@@ -18,7 +18,7 @@ import requests
 from pathlib import Path
 
 from config import settings
-from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts
+from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts, trim_silence
 
 SPESH_URL = "https://speshaudio.com/api/v1/tts"
 MAX_RETRIES = 3
@@ -39,7 +39,7 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
             raise ValueError("SPESHAUDIO_VOICE_ID is not set in .env")
 
     def synthesize(self, text: str, output_path: Path) -> Path:
-        text = clean_for_tts(text)
+        text = clean_for_tts(text, remove_apostrophes=settings.tts_remove_apostrophes)
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -88,5 +88,7 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         if credits_used is not None:
             print(f"    [Spesh] Credits used: {credits_used} | Remaining: {credits_left}")
 
+        if settings.tts_trim_silence:
+            trim_silence(output_path)
         apply_speed(output_path, settings.tts_speed)
         return output_path

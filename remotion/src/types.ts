@@ -19,6 +19,13 @@ export interface VideoSettings {
   transitionDuration: number;
   /** Video overlay effect */
   videoEffect: "none" | "vignette" | "warm" | "cool" | "cinematic";
+
+  /** Karaoke word-highlight color (CSS color, e.g. "#FFD700") */
+  karaokeColor?: string;
+  /** Enable word-by-word karaoke highlighting; when false shows full sentence */
+  karaokeEnabled?: boolean;
+  /** Subtitle animation preset inspired by pycaps */
+  subtitleAnimation?: "hype" | "explosive" | "vibrant" | "minimal" | "none";
 }
 
 export interface WordEntry {

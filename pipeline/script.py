@@ -11,7 +11,7 @@ import json
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
-from config import settings
+from config import settings  # type: ignore  # pyre-ignore[missing-module-attribute]
 
 
 @dataclass
@@ -118,7 +118,7 @@ def _build_script_prompt() -> str:
 
 def _chat(system: str, user: str) -> str:
     """Call Gemini 2.5 Flash via kie.ai — returns JSON string."""
-    from openai import OpenAI
+    from openai import OpenAI  # type: ignore  # pyre-ignore[missing-module-attribute]
     if not settings.kieai_api_key:
         raise RuntimeError("KIEAI_API_KEY is required. Set it in Settings.")
     client = OpenAI(api_key=settings.kieai_api_key, base_url=KIEAI_BASE_URL)
@@ -209,7 +209,7 @@ GLOBAL RULES:
 
 def _gemini_call(system: str, user: str) -> str:
     """Single Gemini API call (non-JSON, plain text response)."""
-    from openai import OpenAI
+    from openai import OpenAI  # type: ignore  # pyre-ignore[missing-module-attribute]
     if not settings.kieai_api_key:
         raise RuntimeError("KIEAI_API_KEY is required. Set it in Settings.")
     client = OpenAI(api_key=settings.kieai_api_key, base_url=KIEAI_BASE_URL)
@@ -242,9 +242,14 @@ def enhance_narration_for_tts(narration: str) -> str:
 
 def _fix_scene(s: dict) -> dict:
     """Tolerate common LLM typos / alternate key names."""
-    if "naration" in s and "narration" not in s:
-        s = {**s, "narration": s.pop("naration")}
-    return s
+    s = dict(s)
+    if "naration" in s:
+        if "narration" not in s or not s["narration"]:
+            s["narration"] = s["naration"]
+        s.pop("naration", None)
+    # Strip any keys Scene doesn't accept
+    valid = {"narration", "visual_query"}
+    return {k: v for k, v in s.items() if k in valid}
 
 
 def generate_from_topic(topic: str) -> list[Scene]:
@@ -276,7 +281,7 @@ def load_from_file(path: Path) -> list[Scene]:
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     scenes = []
     for para in paragraphs:
-        first_sentence = str(para.split(".")[0])[:60]
+        first_sentence = str(para.split(".")[0])[:60]  # pyre-ignore[no-matching-overload]
         scenes.append(Scene(narration=para, visual_query=first_sentence))
     return scenes
 

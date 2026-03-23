@@ -647,6 +647,30 @@
               </div>
             </div>
 
+            <!-- Apostrophe removal -->
+            <div class="flex items-start justify-between gap-4 p-4 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('tts_remove_apostrophes_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('tts_remove_apostrophes_hint')"></p>
+              </div>
+              <select x-model="settings.TTS_REMOVE_APOSTROPHES" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="true" x-text="t('toggle_on')"></option>
+                <option value="false" x-text="t('toggle_off')"></option>
+              </select>
+            </div>
+
+            <!-- Silence trimming -->
+            <div class="flex items-start justify-between gap-4 p-4 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('tts_trim_silence_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('tts_trim_silence_hint')"></p>
+              </div>
+              <select x-model="settings.TTS_TRIM_SILENCE" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="false" x-text="t('toggle_off')"></option>
+                <option value="true" x-text="t('toggle_on')"></option>
+              </select>
+            </div>
+
             <!-- Gemini TTS enhancement -->
             <div class="flex items-start justify-between gap-4 p-4 border border-slate-700/60 rounded-xl bg-slate-800/30">
               <div>
@@ -861,6 +885,33 @@
                   <option value="12" x-text="t('transition_normal')"></option>
                   <option value="24" x-text="t('transition_slow')"></option>
                 </select>
+              </div>
+              <!-- Karaoke -->
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('karaoke_enabled_label')"></label>
+                  <select x-model="settings.REMOTION_KARAOKE_ENABLED" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="true" x-text="t('toggle_on')"></option>
+                    <option value="false" x-text="t('toggle_off')"></option>
+                  </select>
+                </div>
+                <div class="flex-1">
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('karaoke_color_label')"></label>
+                  <input type="color" x-model="settings.REMOTION_KARAOKE_COLOR"
+                    class="w-full h-10 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 cursor-pointer focus:outline-none focus:border-indigo-500 transition-colors" />
+                </div>
+              </div>
+              <!-- Subtitle Animation Preset -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_animation_label')"></label>
+                <select x-model="settings.REMOTION_SUBTITLE_ANIMATION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="hype">Hype</option>
+                  <option value="explosive">Explosive</option>
+                  <option value="vibrant">Vibrant</option>
+                  <option value="minimal">Minimal</option>
+                  <option value="none">None</option>
+                </select>
+                <p class="text-xs text-slate-500 mt-1" x-text="t('subtitle_animation_hint')"></p>
               </div>
               <div class="px-4 py-3 bg-indigo-900/20 border border-indigo-700/40 rounded-xl text-xs text-indigo-300 space-y-1">
                 <div class="font-semibold">Remotion <span class="text-green-400" x-text="t('remotion_free')"></span></div>
@@ -1132,6 +1183,14 @@ const LANG = {
     transition_slow: 'Slow (24 frames)',
     remotion_setup: 'First-time setup: run this command in the project folder:',
     remotion_features: 'Features: Ken Burns effect, smooth fade transitions, SRT-timed subtitles.',
+    karaoke_enabled_label: 'Karaoke Highlight',
+    karaoke_color_label: 'Highlight Color',
+    subtitle_animation_label: 'Subtitle Animation',
+    subtitle_animation_hint: 'Pycaps-inspired animation preset for word-level karaoke effects.',
+    tts_remove_apostrophes_label: 'Remove Apostrophes',
+    tts_remove_apostrophes_hint: "Strip ' characters before TTS to avoid micro-pauses (safe for Turkish suffixes).",
+    tts_trim_silence_label: 'Trim Silence',
+    tts_trim_silence_hint: 'Remove leading/trailing silence from each audio clip to tighten pacing.',
     section_output: '📁 Output', output_dir_label: 'Output Directory',
     resolution_label: 'Resolution', fps_label: 'FPS',
     section_presets: '⚙️ Presets',
@@ -1291,6 +1350,14 @@ const LANG = {
     transition_slow: 'Yavaş (24 kare)',
     remotion_setup: 'İlk kurulum: proje klasöründe şu komutu çalıştırın:',
     remotion_features: 'Özellikler: Ken Burns efekti, yumuşak geçişler, SRT zamanlı altyazılar.',
+    karaoke_enabled_label: 'Karaoke Vurgu',
+    karaoke_color_label: 'Vurgu Rengi',
+    subtitle_animation_label: 'Altyazı Animasyonu',
+    subtitle_animation_hint: 'Pycaps ilhamli kelime bazlı karaoke animasyon stili.',
+    tts_remove_apostrophes_label: 'Kesme İşaretlerini Kaldır',
+    tts_remove_apostrophes_hint: "Mikro duraklamaları önlemek için TTS'e göndermeden önce ' karakterlerini siler (Türkçe ekler için güvenli).",
+    tts_trim_silence_label: 'Sessizliği Kırp',
+    tts_trim_silence_hint: 'Her ses dosyasının başındaki ve sonundaki sessizliği kaldırarak tempoyu sıkılaştırır.',
     section_output: '📁 Çıktı', output_dir_label: 'Çıktı Klasörü',
     resolution_label: 'Çözünürlük', fps_label: 'FPS',
     section_presets: '⚙️ Önayarlar',

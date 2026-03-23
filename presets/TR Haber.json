@@ -9,7 +9,7 @@
   "PEXELS_API_KEY": "",
   "COMPOSER_PROVIDER": "remotion",
   "SUBTITLE_PROVIDER": "pycaps",
-  "PYCAPS_STYLE": "pop",
+  "PYCAPS_STYLE": "minimalist",
   "OUTPUT_DIR": "output",
   "VIDEO_RESOLUTION": "1920x1080",
   "VIDEO_FPS": "60",
@@ -26,5 +26,9 @@
   "REMOTION_SUBTITLE_BG": "pill",
   "REMOTION_VIDEO_EFFECT": "cinematic",
   "TARGET_AUDIENCE": "Haber dinlemek isteyen ki\u015filer",
-  "SPESHAUDIO_STABILITY": "0.15"
+  "SPESHAUDIO_STABILITY": "0.15",
+  "TTS_SPEED": "1.15",
+  "TTS_TRIM_SILENCE": "true",
+  "REMOTION_KARAOKE_COLOR": "#ff0000",
+  "REMOTION_SUBTITLE_STROKE": "0"
 }

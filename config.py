@@ -17,16 +17,19 @@ class Settings(BaseSettings):
     # TTS
     tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio"] = "openai"
     tts_enhance_with_llm: bool = False  # Run Gemini to add TTS emphasis/pauses before synthesis
+    tts_speed: float = 1.0             # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
+    tts_remove_apostrophes: bool = True  # strip ' to prevent micro-pause glitches (safe for Turkish)
+    tts_trim_silence: bool = False      # trim leading/trailing silence from each TTS audio clip
+
     openai_tts_voice: str = "onyx"  # alloy | ash | coral | echo | fable | nova | onyx | sage | shimmer
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
     speshaudio_api_key: str = ""
     speshaudio_voice_id: str = ""
-    speshaudio_language: str = ""  # e.g. "en", "tr" — leave empty for auto-detect
-    speshaudio_stability: float = 0.3        # 0-1: lower = more expressive/varied
-    speshaudio_similarity_boost: float = 0.5   # 0-1: higher = closer to original voice
-    speshaudio_style: float = 0.75             # 0-1: style exaggeration for natural speech
-    tts_speed: float = 1.0                   # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
+    speshaudio_language: str = ""  # e.g. "tr", "en" — strongly recommended for Turkish to set "tr"
+    speshaudio_stability: float = 0.3
+    speshaudio_similarity_boost: float = 0.5
+    speshaudio_style: float = 0.75
 
     # Visuals
     visuals_provider: Literal["pexels", "pixabay", "dalle", "zimage"] = "pexels"
@@ -36,20 +39,23 @@ class Settings(BaseSettings):
 
     # Composer
     composer_provider: Literal["moviepy", "remotion"] = "moviepy"
-    remotion_concurrency: int = 4  # Parallel render threads for Remotion
-    remotion_ken_burns_zoom: float = 0.08  # 0=disabled, 0.05=subtle, 0.08=normal, 0.15=strong
+    remotion_concurrency: int = 4
+    remotion_ken_burns_zoom: float = 0.08
     remotion_ken_burns_direction: str = "center"  # center | pan-left | pan-right | random
-    remotion_subtitle_font: str = "serif"  # serif | sans | roboto | montserrat | oswald | bebas | inter
-    remotion_subtitle_size: int = 40  # px
-    remotion_subtitle_color: str = "#ffffff"  # CSS color
-    remotion_subtitle_bg: str = "none"  # none | box | pill
-    remotion_subtitle_stroke: int = 0  # text stroke width px (0=disabled)
-    remotion_transition_duration: int = 12  # frames for fade-in (0=disabled)
-    remotion_video_effect: str = "none"  # none | vignette | warm | cool | cinematic
+    remotion_subtitle_font: str = "bebas"         # serif | sans | roboto | montserrat | oswald | bebas | inter
+    remotion_subtitle_size: int = 68              # px — bebas looks best at 65–75
+    remotion_subtitle_color: str = "#ffffff"
+    remotion_subtitle_bg: str = "none"            # none | box | pill
+    remotion_subtitle_stroke: int = 2             # text stroke width px (0=disabled)
+    remotion_transition_duration: int = 10        # frames for fade-in (0=disabled)
+    remotion_video_effect: str = "none"           # none | vignette | warm | cool | cinematic
+    remotion_karaoke_color: str = "#FFD700"       # highlight color for active karaoke word
+    remotion_karaoke_enabled: bool = True         # word-by-word highlight (requires word_timing.json)
+    remotion_subtitle_animation: str = "hype"    # hype | explosive | vibrant | minimal | none
 
     # Subtitles
     subtitle_provider: Literal["ffmpeg", "pycaps"] = "ffmpeg"
-    pycaps_style: str = "hype"  # preset name: hype, classic, vibrant, explosive, fast, etc.
+    pycaps_style: str = "hype"
 
     # Output
     output_dir: str = "output"

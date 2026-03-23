@@ -19,8 +19,8 @@ import subprocess
 import threading
 from pathlib import Path
 
-from config import settings
-from pipeline.script import Scene
+from config import settings  # type: ignore  # pyre-ignore[missing-module]
+from pipeline.script import Scene  # type: ignore  # pyre-ignore[missing-module]
 
 _REMOTION_DIR = Path(__file__).parent.parent.parent / "remotion"
 
@@ -75,15 +75,12 @@ def _load_word_timing(session_dir: Path) -> list[dict]:
     return []
 
 
-def _assign_words_to_subtitle(
-    scene_words: list[dict], sub_start_sec: float, sub_end_sec: float,
-    scene_start_sec: float, fps: int
+def _words_to_frames(
+    words: list[dict], scene_start_sec: float, fps: int
 ) -> list[dict]:
-    """Return word entries that fall within a subtitle entry's time window."""
+    """Convert word timing from seconds to scene-relative frames."""
     result = []
-    for w in scene_words:
-        if w["endSec"] <= sub_start_sec or w["startSec"] >= sub_end_sec:
-            continue
+    for w in words:
         start_frame = max(0, round((w["startSec"] - scene_start_sec) * fps))
         end_frame = round((w["endSec"] - scene_start_sec) * fps)
         result.append({"word": w["word"], "startFrame": start_frame, "endFrame": end_frame})
@@ -102,7 +99,7 @@ def _local_http_server(directory: Path):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(directory), **kwargs)
 
-        def log_message(self, *_):
+        def log_message(self, *_):  # pyre-ignore[bad-override]
             pass  # suppress request logs
 
     server = http.server.HTTPServer(("127.0.0.1", port), _Handler)
@@ -189,18 +186,20 @@ def compose_remotion(
                 srt_entries, scene_cursor_sec, scene_cursor_sec + duration_sec, fps
             )
 
-            # Attach word-level timing to each subtitle entry for karaoke
+            # Attach word-level timing to each subtitle entry for karaoke.
+            # word_timing.json now contains pre-chunked word groups that match
+            # SRT entries exactly (by text), eliminating time-based matching
+            # and the duplicate-word bug at chunk boundaries.
             scene_wt = next((s for s in word_timing_data if s["scene"] == i), None)
-            if scene_wt and scene_wt.get("words"):
-                # Match SRT entries back to original timing to assign words
+            if scene_wt and scene_wt.get("chunks"):
                 for sub_entry in subtitles:
-                    # Convert subtitle frames back to absolute seconds for matching
-                    sub_abs_start = scene_cursor_sec + sub_entry["startFrame"] / fps
-                    sub_abs_end = scene_cursor_sec + sub_entry["endFrame"] / fps
-                    sub_entry["words"] = _assign_words_to_subtitle(
-                        scene_wt["words"], sub_abs_start, sub_abs_end,
-                        scene_cursor_sec, fps
-                    )
+                    # Find matching chunk by text content (exact match)
+                    for chunk in scene_wt["chunks"]:  # pyre-ignore
+                        if chunk["text"] == sub_entry["text"]:
+                            sub_entry["words"] = _words_to_frames(
+                                chunk["words"], scene_cursor_sec, fps
+                            )
+                            break
 
             # Build HTTP URLs relative to the served output root
             audio_rel = audio.resolve().relative_to(output_root)
@@ -231,6 +230,9 @@ def compose_remotion(
                 "subtitleStroke": settings.remotion_subtitle_stroke,
                 "transitionDuration": settings.remotion_transition_duration,
                 "videoEffect": settings.remotion_video_effect,
+                "karaokeColor": settings.remotion_karaoke_color,
+                "karaokeEnabled": settings.remotion_karaoke_enabled,
+                "subtitleAnimation": settings.remotion_subtitle_animation,
             },
         }
 

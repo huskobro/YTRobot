@@ -36,13 +36,16 @@ const FONT_MAP: Record<string, string> = {
 const DEFAULT_SETTINGS: VideoSettings = {
   kenBurnsZoom: 0.08,
   kenBurnsDirection: "center",
-  subtitleFont: "serif",
-  subtitleSize: 40,
+  subtitleFont: "bebas",
+  subtitleSize: 68,
   subtitleColor: "#ffffff",
   subtitleBg: "none",
-  subtitleStroke: 0,
-  transitionDuration: 12,
+  subtitleStroke: 2,
+  transitionDuration: 10,
   videoEffect: "none",
+  karaokeColor: "#FFD700",
+  karaokeEnabled: true,
+  subtitleAnimation: "hype",
 };
 
 function getTransformOrigin(
@@ -85,13 +88,14 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
 
   // ── Subtitle text & word-level karaoke ──────────────────────────────────
   let currentText: string;
+  let activeSub: SubtitleEntry | undefined;
   let activeWords: WordEntry[] | undefined;
   if (subtitles && subtitles.length > 0) {
-    const active = subtitles.find(
+    activeSub = subtitles.find(
       (sub: SubtitleEntry) => frame >= sub.startFrame && frame < sub.endFrame
     );
-    currentText = active?.text ?? "";
-    activeWords = active?.words;
+    currentText = activeSub?.text ?? "";
+    activeWords = activeSub?.words;
   } else {
     const sentences = narration
       .split(/(?<=[.!?…])\s+/)
@@ -109,52 +113,158 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
     activeWords = undefined;
   }
 
-  // ── Karaoke word renderer ──────────────────────────────────────────────
-  const highlightColor = "#FFD700"; // gold highlight for active word
-  const renderKaraokeWords = (words: WordEntry[]) => {
-    return words.map((w, idx) => {
-      const isActive = frame >= w.startFrame && frame < w.endFrame;
-      const isPast = frame >= w.endFrame;
-      const isFuture = frame < w.startFrame;
+  // ── Pycaps-inspired karaoke animation presets ───────────────────────────
+  const karaokeColor = s.karaokeColor ?? "#FFD700";
+  const anim = s.subtitleAnimation ?? "hype";
 
-      // Smooth scale for active word
-      const wordScale = isActive
-        ? interpolate(
-            frame,
-            [w.startFrame, Math.min(w.startFrame + 4, w.endFrame)],
-            [1.0, 1.12],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-          )
-        : 1.0;
+  // Safe interpolate: guards against zero-range inputs that crash Remotion
+  const lerp = (f: number, inRange: [number, number], outRange: [number, number]) => {
+    if (inRange[0] >= inRange[1]) return outRange[1];
+    return interpolate(f, inRange, outRange, { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  };
 
-      return (
-        <span
-          key={idx}
-          style={{
-            color: isActive ? highlightColor : isPast ? s.subtitleColor : s.subtitleColor,
-            opacity: isFuture ? 0.55 : 1.0,
-            transform: `scale(${wordScale})`,
-            display: "inline-block",
-            marginRight: "0.3em",
-            transition: "color 0.1s, opacity 0.1s",
-            fontWeight: isActive ? 800 : undefined,
-          }}
-        >
-          {w.word}
-        </span>
-      );
-    });
+  // Overshoot helper: scale ramps to (1 + overshoot) then settles to 1.0
+  const zoomIn = (
+    f: number, start: number, dur: number,
+    initScale: number, overshoot: number, peakFrac: number
+  ) => {
+    if (dur <= 0) return 1.0;
+    const peak = start + Math.max(1, Math.floor(dur * peakFrac));
+    const end = start + dur;
+    if (f < peak) return lerp(f, [start, peak], [initScale, 1 + overshoot]);
+    return lerp(f, [peak, end], [1 + overshoot, 1.0]);
+  };
+
+  // Pop-in: dips below 1.0 then bounces up (pycaps PopInPrimitive)
+  const popIn = (
+    f: number, start: number, dur: number,
+    initScale: number, minScale: number, minAt: number, overshoot: number, peakAt: number
+  ) => {
+    if (dur <= 0) return 1.0;
+    const dipFrame = start + Math.max(1, Math.floor(dur * minAt));
+    const peakFrame = start + Math.max(2, Math.floor(dur * peakAt));
+    const end = start + dur;
+    if (f < dipFrame) return lerp(f, [start, dipFrame], [initScale, minScale]);
+    if (f < peakFrame) return lerp(f, [dipFrame, peakFrame], [minScale, 1 + overshoot]);
+    return lerp(f, [peakFrame, end], [1 + overshoot, 1.0]);
+  };
+
+  const renderKaraokeWords = (words: WordEntry[], sub: SubtitleEntry) => {
+    const subDur = sub.endFrame - sub.startFrame;
+    const introFrames = Math.min(5, Math.floor(subDur * 0.12));
+
+    // ── Segment-level entrance animation ──────────────────────────────
+    let groupTransform = "";
+    let groupOpacity = 1.0;
+
+    if (anim === "hype" || anim === "vibrant" || anim === "minimal") {
+      groupOpacity = lerp(frame, [sub.startFrame, sub.startFrame + introFrames], [0, 1]);
+    }
+
+    if (anim === "explosive") {
+      const slideX = lerp(frame, [sub.startFrame, sub.startFrame + introFrames], [-60, 0]);
+      groupOpacity = lerp(frame, [sub.startFrame, sub.startFrame + introFrames], [0, 1]);
+      groupTransform = `translateX(${slideX}px)`;
+    }
+
+    if (anim === "hype") {
+      const slideY = lerp(frame, [sub.startFrame, sub.startFrame + introFrames], [12, 0]);
+      groupTransform = `translateY(${slideY}px)`;
+    }
+
+    return (
+      <span style={{ transform: groupTransform, opacity: groupOpacity, display: "inline" }}>
+        {words.map((w, idx) => {
+          const isActive = frame >= w.startFrame && frame < w.endFrame;
+          const isPast   = frame >= w.endFrame;
+          const wDur     = Math.max(1, w.endFrame - w.startFrame);
+
+          // ── Word-level scale animation ──────────────────────────────
+          let wordScale = 1.0;
+          const animDur = Math.min(5, wDur);
+
+          if (isActive) {
+            if (anim === "hype") {
+              // zoom_in: 0.8 → 1.05 → 1.0 (pycaps hype: init 0.8, overshoot 0.05, peak 0.7)
+              wordScale = zoomIn(frame, w.startFrame, animDur, 0.8, 0.05, 0.7);
+            } else if (anim === "explosive") {
+              // zoom_in: 0.5 → 1.1 → 1.0 (pycaps explosive: init 0.5, overshoot 0.1, peak 0.7)
+              wordScale = zoomIn(frame, w.startFrame, animDur, 0.5, 0.1, 0.7);
+            } else if (anim === "vibrant") {
+              // pop_in: 0.95 → 0.9 → 1.05 → 1.0 (pycaps vibrant)
+              wordScale = popIn(frame, w.startFrame, animDur, 0.95, 0.9, 0.5, 0.05, 0.8);
+            }
+            // "minimal" and "none": wordScale stays 1.0
+          }
+
+          // ── Word colors per preset ──────────────────────────────────
+          let color = s.subtitleColor;
+          let opacity = 1.0;
+          let textShadow = "0 2px 8px rgba(0,0,0,0.9)";
+
+          if (anim === "hype") {
+            // hype: gray → yellow (active) → white (past)  (pycaps CSS)
+            color = isActive ? karaokeColor : isPast ? "#FFFFFF" : "#DDDDDD";
+            opacity = isActive ? 1.0 : isPast ? 0.9 : 0.45;
+            textShadow = isActive
+              ? `-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 16px ${karaokeColor}99`
+              : "-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 3px 3px 5px rgba(0,0,0,0.5)";
+          } else if (anim === "explosive") {
+            // explosive: gold default → white+fire glow (active) → gold (past)
+            color = isActive ? "#FFFFFF" : karaokeColor;
+            opacity = isActive ? 1.0 : isPast ? 0.9 : 0.5;
+            textShadow = isActive
+              ? `0 0 4px #FFAA00, 0 0 8px #FF8800, 0 0 12px #FF0000, 0 0 20px #FF000088, 1px 1px 1px #000`
+              : `0 0 3px #FF880066, 0 0 6px #FF880044, 1px 1px 1px #000`;
+          } else if (anim === "vibrant") {
+            // vibrant: subtle color change, less glow
+            color = isActive ? karaokeColor : isPast ? s.subtitleColor : s.subtitleColor;
+            opacity = isActive ? 1.0 : isPast ? 0.85 : 0.4;
+            textShadow = isActive
+              ? `0 0 18px ${karaokeColor}88, 0 2px 8px rgba(0,0,0,0.9)`
+              : "0 2px 8px rgba(0,0,0,0.9)";
+          } else if (anim === "minimal") {
+            // minimal: just color swap, no fancy effects
+            color = isActive ? karaokeColor : s.subtitleColor;
+            opacity = isActive ? 1.0 : isPast ? 0.8 : 0.5;
+          } else {
+            // none: all words same color/opacity
+            color = s.subtitleColor;
+            opacity = 1.0;
+          }
+
+          return (
+            <span
+              key={idx}
+              style={{
+                color,
+                opacity,
+                transform: `scale(${wordScale})`,
+                display: "inline-block",
+                marginRight: "0.25em",
+                textShadow,
+                fontWeight: isActive ? 900 : undefined,
+                letterSpacing: isActive ? "0.03em" : undefined,
+              }}
+            >
+              {w.word}
+            </span>
+          );
+        })}
+      </span>
+    );
   };
 
   // … (rest of scene component below) 
 
-  // ── Subtitle fade in/out ─────────────────────────────────────────────────
-  const subFadeDur = Math.min(18, Math.floor(durationInFrames * 0.15));
-  const subOpacity = interpolate(
+  // ── Subtitle fade out only (no fade-in — the per-chunk entrance animation
+  //    already handles smooth appearance; a global fade-in hides the first
+  //    words at scene start, making them appear "rushed").
+  const subFadeOutDur = Math.min(12, Math.floor(durationInFrames * 0.08));
+  const subOpacity = lerp(
     frame,
-    [0, subFadeDur, Math.max(subFadeDur + 2, durationInFrames - subFadeDur), durationInFrames],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    [Math.max(1, durationInFrames - subFadeOutDur), durationInFrames],
+    [1, 0]
   );
 
   // ── Scene fade-in ─────────────────────────────────────────────────────────
@@ -176,7 +286,7 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
           padding: "10px 20px",
           borderRadius: 4,
           display: "inline-block",
-          maxWidth: "85%",
+          maxWidth: "92%",
         }
       : s.subtitleBg === "pill"
       ? {
@@ -184,9 +294,9 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
           padding: "10px 28px",
           borderRadius: 40,
           display: "inline-block",
-          maxWidth: "85%",
+          maxWidth: "92%",
         }
-      : { maxWidth: "85%" };
+      : { width: "92%", textAlign: "center" };
 
   const subtitleTextStyle: React.CSSProperties = {
     color: s.subtitleColor,
@@ -298,16 +408,16 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
           justifyContent: "flex-end",
           alignItems: "center",
           paddingBottom: s.videoEffect === "cinematic" ? cinemaBarHeight + 24 : 72,
-          paddingLeft: 100,
-          paddingRight: 100,
+          paddingLeft: 48,
+          paddingRight: 48,
           opacity: subOpacity,
           pointerEvents: "none",
         }}
       >
         <div style={subtitleContainerStyle}>
           <p style={subtitleTextStyle}>
-            {activeWords && activeWords.length > 0
-              ? renderKaraokeWords(activeWords)
+            {s.karaokeEnabled !== false && activeWords && activeWords.length > 0 && activeSub
+              ? renderKaraokeWords(activeWords, activeSub)
               : currentText}
           </p>
         </div>

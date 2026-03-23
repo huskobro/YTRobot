@@ -1,6 +1,6 @@
 from pathlib import Path
 from config import settings
-from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts
+from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts, trim_silence
 
 
 class ElevenLabsTTSProvider(BaseTTSProvider):
@@ -10,7 +10,7 @@ class ElevenLabsTTSProvider(BaseTTSProvider):
         self.voice_id = settings.elevenlabs_voice_id
 
     def synthesize(self, text: str, output_path: Path) -> Path:
-        text = clean_for_tts(text)
+        text = clean_for_tts(text, remove_apostrophes=settings.tts_remove_apostrophes)
         audio = self.client.generate(
             text=text,
             voice=self.voice_id,
@@ -20,5 +20,7 @@ class ElevenLabsTTSProvider(BaseTTSProvider):
         with open(output_path, "wb") as f:
             for chunk in audio:
                 f.write(chunk)
+        if settings.tts_trim_silence:
+            trim_silence(output_path)
         apply_speed(output_path, settings.tts_speed)
         return output_path

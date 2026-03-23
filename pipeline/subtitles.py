@@ -1,15 +1,23 @@
-"""Subtitles stage: builds an SRT file from script narration text + audio timing.
+"""Subtitles stage: builds an SRT file and verbatim word timing via Whisper.
 
-Uses ffprobe (bundled with ffmpeg) to measure each scene's audio duration, then
-distributes subtitle segments proportionally by character count — no Whisper needed.
-This guarantees subtitles match the script exactly with no transcription errors.
+Uses openai-whisper with word_timestamps=True to ensure subtitles perfectly 
+match the spoken audio, solving synchronization issues caused by naive character timing.
 """
 import json
-import re
 import subprocess
 from pathlib import Path
+import whisper  # type: ignore
+from pipeline.script import Scene  # type: ignore
 
-from pipeline.script import Scene
+_whisper_model = None
+
+
+def _get_whisper_model():
+    global _whisper_model
+    if _whisper_model is None:
+        print("  [Subtitles] Loading Whisper model (base) for precise sync...")
+        _whisper_model = whisper.load_model("base")
+    return _whisper_model
 
 
 def _format_timestamp(seconds: float) -> str:
@@ -35,75 +43,92 @@ def _audio_duration(path: Path) -> float:
     return 0.0
 
 
-def _clean_for_subtitles(text: str) -> str:
-    """Strip TTS markers so subtitles look like normal readable text."""
-    # ALL-CAPS emphasis words → title case (e.g. AMAZING → Amazing)
-    text = re.sub(r'\b([A-Z]{2,})\b', lambda m: m.group(1).capitalize(), text)
-    # Replace slash alternatives with "or"
-    text = re.sub(r'\s*/\s*', ' or ', text)
-    # Collapse multiple spaces
-    text = re.sub(r' {2,}', ' ', text)
-    return text.strip()
+def _get_transcription(audio_path: Path, scene: Scene, session_dir: Path) -> dict:
+    """Run Whisper on a single scene audio and cache the result."""
+    cache_file = session_dir / f"{audio_path.stem}_transcription.json"
+    if cache_file.exists():
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    
+    model = _get_whisper_model()
+    # pass initial_prompt to heavily biased whisper toward the actual script
+    result = model.transcribe(
+        str(audio_path), 
+        word_timestamps=True, 
+        initial_prompt=scene.narration
+    )
+    
+    cache_file.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+    return result
 
 
-def _split_sentences(text: str) -> list[str]:
-    """Split text into subtitle-friendly chunks (by sentence, max ~80 chars)."""
-    # Split on sentence-ending punctuation
-    raw = re.split(r'(?<=[.!?])\s+', text.strip())
-    chunks = []
-    for part in raw:
-        part = part.strip()
-        if not part:
-            continue
-        # If a sentence is very long, split further at commas
-        if len(part) > 80:
-            sub = re.split(r',\s+', part)
-            buf = ""
-            for s in sub:
-                if buf and len(buf) + len(s) > 75:
-                    chunks.append(buf.rstrip(", "))
-                    buf = s
-                else:
-                    buf = (buf + ", " + s).lstrip(", ") if buf else s
-            if buf:
-                chunks.append(buf)
+def _align_words(script_text: str, whisper_words: list[dict]) -> list[dict]:
+    """Force-align script exact text with Whisper timestamps based on linear proportional positioning."""
+    script_parts = script_text.split()
+    aligned = []
+    
+    s_len = len(script_parts)
+    w_len = len(whisper_words)
+    
+    for i, s_word in enumerate(script_parts):
+        # Linearly interpolate to find the closest whisper word index
+        w_idx = int(i * w_len / s_len) if s_len > 0 and w_len > 0 else 0
+        w_idx = min(w_idx, max(0, w_len - 1))
+        
+        if w_len > 0:
+            w_start = float(whisper_words[w_idx].get("start", 0.0))
+            w_end = float(whisper_words[w_idx].get("end", 0.0))
         else:
-            chunks.append(part)
-    return [c for c in chunks if c]
+            w_start, w_end = 0.0, 0.5
+            
+        aligned.append({
+            "word": s_word,
+            "startSec": float(f"{w_start:.4f}"),
+            "endSec": float(f"{w_end:.4f}")
+        })
+    return aligned
 
 
 def generate_srt(audio_paths: list[Path], scenes: list[Scene], session_dir: Path) -> Path:
-    """Build SRT from script narration, timed by audio duration via ffprobe."""
+    """Build SRT from Whisper word-level timestamps, forced to match true Script text."""
     srt_path = session_dir / "subtitles.srt"
     srt_lines: list[str] = []
-    index = 1
-    time_offset = 0.0
+    index: int = 1
+    time_offset: float = 0.0
 
     for i, (audio_path, scene) in enumerate(zip(audio_paths, scenes)):
-        print(f"  [Subtitles] Timing scene {i}...")
-        duration = _audio_duration(audio_path)
-
-        narration = _clean_for_subtitles(scene.narration)
-        sentences = _split_sentences(narration)
-
-        if not sentences or duration <= 0:
-            time_offset += duration
+        print(f"  [Subtitles] Timing scene {i} with Whisper (Forced Alignment)...")
+        duration = float(_audio_duration(audio_path))
+        
+        if duration <= 0:
             continue
-
-        total_chars = sum(len(s) for s in sentences)
-        seg_start = time_offset
-
-        for sent in sentences:
-            weight = len(sent) / total_chars if total_chars > 0 else 1 / len(sentences)
-            seg_end = seg_start + duration * weight
+            
+        result = _get_transcription(audio_path, scene, session_dir)
+        
+        # Flatten all whisper words from all segments
+        all_w_words = []
+        for seg in result.get("segments", []):
+            all_w_words.extend(seg.get("words", []))
+            
+        aligned = _align_words(scene.narration, all_w_words)
+        
+        # Group into ~3 word chunks for 1-line max SRT
+        chunk_size = 3
+        for chunk_idx in range(0, len(aligned), chunk_size):
+            chunk = aligned[chunk_idx:chunk_idx + chunk_size]  # type: ignore
+            if not chunk:
+                continue
+            
+            c_text = " ".join([w["word"] for w in chunk])
+            c_start = float(time_offset) + float(chunk[0]["startSec"])    # type: ignore
+            c_end = float(time_offset) + float(chunk[-1]["endSec"])       # type: ignore
+            
             srt_lines.append(str(index))
-            srt_lines.append(f"{_format_timestamp(seg_start)} --> {_format_timestamp(seg_end)}")
-            srt_lines.append(sent)
+            srt_lines.append(f"{_format_timestamp(c_start)} --> {_format_timestamp(c_end)}")
+            srt_lines.append(c_text)
             srt_lines.append("")
-            index += 1
-            seg_start = seg_end
+            index = int(index) + 1  # type: ignore
 
-        time_offset += duration
+        time_offset = float(time_offset) + duration  # type: ignore
 
     srt_path.write_text("\n".join(srt_lines), encoding="utf-8")
     print(f"  [Subtitles] Written to {srt_path}")
@@ -117,73 +142,42 @@ def generate_word_timing(
 
     Output format (word_timing.json):
     [
-      {                          # one entry per scene
-        "scene": 0,
-        "startSec": 0.0,
-        "words": [
-          {"word": "Hello", "startSec": 0.0, "endSec": 0.35},
-          ...
-        ]
-      },
-      ...
+      { "scene": 0, "startSec": 0.0, "words": [ { "word": "Hello", "startSec":..., "endSec":... } ] }, ...
     ]
     """
     word_timing_path = session_dir / "word_timing.json"
     all_scenes: list[dict] = []
-    time_offset = 0.0
+    time_offset: float = 0.0
 
     for i, (audio_path, scene) in enumerate(zip(audio_paths, scenes)):
-        duration = _audio_duration(audio_path)
-        narration = _clean_for_subtitles(scene.narration)
-        sentences = _split_sentences(narration)
-
+        duration = float(_audio_duration(audio_path))
         scene_words: list[dict] = []
-
-        if not sentences or duration <= 0:
-            all_scenes.append({
-                "scene": i,
-                "startSec": time_offset,
-                "words": [],
-            })
-            time_offset += duration
-            continue
-
-        # Distribute duration across sentences proportionally by char count
-        total_chars = sum(len(s) for s in sentences)
-        sent_start = time_offset
-
-        for sent in sentences:
-            sent_weight = len(sent) / total_chars if total_chars > 0 else 1 / len(sentences)
-            sent_duration = duration * sent_weight
-            sent_end = sent_start + sent_duration
-
-            # Split sentence into words and distribute time proportionally
-            words = sent.split()
-            if not words:
-                sent_start = sent_end
-                continue
-
-            word_total_chars = sum(len(w) for w in words)
-            word_cursor = sent_start
-
-            for w in words:
-                w_weight = len(w) / word_total_chars if word_total_chars > 0 else 1 / len(words)
-                w_duration = sent_duration * w_weight
+        
+        if duration > 0:
+            result = _get_transcription(audio_path, scene, session_dir)
+            
+            # Flatten all whisper words
+            all_w_words = []
+            for seg in result.get("segments", []):
+                all_w_words.extend(seg.get("words", []))
+                
+            aligned = _align_words(scene.narration, all_w_words)
+            
+            for w in aligned:
+                w_start = float(time_offset) + float(w["startSec"])  # type: ignore
+                w_end = float(time_offset) + float(w["endSec"])      # type: ignore
                 scene_words.append({
-                    "word": w,
-                    "startSec": round(word_cursor, 4),
-                    "endSec": round(word_cursor + w_duration, 4),
+                    "word": str(w["word"]),
+                    "startSec": float(f"{w_start:.4f}"),
+                    "endSec": float(f"{w_end:.4f}"),
                 })
-                word_cursor += w_duration
-
-            sent_start = sent_end
 
         all_scenes.append({
-            "scene": i,
-            "startSec": round(time_offset, 4),
+            "scene": int(i),
+            "startSec": float(f"{time_offset:.4f}"),
             "words": scene_words,
         })
-        time_offset += duration
+        time_offset = float(time_offset) + duration  # type: ignore
 
     word_timing_path.write_text(json.dumps(all_scenes, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"  [Subtitles] Word timing written to {word_timing_path}")

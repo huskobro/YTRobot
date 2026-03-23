@@ -19,7 +19,7 @@ _BASE = "https://api.kie.ai"
 _CREATE_URL = f"{_BASE}/api/v1/jobs/createTask"
 _STATUS_URL = f"{_BASE}/api/v1/jobs/recordInfo"
 _POLL_INTERVAL = 3   # seconds between polls
-_TIMEOUT = 180       # max seconds to wait for generation
+_TIMEOUT = 600       # max seconds to wait for generation
 _MAX_RETRIES = 3
 
 
@@ -37,16 +37,19 @@ class ZImageVisualsProvider(BaseVisualsProvider):
         }
 
     def fetch(self, query: str, output_path: Path) -> Path:
+        last_error = None
         for attempt in range(1, _MAX_RETRIES + 1):
             try:
                 return self._fetch_once(query, output_path)
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, TimeoutError) as e:
+                last_error = e
                 if attempt < _MAX_RETRIES:
                     wait = attempt * 5
                     print(f"    [Z-Image] Attempt {attempt} failed ({e.__class__.__name__}), retrying in {wait}s...")
                     time.sleep(wait)
-                else:
-                    raise
+        if last_error:
+            raise last_error
+        raise RuntimeError("Max retries exceeded")
 
     def _fetch_once(self, query: str, output_path: Path) -> Path:
         # 1. Submit generation task
@@ -57,7 +60,7 @@ class ZImageVisualsProvider(BaseVisualsProvider):
                 "aspect_ratio": self.aspect_ratio,
             },
         }
-        resp = requests.post(_CREATE_URL, headers=self._headers(), json=payload, timeout=30)
+        resp = requests.post(_CREATE_URL, headers=self._headers(), json=payload, timeout=60)
         resp.raise_for_status()
         data = resp.json()
         task_id = data["data"]["taskId"]
@@ -72,7 +75,7 @@ class ZImageVisualsProvider(BaseVisualsProvider):
                 _STATUS_URL,
                 headers=self._headers(),
                 params={"taskId": task_id},
-                timeout=15,
+                timeout=30,
             )
             status_resp.raise_for_status()
             info = status_resp.json()["data"]
@@ -92,7 +95,7 @@ class ZImageVisualsProvider(BaseVisualsProvider):
 
         # 3. Download the image
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        img_resp = requests.get(image_url, timeout=60)
+        img_resp = requests.get(image_url, timeout=120)
         img_resp.raise_for_status()
         with open(output_path, "wb") as f:
             f.write(img_resp.content)

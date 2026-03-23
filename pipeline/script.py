@@ -80,6 +80,10 @@ TTS VOICE EMPHASIS MARKERS (so the AI voice sounds human, not robotic)
 • Maximum 1–2 capitalized emphasis words per scene — do NOT over-capitalize
 • NEVER use "/" (slash) — write "or" instead: "fast or easy", not "fast/easy"
 
+LANGUAGE (critical)
+-------------------
+follow strictly language rule. Do not mix multiple languages.
+
 OUTPUT FORMAT
 -------------
 Return ONLY a valid JSON object with key "scenes" containing exactly 10 elements.
@@ -139,12 +143,12 @@ Given a narration text, return it with these modifications ONLY:
 2. Add "..." before impactful statements to create a meaningful pause.
    Example: "And I finally got it. The secret was patience." →
             "And I finally got it. The secret... was patience."
-3. Add "!" for genuine excitement or urgency — sparingly, max 1 per scene.
+3. Add "!" for genuine excitement, urgency, or strong emphasis. Don't be afraid to use it multiple times if the emotion calls for it.
    Only add where the speaker would naturally raise their voice with energy.
    Example: "That's the whole trick." → "That's the whole trick!"
 4. Add commas where the speaker would naturally breathe or pause.
 5. Do NOT change any words, sentences, or meaning. Only add emphasis markers.
-6. Do NOT over-capitalize. Maximum 2 capitalized words total per scene.
+6. Feel free to capitalize 2-4 important words per scene to ensure dynamic delivery.
 7. Do NOT use "/" (slash) at all — if you see one, replace it with " or ".
 
 Return ONLY the modified narration text. No explanation, no JSON, just the text.\
@@ -193,9 +197,9 @@ PART 2 — TTS EMPHASIS (add voice markers):
    Example: "this changes everything" → "this changes EVERYTHING"
 8. Add "..." before impactful statements for a meaningful pause.
    Example: "The secret... was patience."
-9. Add "!" for genuine excitement — sparingly, max 1 per scene.
+9. Add "!" for genuine excitement or strong emphasis. Use it freely when the emotion calls for it.
 10. Add commas where the speaker would naturally breathe.
-11. Do NOT over-capitalize. Maximum 2 CAPS words total per scene.
+11. Feel free to capitalize 2-4 important words per scene to ensure a dynamic, energetic delivery.
 
 GLOBAL RULES:
 • NEVER use "/" (slash) — write "or" instead
@@ -272,7 +276,7 @@ def load_from_file(path: Path) -> list[Scene]:
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     scenes = []
     for para in paragraphs:
-        first_sentence = para.split(".")[0][:60]
+        first_sentence = str(para.split(".")[0])[:60]
         scenes.append(Scene(narration=para, visual_query=first_sentence))
     return scenes
 
@@ -280,4 +284,4 @@ def load_from_file(path: Path) -> list[Scene]:
 def save_script(scenes: list[Scene], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump([asdict(s) for s in scenes], f, indent=2, ensure_ascii=False)
+        json.dump([{"narration": s.narration, "visual_query": s.visual_query} for s in scenes], f, indent=2, ensure_ascii=False)

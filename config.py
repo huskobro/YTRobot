@@ -23,9 +23,9 @@ class Settings(BaseSettings):
     speshaudio_api_key: str = ""
     speshaudio_voice_id: str = ""
     speshaudio_language: str = ""  # e.g. "en", "tr" — leave empty for auto-detect
-    speshaudio_stability: float = 0.5        # 0-1: lower = more expressive/varied
-    speshaudio_similarity_boost: float = 0.75  # 0-1: higher = closer to original voice
-    speshaudio_style: float = 0.3            # 0-1: style exaggeration for natural speech
+    speshaudio_stability: float = 0.3        # 0-1: lower = more expressive/varied
+    speshaudio_similarity_boost: float = 0.5   # 0-1: higher = closer to original voice
+    speshaudio_style: float = 0.75             # 0-1: style exaggeration for natural speech
     tts_speed: float = 1.0                   # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
 
     # Visuals

@@ -1,0 +1,16 @@
+{
+  "scenes": [
+    {
+      "narration": "Güneşin ilk ışıkları ormanın derinliklerine sızarken, doğa sessizce uyanır.",
+      "visual_query": "forest sunrise morning mist"
+    },
+    {
+      "narration": "Her ağacın, her yaprağın anlatacak bir hikayesi vardır. Bu sonsuz döngü, yaşamın ta kendisidir.",
+      "visual_query": "green leaves dew drops"
+    },
+    {
+      "narration": "Doğayı dinlemek, aslında kendi iç sesimizi bulmaktır. Belki de aradığımız huzur buradadır.",
+      "visual_query": "calm river flowing forest"
+    }
+  ]
+}

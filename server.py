@@ -1,0 +1,428 @@
+"""YTRobot Web UI — run with: python server.py"""
+import asyncio
+import json
+import os
+import platform
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse, StreamingResponse
+from pydantic import BaseModel
+
+app = FastAPI(title="YTRobot")
+
+OUTPUT_DIR = Path("output")
+ENV_FILE = Path(".env")
+
+STEPS = ["Script", "Metadata", "TTS", "Visuals", "Subtitles", "Compose"]
+STEP_MARKERS = {
+    "[1/6]": 0,
+    "[2/6]": 1,
+    "[3/6]": 2,
+    "[4/6]": 3,
+    "[5/6]": 4,
+    "[6/6]": 5,
+}
+
+# Process registry — maps session_id → running Popen object
+_procs: dict[str, subprocess.Popen] = {}
+_procs_lock = threading.Lock()
+
+# Always use the venv Python for pipeline subprocesses so that all pipeline
+# dependencies are available even when server.py is started without activating
+# the virtual environment first.
+_VENV_PYTHON = Path(__file__).parent / ".venv" / "bin" / "python"
+_PIPELINE_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
+
+
+# ── File helpers ──────────────────────────────────────────────────────────────
+
+def _session_dir(sid: str) -> Path:
+    return OUTPUT_DIR / sid
+
+
+def _session_json(sid: str) -> Path:
+    return _session_dir(sid) / "session.json"
+
+
+def _log_file(sid: str) -> Path:
+    return _session_dir(sid) / "pipeline.log"
+
+
+def _read_session(sid: str) -> dict:
+    p = _session_json(sid)
+    if not p.exists():
+        raise HTTPException(404, "Session not found")
+    return json.loads(p.read_text())
+
+
+def _write_session(sid: str, data: dict):
+    _session_json(sid).write_text(json.dumps(data, indent=2))
+
+
+def _all_sessions() -> list:
+    sessions = []
+    if OUTPUT_DIR.exists():
+        for p in sorted(OUTPUT_DIR.iterdir(), reverse=True):
+            j = p / "session.json"
+            if j.exists():
+                try:
+                    sessions.append(json.loads(j.read_text()))
+                except Exception:
+                    pass
+    return sessions
+
+
+def _read_env() -> dict:
+    if not ENV_FILE.exists():
+        return {}
+    out = {}
+    for line in ENV_FILE.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            out[k.strip()] = v.strip()
+    return out
+
+
+def _write_env(values: dict):
+    lines = [f"{k}={v}" for k, v in values.items()]
+    ENV_FILE.write_text("\n".join(lines) + "\n")
+
+
+# ── Startup cleanup ───────────────────────────────────────────────────────────
+
+def _cleanup_stale_sessions():
+    """Mark any sessions that were 'running'/'queued' at server start as failed."""
+    for s in _all_sessions():
+        if s.get("status") in ("running", "queued", "paused"):
+            s["status"] = "failed"
+            s["error"] = "Server restarted — process was interrupted"
+            _write_session(s["id"], s)
+
+
+# ── Pipeline runner ───────────────────────────────────────────────────────────
+
+def _run(sid: str, topic: Optional[str], script: Optional[str]):
+    session = _read_session(sid)
+    session["status"] = "running"
+    session["paused"] = False
+    _write_session(sid, session)
+
+    log_path = _log_file(sid)
+    cmd = [_PIPELINE_PYTHON, "-u", "main.py"]
+    if topic:
+        cmd += ["--topic", topic]
+    else:
+        cmd += ["--script", script]
+
+    try:
+        with open(log_path, "w", encoding="utf-8") as lf:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=Path(__file__).parent,
+                encoding="utf-8",
+            )
+            with _procs_lock:
+                _procs[sid] = proc
+
+            # Update session with PID
+            s = _read_session(sid)
+            s["pid"] = proc.pid
+            _write_session(sid, s)
+
+            for line in proc.stdout:
+                lf.write(line)
+                lf.flush()
+                for marker, idx in STEP_MARKERS.items():
+                    if marker in line:
+                        s = _read_session(sid)
+                        s["current_step"] = idx
+                        for i, step in enumerate(s["steps"]):
+                            if i < idx:
+                                step["status"] = "completed"
+                            elif i == idx:
+                                step["status"] = "running"
+                        _write_session(sid, s)
+                        break
+                if "✓ Video ready:" in line:
+                    s = _read_session(sid)
+                    s["output_file"] = line.split("✓ Video ready:")[-1].strip()
+                    _write_session(sid, s)
+            proc.wait()
+
+        with _procs_lock:
+            _procs.pop(sid, None)
+
+        s = _read_session(sid)
+        # Don't overwrite "stopped" status set by stop endpoint
+        if s["status"] not in ("stopped",):
+            if proc.returncode == 0:
+                s["status"] = "completed"
+                s["completed_at"] = datetime.now().isoformat()
+                for step in s["steps"]:
+                    step["status"] = "completed"
+                meta_path = _session_dir(sid) / "metadata.json"
+                if meta_path.exists():
+                    s["metadata"] = json.loads(meta_path.read_text())
+            else:
+                s["status"] = "failed"
+                s["error"] = f"Process exited with code {proc.returncode}"
+            _write_session(sid, s)
+
+    except Exception as e:
+        with _procs_lock:
+            _procs.pop(sid, None)
+        s = _read_session(sid)
+        if s.get("status") not in ("stopped",):
+            s["status"] = "failed"
+            s["error"] = str(e)
+            _write_session(sid, s)
+
+
+# ── API ───────────────────────────────────────────────────────────────────────
+
+@app.get("/api/sessions")
+def get_sessions():
+    return _all_sessions()
+
+
+@app.get("/api/sessions/{sid}")
+def get_session(sid: str):
+    return _read_session(sid)
+
+
+class RunReq(BaseModel):
+    topic: Optional[str] = None
+    script_file: Optional[str] = None
+
+
+@app.post("/api/run")
+def start_run(req: RunReq):
+    if not req.topic and not req.script_file:
+        raise HTTPException(400, "Provide topic or script_file")
+    sid = datetime.now().strftime("%Y%m%d_%H%M%S")
+    _session_dir(sid).mkdir(parents=True, exist_ok=True)
+    session = {
+        "id": sid,
+        "topic": req.topic or req.script_file,
+        "input_type": "topic" if req.topic else "script",
+        "input_value": req.topic or req.script_file,
+        "status": "queued",
+        "paused": False,
+        "pid": None,
+        "current_step": -1,
+        "steps": [{"name": s, "status": "pending"} for s in STEPS],
+        "notes": "",
+        "started_at": datetime.now().isoformat(),
+        "completed_at": None,
+        "output_file": None,
+        "error": None,
+        "metadata": None,
+    }
+    _write_session(sid, session)
+    threading.Thread(target=_run, args=(sid, req.topic, req.script_file), daemon=True).start()
+    return {"session_id": sid}
+
+
+@app.post("/api/sessions/{sid}/stop")
+def stop_session(sid: str):
+    s = _read_session(sid)
+    if s["status"] not in ("running", "paused", "queued"):
+        raise HTTPException(400, f"Cannot stop session in status '{s['status']}'")
+    with _procs_lock:
+        proc = _procs.get(sid)
+    if proc:
+        try:
+            proc.terminate()
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+    s["status"] = "stopped"
+    s["error"] = "Stopped by user"
+    s["paused"] = False
+    _write_session(sid, s)
+    return {"ok": True}
+
+
+@app.post("/api/sessions/{sid}/pause")
+def pause_session(sid: str):
+    if platform.system() == "Windows":
+        raise HTTPException(400, "Pause is not supported on Windows")
+    s = _read_session(sid)
+    if s["status"] != "running":
+        raise HTTPException(400, f"Cannot pause session in status '{s['status']}'")
+    with _procs_lock:
+        proc = _procs.get(sid)
+    if not proc:
+        raise HTTPException(400, "Process not found (may have already finished)")
+    try:
+        os.kill(proc.pid, signal.SIGSTOP)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to pause: {e}")
+    s["status"] = "paused"
+    s["paused"] = True
+    _write_session(sid, s)
+    return {"ok": True}
+
+
+@app.post("/api/sessions/{sid}/resume")
+def resume_session(sid: str):
+    if platform.system() == "Windows":
+        raise HTTPException(400, "Resume is not supported on Windows")
+    s = _read_session(sid)
+    if s["status"] != "paused":
+        raise HTTPException(400, f"Cannot resume session in status '{s['status']}'")
+    with _procs_lock:
+        proc = _procs.get(sid)
+    if not proc:
+        raise HTTPException(400, "Process not found")
+    try:
+        os.kill(proc.pid, signal.SIGCONT)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to resume: {e}")
+    s["status"] = "running"
+    s["paused"] = False
+    _write_session(sid, s)
+    return {"ok": True}
+
+
+@app.post("/api/sessions/{sid}/restart")
+def restart_session(sid: str):
+    s = _read_session(sid)
+    # Stop current process if running
+    with _procs_lock:
+        proc = _procs.get(sid)
+    if proc:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+
+    # Reset session state
+    s["status"] = "queued"
+    s["paused"] = False
+    s["pid"] = None
+    s["current_step"] = -1
+    s["steps"] = [{"name": name, "status": "pending"} for name in STEPS]
+    s["error"] = None
+    s["output_file"] = None
+    s["completed_at"] = None
+    s["started_at"] = datetime.now().isoformat()
+    _write_session(sid, s)
+
+    topic = s.get("input_value") if s.get("input_type") == "topic" else None
+    script = s.get("input_value") if s.get("input_type") == "script" else None
+    # Fallback: use topic field directly for older sessions
+    if not topic and not script:
+        topic = s.get("topic")
+
+    threading.Thread(target=_run, args=(sid, topic, script), daemon=True).start()
+    return {"ok": True}
+
+
+@app.delete("/api/sessions/{sid}")
+def delete_session(sid: str):
+    # Stop any running process first
+    with _procs_lock:
+        proc = _procs.pop(sid, None)
+    if proc:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+
+    d = _session_dir(sid)
+    if not d.exists():
+        raise HTTPException(404, "Session not found")
+    shutil.rmtree(d)
+    return {"ok": True}
+
+
+class NoteReq(BaseModel):
+    notes: str
+
+
+@app.patch("/api/sessions/{sid}")
+def update_notes(sid: str, body: NoteReq):
+    s = _read_session(sid)
+    s["notes"] = body.notes
+    _write_session(sid, s)
+    return s
+
+
+@app.get("/api/settings")
+def get_settings():
+    return _read_env()
+
+
+class SettingsReq(BaseModel):
+    values: dict
+
+
+@app.put("/api/settings")
+def save_settings(body: SettingsReq):
+    _write_env(body.values)
+    return {"ok": True}
+
+
+@app.get("/api/sessions/{sid}/logs")
+async def stream_logs(sid: str):
+    log_path = _log_file(sid)
+
+    async def generate():
+        position = 0
+        waited = 0.0
+        while not log_path.exists() and waited < 30:
+            await asyncio.sleep(0.3)
+            waited += 0.3
+        while True:
+            try:
+                s = _read_session(sid)
+            except Exception:
+                break
+            if log_path.exists():
+                text = log_path.read_text(encoding="utf-8", errors="replace")
+                if len(text) > position:
+                    new_text = text[position:]
+                    position = len(text)
+                    for line in new_text.splitlines():
+                        yield f"data: {json.dumps(line)}\n\n"
+            if s["status"] in ("completed", "failed", "stopped"):
+                yield f"data: {json.dumps('__DONE__')}\n\n"
+                break
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/")
+def serve_ui():
+    html_path = Path(__file__).parent / "ui" / "index.html"
+    if not html_path.exists():
+        return HTMLResponse("<h1>UI not found — create ui/index.html</h1>", status_code=404)
+    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    _cleanup_stale_sessions()
+    print("🎬 YTRobot UI → http://localhost:8080")
+    uvicorn.run(app, host="0.0.0.0", port=8080, reload=False)

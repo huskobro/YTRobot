@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTRobot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .log-line { font-family: 'Cascadia Code','Fira Code','Courier New',monospace; font-size: 12px; line-height: 1.6; }
+    @keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    .animate-spin-slow { animation: spin-slow 1.2s linear infinite; display:inline-block; }
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:#475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-hidden">
+
+<div x-data="app()" x-init="init()" x-cloak class="flex h-screen">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="w-52 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
+    <div class="px-5 py-5 border-b border-slate-800">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-red-900/40">▶</div>
+        <div>
+          <div class="font-bold text-white leading-tight">YTRobot</div>
+          <div class="text-slate-500 text-xs" x-text="t('app_subtitle')"></div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <button @click="view='dashboard'"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📊</span> <span x-text="t('nav_dashboard')"></span>
+      </button>
+      <button @click="view='new-run';mode='topic';runError=''"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='new-run'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>✨</span> <span x-text="t('nav_new_video')"></span>
+      </button>
+      <button @click="loadSettings();view='settings'"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>⚙️</span> <span x-text="t('nav_settings')"></span>
+      </button>
+    </nav>
+
+    <!-- Stats -->
+    <div class="px-4 py-3 border-t border-slate-800 space-y-1.5">
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_running')"></span>
+        <span class="font-mono font-bold" :class="sessions.filter(s=>s.status==='running').length>0?'text-blue-400':'text-slate-500'"
+              x-text="sessions.filter(s=>s.status==='running').length"></span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_completed')"></span>
+        <span class="font-mono text-green-400" x-text="sessions.filter(s=>s.status==='completed').length"></span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_total')"></span>
+        <span class="font-mono text-slate-400" x-text="sessions.length"></span>
+      </div>
+    </div>
+
+    <!-- Language toggle -->
+    <div class="px-4 py-3 border-t border-slate-800">
+      <div class="flex gap-1 p-1 bg-slate-800 rounded-lg">
+        <button @click="setLang('tr')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all"
+                :class="lang==='tr'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'">TR</button>
+        <button @click="setLang('en')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all"
+                :class="lang==='en'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'">EN</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────────────── -->
+  <main class="flex-1 overflow-y-auto bg-slate-950">
+
+    <!-- ══ DASHBOARD ══════════════════════════════════════════════════ -->
+    <div x-show="view==='dashboard'" class="p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-white" x-text="t('dashboard_title')"></h1>
+          <p class="text-slate-500 text-sm mt-0.5" x-text="t('dashboard_subtitle')"></p>
+        </div>
+        <button @click="view='new-run';mode='topic';runError=''"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg shadow-md shadow-indigo-900/30 transition-all">
+          <span x-text="t('dashboard_new_video')"></span>
+        </button>
+      </div>
+
+      <!-- Filter bar -->
+      <div x-show="sessions.length>0" class="flex gap-2 mb-5 flex-wrap">
+        <template x-for="f in ['all','running','queued','paused','completed','failed','stopped']" :key="f">
+          <button @click="filter=f"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all"
+                  :class="filter===f ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm shadow-indigo-900/40' : 'text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'"
+                  x-text="t('filter_'+f)"></button>
+        </template>
+        <span class="ml-auto text-xs text-slate-600 self-center" x-text="filteredSessions().length+' / '+sessions.length"></span>
+      </div>
+
+      <!-- Empty -->
+      <div x-show="sessions.length===0" class="flex flex-col items-center justify-center py-32 text-center">
+        <div class="text-6xl mb-4">🎬</div>
+        <div class="text-xl font-semibold text-white mb-2" x-text="t('empty_title')"></div>
+        <div class="text-slate-500 text-sm mb-6" x-text="t('empty_subtitle')"></div>
+        <button @click="view='new-run';mode='topic'"
+                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-all"
+                x-text="t('empty_cta')"></button>
+      </div>
+
+      <!-- Empty filter result -->
+      <div x-show="sessions.length>0 && filteredSessions().length===0" class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="text-4xl mb-3">🔍</div>
+        <div class="text-slate-500 text-sm">No sessions match the current filter</div>
+      </div>
+
+      <!-- Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <template x-for="session in filteredSessions()" :key="session.id">
+          <div @click="openSession(session)"
+               class="bg-slate-900 border border-slate-800 rounded-xl p-5 cursor-pointer hover:border-slate-600 hover:bg-slate-800/60 transition-all group relative overflow-hidden">
+            <div x-show="session.status==='running'" class="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
+            <div x-show="session.status==='paused'" class="absolute inset-0 bg-purple-500/5 pointer-events-none"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border" :class="statusBadge(session.status)"
+                    x-text="t('status_'+session.status) || session.status.toUpperCase()"></span>
+              <span class="text-xs text-slate-600 font-mono" x-text="formatDate(session.started_at)"></span>
+            </div>
+            <div class="font-semibold text-white mb-0.5 line-clamp-2 group-hover:text-indigo-300 transition-colors text-sm"
+                 x-text="session.topic||session.id"></div>
+            <div class="text-xs text-slate-600 font-mono mb-3" x-text="session.id"></div>
+            <!-- Mini step track -->
+            <div class="flex gap-1 mb-3">
+              <template x-for="(step,i) in (session.steps||[])" :key="i">
+                <div class="flex-1 h-1.5 rounded-full transition-all"
+                     :class="step.status==='completed'?'bg-green-500':step.status==='running'?'bg-blue-500 animate-pulse':step.status==='failed'?'bg-red-500':'bg-slate-700'"></div>
+              </template>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-500">
+                <span x-text="(session.steps||[]).filter(s=>s.status==='completed').length"></span>/6 <span x-text="t('steps_label')"></span>
+              </span>
+              <span x-show="session.status==='running'" class="text-xs text-blue-400">↻ <span x-text="(session.steps||[])[session.current_step]?.name||'...'"></span></span>
+              <span x-show="session.status==='completed'" class="text-xs text-green-400">✓ <span x-text="t('status_completed')"></span></span>
+              <span x-show="session.status==='queued'" class="text-xs text-yellow-400">⏳ <span x-text="t('status_queued')"></span></span>
+              <span x-show="session.status==='paused'" class="text-xs text-purple-400">⏸ <span x-text="t('status_paused')"></span></span>
+              <span x-show="session.status==='stopped'" class="text-xs text-orange-400">⏹ <span x-text="t('status_stopped')"></span></span>
+            </div>
+            <div x-show="session.error" class="mt-2.5 px-2.5 py-1.5 bg-red-900/30 border border-red-800/50 rounded-lg text-xs text-red-400 line-clamp-2" x-text="session.error"></div>
+            <div x-show="session.notes&&session.notes.trim()" class="mt-2 text-xs text-slate-500 flex items-center gap-1">
+              <span>📝</span><span class="truncate" x-text="session.notes"></span>
+            </div>
+            <!-- Action buttons -->
+            <div class="flex gap-1.5 mt-3 pt-3 border-t border-slate-800/70" @click.stop>
+              <button x-show="['running','queued','paused'].includes(session.status)"
+                      @click="sessionAction('stop', session.id, $event)"
+                      class="px-2 py-1 text-xs rounded-md bg-red-900/30 border border-red-700/40 text-red-400 hover:bg-red-900/60 transition-all"
+                      x-text="t('btn_stop')"></button>
+              <button x-show="session.status==='running'"
+                      @click="sessionAction('pause', session.id, $event)"
+                      class="px-2 py-1 text-xs rounded-md bg-purple-900/30 border border-purple-700/40 text-purple-400 hover:bg-purple-900/60 transition-all"
+                      x-text="t('btn_pause')"></button>
+              <button x-show="session.status==='paused'"
+                      @click="sessionAction('resume', session.id, $event)"
+                      class="px-2 py-1 text-xs rounded-md bg-blue-900/30 border border-blue-700/40 text-blue-400 hover:bg-blue-900/60 transition-all"
+                      x-text="t('btn_resume')"></button>
+              <button x-show="['completed','failed','stopped'].includes(session.status)"
+                      @click="sessionAction('restart', session.id, $event)"
+                      class="px-2 py-1 text-xs rounded-md bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition-all"
+                      x-text="t('btn_restart')"></button>
+              <button @click="deleteSession(session.id, $event)"
+                      class="px-2 py-1 text-xs rounded-md ml-auto bg-slate-800/50 border border-slate-700/50 text-slate-500 hover:text-red-400 hover:border-red-700/50 transition-all"
+                      x-text="t('btn_delete')"></button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ══ SESSION DETAIL ══════════════════════════════════════════════ -->
+    <div x-show="view==='session'&&currentSession" class="p-6 max-w-5xl mx-auto">
+      <div class="flex items-center gap-3 mb-6">
+        <button @click="closeSession()" class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm" x-text="t('back')"></button>
+        <span class="text-slate-700">/</span>
+        <h1 class="font-semibold text-white truncate flex-1" x-text="currentSession?.topic||currentSession?.id"></h1>
+        <span class="shrink-0 px-3 py-1 rounded-full text-xs font-bold border" :class="statusBadge(currentSession?.status)"
+              x-text="t('status_'+(currentSession?.status||'')) || (currentSession?.status||'').toUpperCase()"></span>
+        <div class="flex gap-2 ml-2 shrink-0">
+          <button x-show="['running','queued','paused'].includes(currentSession?.status)"
+                  @click="sessionAction('stop', currentSession.id, $event)"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-900/30 border border-red-700/40 text-red-400 hover:bg-red-900/60 transition-all"
+                  x-text="t('btn_stop')"></button>
+          <button x-show="currentSession?.status==='running'"
+                  @click="sessionAction('pause', currentSession.id, $event)"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-900/30 border border-purple-700/40 text-purple-400 hover:bg-purple-900/60 transition-all"
+                  x-text="t('btn_pause')"></button>
+          <button x-show="currentSession?.status==='paused'"
+                  @click="sessionAction('resume', currentSession.id, $event)"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-900/30 border border-blue-700/40 text-blue-400 hover:bg-blue-900/60 transition-all"
+                  x-text="t('btn_resume')"></button>
+          <button x-show="['completed','failed','stopped'].includes(currentSession?.status)"
+                  @click="sessionAction('restart', currentSession.id, $event)"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition-all"
+                  x-text="t('btn_restart')"></button>
+          <button @click="deleteSession(currentSession.id, $event)"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-500 hover:text-red-400 hover:border-red-700/50 transition-all"
+                  x-text="t('btn_delete')"></button>
+        </div>
+      </div>
+
+      <!-- Step tracker -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div class="flex items-center justify-between mb-5">
+          <span class="text-sm font-semibold text-slate-300" x-text="t('progress_title')"></span>
+          <span class="text-xs text-slate-500">
+            <span x-text="(currentSession?.steps||[]).filter(s=>s.status==='completed').length"></span>/6 <span x-text="t('progress_complete')"></span>
+          </span>
+        </div>
+        <div class="relative flex justify-between items-start px-2">
+          <div class="absolute left-6 right-6 top-3.5 h-0.5 bg-slate-700 z-0"></div>
+          <div class="absolute left-6 top-3.5 h-0.5 bg-green-500 z-0 transition-all duration-700"
+               :style="`width: calc(${progressPct(currentSession)} * (100% - 48px) / 100)`"></div>
+          <template x-for="(step, idx) in (currentSession?.steps||[])" :key="idx">
+            <div class="relative flex flex-col items-center z-10" style="min-width:60px">
+              <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all" :class="stepCircle(step.status)">
+                <span x-show="step.status==='completed'">✓</span>
+                <span x-show="step.status==='running'" class="animate-spin-slow">↻</span>
+                <span x-show="step.status==='failed'">✗</span>
+                <span x-show="step.status==='pending'" x-text="idx+1"></span>
+              </div>
+              <div class="text-center mt-2 text-xs leading-tight max-w-14"
+                   :class="step.status==='completed'?'text-green-400':step.status==='running'?'text-blue-400 font-semibold':step.status==='failed'?'text-red-400':'text-slate-600'"
+                   x-text="t('step_'+step.name.toLowerCase().replace(' ','_')) || step.name"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Log + Sidebar -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <span class="text-sm font-semibold text-slate-300" x-text="t('live_log')"></span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-600" x-text="logLines.length+' '+t('lines')"></span>
+              <div x-show="currentSession?.status==='running'" class="flex items-center gap-1.5">
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span class="text-xs text-blue-400 font-medium" x-text="t('live')"></span>
+              </div>
+              <div x-show="currentSession?.status==='completed'" class="flex items-center gap-1.5">
+                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span class="text-xs text-green-400 font-medium" x-text="t('done')"></span>
+              </div>
+              <div x-show="currentSession?.status==='failed'" class="flex items-center gap-1.5">
+                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span class="text-xs text-red-400 font-medium" x-text="t('failed_label')"></span>
+              </div>
+            </div>
+          </div>
+          <div id="log-container" class="h-72 overflow-y-auto p-4 bg-slate-950 space-y-0.5">
+            <div x-show="logLines.length===0" class="text-slate-700 text-xs italic" x-text="t('waiting')"></div>
+            <template x-for="(line,i) in logLines" :key="i">
+              <div class="log-line whitespace-pre-wrap break-all"
+                   :class="line.includes('✓')?'text-green-400':/\[\d\/6\]/.test(line)?'text-indigo-400 font-semibold':line.toLowerCase().includes('error')||line.toLowerCase().includes('failed')?'text-red-400':line.startsWith('  ')?'text-slate-400':'text-slate-300'"
+                   x-text="line||' '"></div>
+            </template>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3" x-text="t('info')"></div>
+            <dl class="space-y-2.5">
+              <div>
+                <dt class="text-xs text-slate-600" x-text="t('session_id')"></dt>
+                <dd class="font-mono text-slate-300 text-xs mt-0.5" x-text="currentSession?.id"></dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-600" x-text="t('started')"></dt>
+                <dd class="text-slate-300 text-xs mt-0.5" x-text="formatDate(currentSession?.started_at)"></dd>
+              </div>
+              <div x-show="currentSession?.completed_at">
+                <dt class="text-xs text-slate-600" x-text="t('completed_at')"></dt>
+                <dd class="text-slate-300 text-xs mt-0.5" x-text="formatDate(currentSession?.completed_at)"></dd>
+              </div>
+              <div x-show="currentSession?.output_file">
+                <dt class="text-xs text-slate-600" x-text="t('output_file')"></dt>
+                <dd class="text-green-400 text-xs font-mono mt-0.5 break-all" x-text="currentSession?.output_file"></dd>
+              </div>
+              <div x-show="currentSession?.error">
+                <dt class="text-xs text-red-500" x-text="t('error')"></dt>
+                <dd class="text-red-400 text-xs mt-0.5 break-all" x-text="currentSession?.error"></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5" x-text="t('notes')"></div>
+            <textarea x-model="notes" @blur="saveNotes()"
+                      class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500 placeholder-slate-600 transition-colors"
+                      rows="5" :placeholder="t('notes_placeholder')"></textarea>
+            <div x-show="notesSaved" x-transition class="text-xs text-green-400 mt-1" x-text="t('notes_saved')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metadata -->
+      <div x-show="currentSession?.metadata" class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div class="flex items-center justify-between mb-5">
+          <span class="text-sm font-semibold text-slate-300" x-text="t('yt_metadata')"></span>
+          <button @click="copyMetadata()" class="px-3 py-1 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 transition-colors">
+            <span x-show="!metaCopied" x-text="t('copy_all')"></span>
+            <span x-show="metaCopied" class="text-green-400" x-text="t('copied')"></span>
+          </button>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <div class="text-xs text-slate-500 mb-1.5 font-medium" x-text="t('title_label')"></div>
+            <div class="text-white font-semibold text-lg leading-snug" x-text="currentSession?.metadata?.title"></div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1.5 font-medium" x-text="t('desc_label')"></div>
+            <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-slate-800/50 rounded-lg p-3"
+                 x-text="currentSession?.metadata?.description"></div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-2 font-medium" x-text="t('tags_label')"></div>
+            <div class="flex flex-wrap gap-1.5">
+              <template x-for="tag in (currentSession?.metadata?.tags||[])" :key="tag">
+                <span class="px-2.5 py-0.5 bg-indigo-900/40 border border-indigo-700/40 rounded-full text-xs text-indigo-300" x-text="tag"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ NEW RUN ══════════════════════════════════════════════════════ -->
+    <div x-show="view==='new-run'" class="p-6">
+      <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold text-white mb-2" x-text="t('new_video_title')"></h1>
+        <p class="text-slate-500 text-sm mb-6" x-text="t('new_video_subtitle')"></p>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex gap-1 p-1 bg-slate-800 rounded-xl mb-6">
+            <button @click="mode='topic'" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                    :class="mode==='topic'?'bg-indigo-600 text-white shadow-md':'text-slate-400 hover:text-white'"
+                    x-text="t('mode_topic')"></button>
+            <button @click="mode='script'" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                    :class="mode==='script'?'bg-indigo-600 text-white shadow-md':'text-slate-400 hover:text-white'"
+                    x-text="t('mode_script')"></button>
+          </div>
+
+          <div x-show="mode==='topic'">
+            <label class="block text-sm font-semibold text-slate-300 mb-2" x-text="t('topic_label')"></label>
+            <textarea x-model="newTopic"
+                      class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white resize-none focus:outline-none focus:border-indigo-500 placeholder-slate-600 transition-colors text-sm"
+                      rows="4" :placeholder="t('topic_placeholder')"></textarea>
+            <p class="text-xs text-slate-500 mt-2" x-text="t('topic_hint')"></p>
+          </div>
+
+          <div x-show="mode==='script'">
+            <label class="block text-sm font-semibold text-slate-300 mb-2" x-text="t('script_label')"></label>
+            <input x-model="newScriptFile" type="text"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 placeholder-slate-600 transition-colors text-sm"
+                   :placeholder="t('script_placeholder')" />
+            <p class="text-xs text-slate-500 mt-2" x-text="t('script_hint')"></p>
+          </div>
+
+          <div x-show="runError" class="mt-4 px-4 py-3 bg-red-900/30 border border-red-800/60 rounded-xl text-sm text-red-400 flex items-start gap-2">
+            <span class="shrink-0">⚠️</span><span x-text="runError"></span>
+          </div>
+
+          <button @click="submitRun()" :disabled="submitting"
+                  class="mt-6 w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all text-sm">
+            <span x-show="!submitting" class="flex items-center justify-center gap-2" x-text="t('submit')"></span>
+            <span x-show="submitting" class="flex items-center justify-center gap-2">
+              <span class="animate-spin-slow">↻</span> <span x-text="t('submitting')"></span>
+            </span>
+          </button>
+        </div>
+
+        <div class="mt-6 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3" x-text="t('pipeline_steps_title')"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <template x-for="(step, i) in pipelineSteps()" :key="i">
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 font-mono text-xs shrink-0" x-text="i+1"></span>
+                <span x-text="step"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══════════════════════════════════════════════════════ -->
+    <div x-show="view==='settings'" class="p-6">
+      <div class="max-w-3xl mx-auto">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-bold text-white" x-text="t('settings_title')"></h1>
+            <p class="text-slate-500 text-sm mt-0.5" x-text="t('settings_subtitle')"></p>
+          </div>
+          <button @click="saveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all"
+                  x-text="t('save_settings')"></button>
+        </div>
+
+        <div x-show="settingsSaved" x-transition class="mb-4 px-4 py-3 bg-green-900/30 border border-green-700/50 rounded-xl text-sm text-green-400 flex items-center gap-2"
+             x-text="t('settings_saved')"></div>
+
+        <!-- LLM -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_llm')"></h2>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('kieai_key')"></label>
+              <input x-model="settings.KIEAI_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('openai_key')"></label>
+                <input x-model="settings.OPENAI_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('anthropic_key')"></label>
+                <input x-model="settings.ANTHROPIC_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TTS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_tts')"></h2>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('provider_label')"></label>
+              <select x-model="settings.TTS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="speshaudio">Spesh Audio</option>
+                <option value="elevenlabs">ElevenLabs</option>
+                <option value="openai">OpenAI TTS</option>
+                <option value="google">Google TTS</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('spesh_key')"></label>
+                <input x-model="settings.SPESHAUDIO_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_id')"></label>
+                <input x-model="settings.SPESHAUDIO_VOICE_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" placeholder="21m00Tcm4TlvDq8ikWAM" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('language_setting')"></label>
+                <input x-model="settings.SPESHAUDIO_LANGUAGE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="en, tr, de, fr..." />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('elevenlabs_key')"></label>
+                <input x-model="settings.ELEVENLABS_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visuals -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_visuals')"></h2>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('provider_label')"></label>
+                <select x-model="settings.VISUALS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="zimage">Z-Image (kie.ai)</option>
+                  <option value="pexels">Pexels</option>
+                  <option value="dalle">DALL-E 3</option>
+                  <option value="pixabay">Pixabay</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('zimage_aspect')"></label>
+                <select x-model="settings.ZIMAGE_ASPECT_RATIO" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="16:9">16:9 — YouTube</option>
+                  <option value="9:16">9:16 — Shorts</option>
+                  <option value="1:1">1:1</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('pexels_key')"></label>
+                <input x-model="settings.PEXELS_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('pixabay_key')"></label>
+                <input x-model="settings.PIXABAY_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subtitles -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_subtitles')"></h2>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_provider_label')"></label>
+                <select x-model="settings.SUBTITLE_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="ffmpeg" x-text="t('subtitle_ffmpeg')"></option>
+                  <option value="pycaps" x-text="t('subtitle_pycaps')"></option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('pycaps_style_label')"></label>
+                <select x-model="settings.PYCAPS_STYLE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                        :disabled="settings.SUBTITLE_PROVIDER !== 'pycaps'" :class="settings.SUBTITLE_PROVIDER !== 'pycaps' ? 'opacity-40' : ''">
+                  <option value="hype">Hype — zoom-in words + emoji</option>
+                  <option value="classic">Classic — clean minimal</option>
+                  <option value="vibrant">Vibrant — colorful pop</option>
+                  <option value="explosive">Explosive — bold impact</option>
+                  <option value="fast">Fast — quick cuts</option>
+                  <option value="retro-gaming">Retro Gaming — pixel style</option>
+                  <option value="minimalist">Minimalist — simple</option>
+                  <option value="neo-minimal">Neo-Minimal — modern</option>
+                  <option value="line-focus">Line Focus — line highlight</option>
+                  <option value="word-focus">Word Focus — word highlight</option>
+                  <option value="model">Model — elegant serif</option>
+                  <option value="default">Default</option>
+                </select>
+              </div>
+            </div>
+            <div x-show="settings.SUBTITLE_PROVIDER==='pycaps'"
+                 class="px-4 py-3 bg-violet-900/20 border border-violet-700/40 rounded-xl text-xs text-violet-300 space-y-1">
+              <div class="font-semibold" x-text="t('pycaps_note_title')"></div>
+              <div x-text="t('pycaps_note_body')"></div>
+            </div>
+            <div x-show="settings.SUBTITLE_PROVIDER==='ffmpeg'"
+                 class="px-4 py-3 bg-slate-800/60 border border-slate-700/40 rounded-xl text-xs text-slate-400">
+              <span x-text="t('ffmpeg_note')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Composer -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_composer')"></h2>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('composer_desc')"></p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('composer_provider_label')"></label>
+              <select x-model="settings.COMPOSER_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="moviepy" x-text="t('composer_moviepy')"></option>
+                <option value="remotion" x-text="t('composer_remotion')"></option>
+              </select>
+            </div>
+            <div x-show="settings.COMPOSER_PROVIDER==='remotion'" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_concurrency_label')"></label>
+                <select x-model="settings.REMOTION_CONCURRENCY" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="1">1 — Slow (low memory)</option>
+                  <option value="2">2</option>
+                  <option value="4">4 — Default</option>
+                  <option value="8">8 — Fast (high memory)</option>
+                </select>
+              </div>
+              <!-- Ken Burns Zoom -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('ken_burns_zoom_label')"></label>
+                <select x-model="settings.REMOTION_KEN_BURNS_ZOOM" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="0" x-text="t('ken_burns_none')"></option>
+                  <option value="0.05" x-text="t('ken_burns_subtle')"></option>
+                  <option value="0.08" x-text="t('ken_burns_normal')"></option>
+                  <option value="0.15" x-text="t('ken_burns_strong')"></option>
+                </select>
+              </div>
+              <!-- Ken Burns Direction -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('ken_burns_direction_label')"></label>
+                <select x-model="settings.REMOTION_KEN_BURNS_DIRECTION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="center" x-text="t('kb_dir_center')"></option>
+                  <option value="pan-left" x-text="t('kb_dir_pan_left')"></option>
+                  <option value="pan-right" x-text="t('kb_dir_pan_right')"></option>
+                  <option value="random" x-text="t('kb_dir_random')"></option>
+                </select>
+              </div>
+              <!-- Subtitle Font -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_font_label')"></label>
+                <select x-model="settings.REMOTION_SUBTITLE_FONT" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="bebas" x-text="t('font_bebas')"></option>
+                  <option value="montserrat" x-text="t('font_montserrat')"></option>
+                  <option value="oswald" x-text="t('font_oswald')"></option>
+                  <option value="roboto" x-text="t('font_roboto')"></option>
+                  <option value="inter" x-text="t('font_inter')"></option>
+                  <option value="serif" x-text="t('font_serif')"></option>
+                  <option value="sans" x-text="t('font_sans')"></option>
+                </select>
+              </div>
+              <!-- Subtitle Size + Color -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_size_label')"></label>
+                  <select x-model="settings.REMOTION_SUBTITLE_SIZE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="28" x-text="t('size_small')"></option>
+                    <option value="40" x-text="t('size_medium')"></option>
+                    <option value="52" x-text="t('size_large')"></option>
+                    <option value="64" x-text="t('size_xlarge')"></option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_color_label')"></label>
+                  <select x-model="settings.REMOTION_SUBTITLE_COLOR" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="#ffffff" x-text="t('color_white')"></option>
+                    <option value="#FFE600" x-text="t('color_yellow')"></option>
+                    <option value="#00E5FF" x-text="t('color_cyan')"></option>
+                    <option value="#FF6B35" x-text="t('color_orange')"></option>
+                    <option value="#FF4D9E" x-text="t('color_pink')"></option>
+                    <option value="#B2FF59" x-text="t('color_lime')"></option>
+                    <option value="#FF3D3D" x-text="t('color_red')"></option>
+                  </select>
+                </div>
+              </div>
+              <!-- Subtitle Background + Stroke -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_bg_label')"></label>
+                  <select x-model="settings.REMOTION_SUBTITLE_BG" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="none" x-text="t('subtitle_bg_none')"></option>
+                    <option value="box" x-text="t('subtitle_bg_box')"></option>
+                    <option value="pill" x-text="t('subtitle_bg_pill')"></option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_stroke_label')"></label>
+                  <select x-model="settings.REMOTION_SUBTITLE_STROKE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="0" x-text="t('stroke_none')"></option>
+                    <option value="1" x-text="t('stroke_thin')"></option>
+                    <option value="2" x-text="t('stroke_medium')"></option>
+                    <option value="3" x-text="t('stroke_thick')"></option>
+                  </select>
+                </div>
+              </div>
+              <!-- Video Effect -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('video_effect_label')"></label>
+                <select x-model="settings.REMOTION_VIDEO_EFFECT" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="none" x-text="t('effect_none')"></option>
+                  <option value="vignette" x-text="t('effect_vignette')"></option>
+                  <option value="warm" x-text="t('effect_warm')"></option>
+                  <option value="cool" x-text="t('effect_cool')"></option>
+                  <option value="cinematic" x-text="t('effect_cinematic')"></option>
+                </select>
+              </div>
+              <!-- Transition Duration -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_transition_label')"></label>
+                <select x-model="settings.REMOTION_TRANSITION_DURATION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="0" x-text="t('transition_none')"></option>
+                  <option value="8" x-text="t('transition_fast')"></option>
+                  <option value="12" x-text="t('transition_normal')"></option>
+                  <option value="24" x-text="t('transition_slow')"></option>
+                </select>
+              </div>
+              <div class="px-4 py-3 bg-indigo-900/20 border border-indigo-700/40 rounded-xl text-xs text-indigo-300 space-y-1">
+                <div class="font-semibold">Remotion <span class="text-green-400" x-text="t('remotion_free')"></span></div>
+                <div x-text="t('remotion_setup')"></div>
+                <code class="block mt-1 bg-slate-900/60 px-3 py-1.5 rounded font-mono text-slate-300">cd remotion &amp;&amp; npm install</code>
+                <div x-text="t('remotion_features')"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_output')"></h2>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('output_dir_label')"></label>
+              <input x-model="settings.OUTPUT_DIR" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('resolution_label')"></label>
+              <select x-model="settings.VIDEO_RESOLUTION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="1920x1080">1920×1080 (1080p)</option>
+                <option value="1280x720">1280×720 (720p)</option>
+                <option value="3840x2160">3840×2160 (4K)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('fps_label')"></label>
+              <select x-model="settings.VIDEO_FPS" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="24">24 fps</option>
+                <option value="30">30 fps</option>
+                <option value="60">60 fps</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button @click="saveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
+                x-text="t('save_settings')"></button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Translations ─────────────────────────────────────────────────────────────
+const LANG = {
+  en: {
+    app_subtitle: 'Auto Video Generator',
+    nav_dashboard: 'Dashboard', nav_new_video: 'New Video', nav_settings: 'Settings',
+    sidebar_running: 'Running', sidebar_completed: 'Completed', sidebar_total: 'Total',
+    dashboard_title: 'Dashboard', dashboard_subtitle: 'All your video generation sessions',
+    dashboard_new_video: '+ New Video',
+    empty_title: 'No videos yet', empty_subtitle: 'Start generating your first YouTube video', empty_cta: 'Create First Video',
+    steps_label: 'steps',
+    status_queued: 'QUEUED', status_running: 'RUNNING', status_completed: 'COMPLETED', status_failed: 'FAILED',
+    status_stopped: 'STOPPED', status_paused: 'PAUSED',
+    filter_all: 'All', filter_running: 'Running', filter_queued: 'Queued', filter_paused: 'Paused',
+    filter_completed: 'Completed', filter_failed: 'Failed', filter_stopped: 'Stopped',
+    btn_stop: 'Stop', btn_pause: 'Pause', btn_resume: 'Resume',
+    btn_restart: 'Restart', btn_delete: 'Delete',
+    confirm_delete_msg: 'Delete this session and all its files? This cannot be undone.',
+    back: '← Back',
+    progress_title: 'Pipeline Progress', progress_complete: 'complete',
+    live_log: 'Live Log', live: 'Live', done: 'Done', failed_label: 'Failed', waiting: 'Waiting for output...',
+    lines: 'lines',
+    info: 'Info', session_id: 'Session ID', started: 'Started', completed_at: 'Completed',
+    output_file: 'Output File', error: 'Error',
+    notes: 'Notes', notes_placeholder: 'Add notes here... (auto-saves on blur)', notes_saved: '✓ Saved',
+    yt_metadata: 'YouTube Metadata', copy_all: 'Copy All', copied: '✓ Copied',
+    title_label: 'TITLE', desc_label: 'DESCRIPTION', tags_label: 'TAGS',
+    new_video_title: 'New Video', new_video_subtitle: 'Generate a full YouTube video from a topic or script file',
+    mode_topic: '💬 Generate from Topic', mode_script: '📄 Use Script File',
+    topic_label: 'Video Topic', topic_placeholder: 'e.g. The history of ancient Rome\n10 Python tips for beginners...',
+    topic_hint: 'The AI (Gemini 2.5 Flash) will generate a complete 10-scene script from your topic.',
+    script_label: 'Script File Path', script_placeholder: '/absolute/path/to/script.txt',
+    script_hint: 'Supports .txt (one scene per paragraph) or .json format.',
+    error_topic: 'Please enter a video topic.', error_script: 'Please enter a script file path.',
+    submit: '🚀 Start Generation', submitting: 'Starting...',
+    pipeline_steps_title: 'Pipeline Steps',
+    pipeline_steps: ['Script generation','YouTube metadata','Text-to-speech','AI visuals','Subtitle alignment','Video composition'],
+    settings_title: 'Settings', settings_subtitle: 'Manage API keys and pipeline configuration',
+    save_settings: 'Save Settings', settings_saved: '✓ Settings saved successfully',
+    section_llm: '🧠 Script & LLM',
+    kieai_key: 'KIE.AI API Key (Gemini 2.5 Flash — primary)',
+    openai_key: 'OpenAI API Key (fallback)', anthropic_key: 'Anthropic API Key',
+    section_tts: '🔊 Text-to-Speech', provider_label: 'Provider',
+    spesh_key: 'Spesh Audio API Key', voice_id: 'Voice ID',
+    language_setting: 'Language (empty = auto-detect)', elevenlabs_key: 'ElevenLabs API Key',
+    section_visuals: '🎨 Visuals', zimage_aspect: 'Z-Image Aspect Ratio',
+    pexels_key: 'Pexels API Key', pixabay_key: 'Pixabay API Key',
+    section_subtitles: '💬 Subtitles',
+    subtitle_provider_label: 'Subtitle Engine',
+    subtitle_ffmpeg: 'FFmpeg — soft track embed (fast, compatible)',
+    subtitle_pycaps: 'pycaps — animated CSS subtitles (styled, slower)',
+    pycaps_style_label: 'pycaps Style',
+    pycaps_note_title: 'pycaps animated subtitles',
+    pycaps_note_body: 'Renders CSS-styled animated subtitles using Chromium. ~40-60s extra render time per video.',
+    ffmpeg_note: 'Embeds subtitles as a soft track (visible in players that support subtitle tracks).',
+    section_composer: '🎬 Video Composer',
+    composer_desc: 'Choose how the final video is rendered.',
+    composer_provider_label: 'Composer Engine',
+    composer_moviepy: 'MoviePy — Python/FFmpeg (default, no setup needed)',
+    composer_remotion: 'Remotion — React renderer (Ken Burns, animations)',
+    remotion_free: '(free for individuals)',
+    remotion_concurrency_label: 'Render Concurrency (parallel threads)',
+    ken_burns_zoom_label: 'Ken Burns Zoom Intensity',
+    ken_burns_none: 'None (disabled)',
+    ken_burns_subtle: 'Subtle (5%)',
+    ken_burns_normal: 'Normal (8%) — Default',
+    ken_burns_strong: 'Strong (15%)',
+    ken_burns_direction_label: 'Ken Burns Direction',
+    kb_dir_center: 'Center — zoom toward center',
+    kb_dir_pan_left: 'Pan Left → Right',
+    kb_dir_pan_right: 'Pan Right → Left',
+    kb_dir_random: 'Random corners (alternating)',
+    remotion_subtitle_font_label: 'Subtitle Font',
+    font_bebas: 'Bebas Neue — bold/impactful (popular YouTube)',
+    font_montserrat: 'Montserrat — bold/clean (trending)',
+    font_oswald: 'Oswald — condensed/strong',
+    font_roboto: 'Roboto — modern/neutral',
+    font_inter: 'Inter — clean/minimal',
+    font_serif: 'Georgia — cinematic/elegant',
+    font_sans: 'Arial — sans-serif/simple',
+    remotion_subtitle_size_label: 'Subtitle Size',
+    size_small: 'Small (28px)',
+    size_medium: 'Medium (40px) — Default',
+    size_large: 'Large (52px)',
+    size_xlarge: 'Extra Large (64px)',
+    remotion_subtitle_color_label: 'Subtitle Color',
+    color_white: 'White',
+    color_yellow: 'Yellow',
+    color_cyan: 'Cyan',
+    color_orange: 'Orange',
+    color_pink: 'Hot Pink',
+    color_lime: 'Lime Green',
+    color_red: 'Red',
+    subtitle_bg_label: 'Subtitle Background',
+    subtitle_bg_none: 'None (shadow only)',
+    subtitle_bg_box: 'Dark Box',
+    subtitle_bg_pill: 'Rounded Pill',
+    subtitle_stroke_label: 'Text Outline/Stroke',
+    stroke_none: 'None',
+    stroke_thin: 'Thin (1px)',
+    stroke_medium: 'Medium (2px)',
+    stroke_thick: 'Thick (3px)',
+    video_effect_label: 'Video Overlay Effect',
+    effect_none: 'None',
+    effect_vignette: 'Vignette — dark edges',
+    effect_warm: 'Warm — orange tint',
+    effect_cool: 'Cool — blue tint',
+    effect_cinematic: 'Cinematic — letterbox bars',
+    remotion_transition_label: 'Scene Fade-In Duration',
+    transition_none: 'None (instant cut)',
+    transition_fast: 'Fast (8 frames)',
+    transition_normal: 'Normal (12 frames) — Default',
+    transition_slow: 'Slow (24 frames)',
+    remotion_setup: 'First-time setup: run this command in the project folder:',
+    remotion_features: 'Features: Ken Burns effect, smooth fade transitions, SRT-timed subtitles.',
+    section_output: '📁 Output', output_dir_label: 'Output Directory',
+    resolution_label: 'Resolution', fps_label: 'FPS',
+  },
+  tr: {
+    app_subtitle: 'Otomatik Video Üretici',
+    nav_dashboard: 'Panel', nav_new_video: 'Yeni Video', nav_settings: 'Ayarlar',
+    sidebar_running: 'Çalışan', sidebar_completed: 'Tamamlanan', sidebar_total: 'Toplam',
+    dashboard_title: 'Panel', dashboard_subtitle: 'Tüm video üretim oturumlarınız',
+    dashboard_new_video: '+ Yeni Video',
+    empty_title: 'Henüz video yok', empty_subtitle: 'İlk YouTube videonuzu üretmeye başlayın', empty_cta: 'İlk Videoyu Oluştur',
+    steps_label: 'adım',
+    status_queued: 'KUYRUKTA', status_running: 'ÇALIŞIYOR', status_completed: 'TAMAMLANDI', status_failed: 'BAŞARISIZ',
+    status_stopped: 'DURDURULDU', status_paused: 'DURAKLATILDI',
+    filter_all: 'Tümü', filter_running: 'Çalışan', filter_queued: 'Kuyrukta', filter_paused: 'Duraklatılan',
+    filter_completed: 'Tamamlanan', filter_failed: 'Başarısız', filter_stopped: 'Durdurulan',
+    btn_stop: 'Durdur', btn_pause: 'Duraklat', btn_resume: 'Devam Et',
+    btn_restart: 'Yeniden Başlat', btn_delete: 'Sil',
+    confirm_delete_msg: 'Bu oturum ve tüm dosyaları silinsin mi? Bu işlem geri alınamaz.',
+    back: '← Geri',
+    progress_title: 'Pipeline İlerlemesi', progress_complete: 'tamamlandı',
+    live_log: 'Canlı Log', live: 'Canlı', done: 'Bitti', failed_label: 'Başarısız', waiting: 'Çıktı bekleniyor...',
+    lines: 'satır',
+    info: 'Bilgi', session_id: 'Oturum ID', started: 'Başladı', completed_at: 'Tamamlandı',
+    output_file: 'Çıktı Dosyası', error: 'Hata',
+    notes: 'Notlar', notes_placeholder: 'Buraya not ekleyin... (odak kaybında otomatik kaydeder)', notes_saved: '✓ Kaydedildi',
+    yt_metadata: 'YouTube Meta Verileri', copy_all: 'Hepsini Kopyala', copied: '✓ Kopyalandı',
+    title_label: 'BAŞLIK', desc_label: 'AÇIKLAMA', tags_label: 'ETİKETLER',
+    new_video_title: 'Yeni Video', new_video_subtitle: 'Bir konu veya script dosyasından tam YouTube videosu üret',
+    mode_topic: '💬 Konudan Üret', mode_script: '📄 Script Dosyası Kullan',
+    topic_label: 'Video Konusu', topic_placeholder: 'örn. Antik Roma tarihi\nYeni başlayanlar için 10 Python ipucu...',
+    topic_hint: 'Yapay zeka (Gemini 2.5 Flash) konunuzdan 10 sahneli tam bir script üretecek.',
+    script_label: 'Script Dosya Yolu', script_placeholder: '/tam/yol/script.txt',
+    script_hint: '.txt (paragraf başına bir sahne) veya .json formatı desteklenir.',
+    error_topic: 'Lütfen bir video konusu girin.', error_script: 'Lütfen bir script dosya yolu girin.',
+    submit: '🚀 Üretimi Başlat', submitting: 'Başlatılıyor...',
+    pipeline_steps_title: 'Pipeline Adımları',
+    pipeline_steps: ['Script üretimi','YouTube meta verileri','Metinden sese','Yapay zeka görseller','Altyazı hizalama','Video birleştirme'],
+    settings_title: 'Ayarlar', settings_subtitle: 'API anahtarlarını ve pipeline yapılandırmasını yönetin',
+    save_settings: 'Ayarları Kaydet', settings_saved: '✓ Ayarlar başarıyla kaydedildi',
+    section_llm: '🧠 Script & Dil Modeli',
+    kieai_key: 'KIE.AI API Anahtarı (Gemini 2.5 Flash — birincil)',
+    openai_key: 'OpenAI API Anahtarı (yedek)', anthropic_key: 'Anthropic API Anahtarı',
+    section_tts: '🔊 Metinden Sese', provider_label: 'Sağlayıcı',
+    spesh_key: 'Spesh Audio API Anahtarı', voice_id: 'Ses ID',
+    language_setting: 'Dil (boş = otomatik algıla)', elevenlabs_key: 'ElevenLabs API Anahtarı',
+    section_visuals: '🎨 Görseller', zimage_aspect: 'Z-Image En-Boy Oranı',
+    pexels_key: 'Pexels API Anahtarı', pixabay_key: 'Pixabay API Anahtarı',
+    section_subtitles: '💬 Altyazılar',
+    subtitle_provider_label: 'Altyazı Motoru',
+    subtitle_ffmpeg: 'FFmpeg — yumuşak parça gömme (hızlı, uyumlu)',
+    subtitle_pycaps: 'pycaps — animasyonlu CSS altyazıları (stilli, daha yavaş)',
+    pycaps_style_label: 'pycaps Stili',
+    pycaps_note_title: 'pycaps animasyonlu altyazılar',
+    pycaps_note_body: 'Chromium kullanarak CSS stilli animasyonlu altyazılar render eder. Video başına ~40-60 sn ek render süresi.',
+    ffmpeg_note: 'Altyazıları yumuşak parça olarak gömer (altyazı parçası destekleyen oynatıcılarda görünür).',
+    section_composer: '🎬 Video Birleştirici',
+    composer_desc: 'Son videonun nasıl oluşturulacağını seçin.',
+    composer_provider_label: 'Birleştirici Motor',
+    composer_moviepy: 'MoviePy — Python/FFmpeg (varsayılan, kurulum gerekmez)',
+    composer_remotion: 'Remotion — React renderer (Ken Burns, animasyonlar)',
+    remotion_free: '(bireyler için ücretsiz)',
+    remotion_concurrency_label: 'Render Eş Zamanlılığı (paralel thread)',
+    ken_burns_zoom_label: 'Ken Burns Zoom Yoğunluğu',
+    ken_burns_none: 'Yok (devre dışı)',
+    ken_burns_subtle: 'Hafif (%5)',
+    ken_burns_normal: 'Normal (%8) — Varsayılan',
+    ken_burns_strong: 'Güçlü (%15)',
+    ken_burns_direction_label: 'Ken Burns Yönü',
+    kb_dir_center: 'Merkeze — merkeze doğru zoom',
+    kb_dir_pan_left: 'Sola Pan → Sağa',
+    kb_dir_pan_right: 'Sağa Pan → Sola',
+    kb_dir_random: 'Rastgele köşeler (dönüşümlü)',
+    remotion_subtitle_font_label: 'Altyazı Fontu',
+    font_bebas: 'Bebas Neue — kalın/çarpıcı (YouTube popüler)',
+    font_montserrat: 'Montserrat — kalın/temiz (trend)',
+    font_oswald: 'Oswald — dar/güçlü',
+    font_roboto: 'Roboto — modern/nötr',
+    font_inter: 'Inter — temiz/minimal',
+    font_serif: 'Georgia — sinematik/zarif',
+    font_sans: 'Arial — sans-serif/sade',
+    remotion_subtitle_size_label: 'Altyazı Boyutu',
+    size_small: 'Küçük (28px)',
+    size_medium: 'Orta (40px) — Varsayılan',
+    size_large: 'Büyük (52px)',
+    size_xlarge: 'Çok Büyük (64px)',
+    remotion_subtitle_color_label: 'Altyazı Rengi',
+    color_white: 'Beyaz',
+    color_yellow: 'Sarı',
+    color_cyan: 'Camgöbeği',
+    color_orange: 'Turuncu',
+    color_pink: 'Pembe',
+    color_lime: 'Limon Yeşili',
+    color_red: 'Kırmızı',
+    subtitle_bg_label: 'Altyazı Arka Planı',
+    subtitle_bg_none: 'Yok (sadece gölge)',
+    subtitle_bg_box: 'Koyu Kutu',
+    subtitle_bg_pill: 'Yuvarlak Pill',
+    subtitle_stroke_label: 'Metin Çerçevesi/Stroke',
+    stroke_none: 'Yok',
+    stroke_thin: 'İnce (1px)',
+    stroke_medium: 'Orta (2px)',
+    stroke_thick: 'Kalın (3px)',
+    video_effect_label: 'Video Efekti',
+    effect_none: 'Yok',
+    effect_vignette: 'Vignet — karanlık kenarlar',
+    effect_warm: 'Sıcak — turuncu ton',
+    effect_cool: 'Soğuk — mavi ton',
+    effect_cinematic: 'Sinematik — letterbox çubuklar',
+    remotion_transition_label: 'Sahne Geçiş Süresi',
+    transition_none: 'Yok (anlık kesim)',
+    transition_fast: 'Hızlı (8 kare)',
+    transition_normal: 'Normal (12 kare) — Varsayılan',
+    transition_slow: 'Yavaş (24 kare)',
+    remotion_setup: 'İlk kurulum: proje klasöründe şu komutu çalıştırın:',
+    remotion_features: 'Özellikler: Ken Burns efekti, yumuşak geçişler, SRT zamanlı altyazılar.',
+    section_output: '📁 Çıktı', output_dir_label: 'Çıktı Klasörü',
+    resolution_label: 'Çözünürlük', fps_label: 'FPS',
+  }
+};
+
+// ── App ──────────────────────────────────────────────────────────────────────
+function app() {
+  return {
+    lang: localStorage.getItem('ytrobot-lang') || 'en',
+    view: 'dashboard', mode: 'topic',
+    sessions: [], currentSession: null, settings: {},
+    newTopic: '', newScriptFile: '', notes: '', logLines: [],
+    submitting: false, runError: '',
+    settingsSaved: false, notesSaved: false, metaCopied: false,
+    filter: 'all',
+    _sse: null, _timer: null,
+
+    t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
+    setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
+    pipelineSteps() { return this.t('pipeline_steps'); },
+
+    async init() {
+      await this.loadSessions();
+      this._timer = setInterval(() => this.loadSessions(), 3000);
+    },
+
+    async loadSessions() {
+      try {
+        const r = await fetch('/api/sessions');
+        this.sessions = await r.json();
+        if (this.currentSession) {
+          const u = this.sessions.find(s => s.id === this.currentSession.id);
+          if (u) this.currentSession = u;
+        }
+      } catch(e) {}
+    },
+
+    openSession(session) {
+      this.currentSession = session;
+      this.notes = session.notes || '';
+      this.logLines = [];
+      this.view = 'session';
+      if (this._sse) { this._sse.close(); this._sse = null; }
+      const es = new EventSource(`/api/sessions/${session.id}/logs`);
+      this._sse = es;
+      es.onmessage = (e) => {
+        const line = JSON.parse(e.data);
+        if (line === '__DONE__') { es.close(); this._sse = null; this.loadSessions(); return; }
+        this.logLines.push(line);
+        this.$nextTick(() => { const el = document.getElementById('log-container'); if (el) el.scrollTop = el.scrollHeight; });
+      };
+      es.onerror = () => { es.close(); this._sse = null; };
+    },
+
+    closeSession() {
+      if (this._sse) { this._sse.close(); this._sse = null; }
+      this.currentSession = null; this.logLines = []; this.view = 'dashboard';
+    },
+
+    async saveNotes() {
+      if (!this.currentSession) return;
+      await fetch(`/api/sessions/${this.currentSession.id}`, {
+        method: 'PATCH', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ notes: this.notes }),
+      });
+      this.notesSaved = true; setTimeout(() => this.notesSaved = false, 2000);
+    },
+
+    async submitRun() {
+      this.runError = '';
+      const body = {};
+      if (this.mode === 'topic') {
+        if (!this.newTopic.trim()) { this.runError = this.t('error_topic'); return; }
+        body.topic = this.newTopic.trim();
+      } else {
+        if (!this.newScriptFile.trim()) { this.runError = this.t('error_script'); return; }
+        body.script_file = this.newScriptFile.trim();
+      }
+      this.submitting = true;
+      try {
+        const r = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if (!r.ok) { this.runError = (await r.json()).detail || 'Request failed'; return; }
+        const { session_id } = await r.json();
+        this.newTopic = ''; this.newScriptFile = '';
+        await this.loadSessions();
+        const session = this.sessions.find(s => s.id === session_id);
+        if (session) this.openSession(session);
+      } catch(e) { this.runError = e.message; }
+      finally { this.submitting = false; }
+    },
+
+    async loadSettings() { const r = await fetch('/api/settings'); this.settings = await r.json(); },
+
+    async saveSettings() {
+      await fetch('/api/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.settings }) });
+      this.settingsSaved = true; setTimeout(() => this.settingsSaved = false, 3000);
+    },
+
+    async copyMetadata() {
+      if (!this.currentSession?.metadata) return;
+      const m = this.currentSession.metadata;
+      const text = `Title: ${m.title}\n\nDescription:\n${m.description}\n\nTags: ${(m.tags||[]).join(', ')}`;
+      await navigator.clipboard.writeText(text);
+      this.metaCopied = true; setTimeout(() => this.metaCopied = false, 2000);
+    },
+
+    progressPct(session) {
+      if (!session?.steps) return 0;
+      if (session.status === 'completed') return 100;
+      const done = session.steps.filter(s => s.status === 'completed').length;
+      return Math.round((done / session.steps.length) * 100);
+    },
+
+    filteredSessions() {
+      if (this.filter === 'all') return this.sessions;
+      return this.sessions.filter(s => s.status === this.filter);
+    },
+
+    async sessionAction(action, sid, e) {
+      e.stopPropagation();
+      try {
+        await fetch(`/api/sessions/${sid}/${action}`, { method: 'POST' });
+        await this.loadSessions();
+      } catch(err) { console.error(err); }
+    },
+
+    async deleteSession(sid, e) {
+      e.stopPropagation();
+      if (!window.confirm(this.t('confirm_delete_msg'))) return;
+      await fetch(`/api/sessions/${sid}`, { method: 'DELETE' });
+      if (this.currentSession?.id === sid) this.closeSession();
+      await this.loadSessions();
+    },
+
+    statusBadge(status) {
+      return {
+        queued:'text-yellow-400 bg-yellow-400/10 border-yellow-500/30',
+        running:'text-blue-400 bg-blue-400/10 border-blue-500/30',
+        completed:'text-green-400 bg-green-400/10 border-green-500/30',
+        failed:'text-red-400 bg-red-400/10 border-red-500/30',
+        stopped:'text-orange-400 bg-orange-400/10 border-orange-500/30',
+        paused:'text-purple-400 bg-purple-400/10 border-purple-500/30',
+      }[status] || 'text-slate-400 bg-slate-800 border-slate-700';
+    },
+
+    stepCircle(status) {
+      return { pending:'border-slate-700 text-slate-600 bg-slate-900', running:'border-blue-500 text-blue-400 bg-blue-500/10 shadow-sm shadow-blue-500/30', completed:'border-green-500 text-green-400 bg-green-500/10', failed:'border-red-500 text-red-400 bg-red-500/10' }[status] || 'border-slate-700 text-slate-600 bg-slate-900';
+    },
+
+    formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString(this.lang === 'tr' ? 'tr-TR' : 'en-US', { month:'short', day:'numeric' }) + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    },
+  };
+}
+</script>
+</body>
+</html>

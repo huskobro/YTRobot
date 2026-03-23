@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m scripts.aggregate_benchmark \"/Users/huseyincoskun/.claude/skills/ytrobot-workspace/iteration-1\" --skill-name ytrobot)",
+      "WebFetch(domain:kie.ai)",
+      "WebFetch(domain:speshaudio.com)",
+      "WebFetch(domain:docs.kie.ai)"
+    ]
+  }
+}

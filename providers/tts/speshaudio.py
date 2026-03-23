@@ -1,4 +1,4 @@
-"""Spesh Audio TTS provider.
+"""Spesh Audio TTS provider (ElevenLabs-compatible API).
 
 API endpoint: POST https://speshaudio.com/api/v1/tts
 Auth: Authorization: Bearer <key>
@@ -7,13 +7,18 @@ Set in .env:
   SPESHAUDIO_API_KEY=sk_spesh_...
   SPESHAUDIO_VOICE_ID=21m00Tcm4TlvDq8ikWAM   (ElevenLabs voice ID)
   SPESHAUDIO_LANGUAGE=                         (optional; omit for auto-detect)
+
+Voice quality settings (ElevenLabs-compatible):
+  SPESHAUDIO_STABILITY=0.5         # 0-1: lower = more expressive, higher = more consistent
+  SPESHAUDIO_SIMILARITY_BOOST=0.75 # 0-1: how closely to match the original voice
+  SPESHAUDIO_STYLE=0.3             # 0-1: style exaggeration for more natural, dynamic speech
 """
 import time
 import requests
 from pathlib import Path
 
 from config import settings
-from providers.tts.base import BaseTTSProvider
+from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts
 
 SPESH_URL = "https://speshaudio.com/api/v1/tts"
 MAX_RETRIES = 3
@@ -25,12 +30,16 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         self.api_key = settings.speshaudio_api_key
         self.voice_id = settings.speshaudio_voice_id
         self.language = settings.speshaudio_language  # "" → omit → auto-detect
+        self.stability = settings.speshaudio_stability
+        self.similarity_boost = settings.speshaudio_similarity_boost
+        self.style = settings.speshaudio_style
         if not self.api_key:
             raise ValueError("SPESHAUDIO_API_KEY is not set in .env")
         if not self.voice_id:
             raise ValueError("SPESHAUDIO_VOICE_ID is not set in .env")
 
     def synthesize(self, text: str, output_path: Path) -> Path:
+        text = clean_for_tts(text)
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -39,6 +48,12 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
             "text": text,
             "voice_id": self.voice_id,
             "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": self.stability,
+                "similarity_boost": self.similarity_boost,
+                "style": self.style,
+                "use_speaker_boost": True,
+            },
         }
         if self.language:
             payload["language"] = self.language
@@ -73,4 +88,5 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         if credits_used is not None:
             print(f"    [Spesh] Credits used: {credits_used} | Remaining: {credits_left}")
 
+        apply_speed(output_path, settings.tts_speed)
         return output_path

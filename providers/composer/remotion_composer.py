@@ -67,6 +67,29 @@ def _assign_subtitles_to_scene(
     return result
 
 
+def _load_word_timing(session_dir: Path) -> list[dict]:
+    """Load word_timing.json if it exists."""
+    wt_path = session_dir / "word_timing.json"
+    if wt_path.exists():
+        return json.loads(wt_path.read_text(encoding="utf-8"))
+    return []
+
+
+def _assign_words_to_subtitle(
+    scene_words: list[dict], sub_start_sec: float, sub_end_sec: float,
+    scene_start_sec: float, fps: int
+) -> list[dict]:
+    """Return word entries that fall within a subtitle entry's time window."""
+    result = []
+    for w in scene_words:
+        if w["endSec"] <= sub_start_sec or w["startSec"] >= sub_end_sec:
+            continue
+        start_frame = max(0, round((w["startSec"] - scene_start_sec) * fps))
+        end_frame = round((w["endSec"] - scene_start_sec) * fps)
+        result.append({"word": w["word"], "startFrame": start_frame, "endFrame": end_frame})
+    return result
+
+
 @contextlib.contextmanager
 def _local_http_server(directory: Path):
     """Serve a directory over HTTP on a free port. Yields the base URL."""
@@ -143,6 +166,8 @@ def compose_remotion(
 
     # Parse SRT for accurate subtitle timing
     srt_entries = _parse_srt(srt_path) if srt_path and srt_path.exists() else []
+    # Load word-level timing for karaoke highlight
+    word_timing_data = _load_word_timing(session_dir)
 
     # Serve the output root (parent of session dir) over HTTP so Remotion can
     # load audio/visual assets — file:// URLs are not supported by the CLI renderer.
@@ -163,6 +188,19 @@ def compose_remotion(
             subtitles = _assign_subtitles_to_scene(
                 srt_entries, scene_cursor_sec, scene_cursor_sec + duration_sec, fps
             )
+
+            # Attach word-level timing to each subtitle entry for karaoke
+            scene_wt = next((s for s in word_timing_data if s["scene"] == i), None)
+            if scene_wt and scene_wt.get("words"):
+                # Match SRT entries back to original timing to assign words
+                for sub_entry in subtitles:
+                    # Convert subtitle frames back to absolute seconds for matching
+                    sub_abs_start = scene_cursor_sec + sub_entry["startFrame"] / fps
+                    sub_abs_end = scene_cursor_sec + sub_entry["endFrame"] / fps
+                    sub_entry["words"] = _assign_words_to_subtitle(
+                        scene_wt["words"], sub_abs_start, sub_abs_end,
+                        scene_cursor_sec, fps
+                    )
 
             # Build HTTP URLs relative to the served output root
             audio_rel = audio.resolve().relative_to(output_root)

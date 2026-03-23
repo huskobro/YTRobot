@@ -10,13 +10,23 @@ class Settings(BaseSettings):
     # kie.ai — Gemini 2.5 Flash (primary for script/metadata generation)
     kieai_api_key: str = ""
 
+    # Script generation
+    target_audience: str = ""  # e.g. "beginner YouTubers under 1k subscribers who want to grow"
+    script_humanize_with_llm: bool = False  # Gemini pass to rewrite script for natural human speech
+
     # TTS
     tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio"] = "openai"
+    tts_enhance_with_llm: bool = False  # Run Gemini to add TTS emphasis/pauses before synthesis
+    openai_tts_voice: str = "onyx"  # alloy | ash | coral | echo | fable | nova | onyx | sage | shimmer
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
     speshaudio_api_key: str = ""
     speshaudio_voice_id: str = ""
     speshaudio_language: str = ""  # e.g. "en", "tr" — leave empty for auto-detect
+    speshaudio_stability: float = 0.5        # 0-1: lower = more expressive/varied
+    speshaudio_similarity_boost: float = 0.75  # 0-1: higher = closer to original voice
+    speshaudio_style: float = 0.3            # 0-1: style exaggeration for natural speech
+    tts_speed: float = 1.0                   # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
 
     # Visuals
     visuals_provider: Literal["pexels", "pixabay", "dalle", "zimage"] = "pexels"

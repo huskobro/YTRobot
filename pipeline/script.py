@@ -1,12 +1,11 @@
 """Script generation stage.
 
 A "script" is a list of Scene objects. Each scene has:
-  - narration: the spoken text
+  - narration: the spoken text (written in natural speech with TTS emphasis markers)
   - visual_query: a short generic phrase used to search/generate the visual
                   (stock-footage-friendly, 3-5 words, no proper nouns)
 
-Uses Gemini 2.5 Flash via kie.ai by default (KIEAI_API_KEY).
-Falls back to OpenAI (OPENAI_API_KEY) if kie.ai key is not set.
+Uses Gemini 2.5 Flash via kie.ai (KIEAI_API_KEY required).
 """
 import json
 from dataclasses import dataclass, asdict
@@ -26,48 +25,213 @@ class Scene:
 KIEAI_BASE_URL = "https://api.kie.ai/gemini-2.5-flash/v1"
 KIEAI_MODEL = "gemini-2.5-flash"
 
-SCRIPT_SYSTEM_PROMPT = """\
-You are a professional YouTube scriptwriter. Given a topic, write a compelling \
-long-form video script optimised for viewer retention.
+_SCRIPT_SYSTEM_PROMPT_TEMPLATE = """\
+You are an expert YouTube scriptwriter whose videos get millions of views.
 
-Return ONLY a valid JSON object with a single key "scenes" containing an array. \
-Each element must have exactly two keys:
-  "narration"     – the spoken words for that scene (3-6 engaging sentences)
-  "visual_query"  – a SHORT, generic, stock-footage-friendly phrase \
-(3-5 words, NO proper nouns, NO historical figures, NO brand names). \
-Examples of good visual_query values: "ancient stone ruins", \
-"busy city street night", "scientist working lab", "mountain river aerial".
+AUDIENCE
+--------
+{audience}
 
-Write exactly 10 scenes. Do not add any text outside the JSON object.\
+VIDEO STRUCTURE (follow this strictly)
+---------------------------------------
+• Scene 0 — HOOK: The first 30 seconds. Create an irresistible question, tension, or bold
+  claim. Make the viewer feel they NEED to keep watching. Use curiosity, contrast, or a
+  surprising statement. This is the most important scene.
+• Scene 1 — Establish the surface problem AND hint at the deeper emotional problem beneath it.
+• Scenes 2–8 — Deliver value progressively. Tell stories, build tension, use examples.
+• Scene 9 — Resolve the deeper emotional problem (not just the technical surface problem).
+  Leave the viewer feeling transformed, not just informed.
+
+GOAL ALIGNMENT (critical)
+--------------------------
+The viewer's goal and the creator's goal must feel perfectly aligned. Never write a script
+where the creator feels like they're selling or lecturing. Write as if you genuinely care
+about helping this specific viewer solve their problem.
+
+THE DEEPER PROBLEM (what separates viral from forgettable)
+----------------------------------------------------------
+Every great YouTube video has TWO layers:
+  • Surface problem — the practical/technical topic (e.g. "how to edit videos faster")
+  • Deeper problem — the emotional struggle underneath (e.g. perfectionism, fear of failure,
+    self-doubt, impatience, feeling behind)
+Weave the deeper emotional problem naturally throughout the narration without stating it
+explicitly until the final scene.
+
+CONVERSATIONAL WRITING STYLE (Gemini must follow every rule below)
+-------------------------------------------------------------------
+• Write exactly as a person speaks — contractions (it's, you're, don't, I've), fragments OK
+• Vary sentence rhythm: SHORT punchy sentences. Followed by longer ones that breathe and
+  elaborate. Then short again.
+• NEVER use: "In conclusion", "Furthermore", "It's worth noting", "In today's world",
+  "Delve into", "Leverage", or any corporate/essay language
+• Write to ONE person, not a crowd. Say "you" not "viewers"
+• Include moments of humor, self-awareness, or vulnerability — this is what makes it human
+• Occasionally include small imperfections: hesitations ("I mean..."), rhetorical questions,
+  or mid-thought corrections that feel natural in speech
+
+TTS VOICE EMPHASIS MARKERS (so the AI voice sounds human, not robotic)
+------------------------------------------------------------------------
+• CAPITALIZE words that need strong spoken emphasis: "this is INSANE", "you NEED this"
+• Use "..." for meaningful pauses before impactful statements:
+  "And then I realized... everything I thought I knew was wrong."
+• Use "!" for genuine excitement or urgency — sparingly, max 1 per scene:
+  "And that's when everything clicked!"
+• Use commas to create natural speech breathing rhythm
+• Maximum 1–2 capitalized emphasis words per scene — do NOT over-capitalize
+• NEVER use "/" (slash) — write "or" instead: "fast or easy", not "fast/easy"
+
+OUTPUT FORMAT
+-------------
+Return ONLY a valid JSON object with key "scenes" containing exactly 10 elements.
+Each element has exactly two keys:
+  "narration"     — 3–6 sentences of spoken dialogue following all style rules above
+  "visual_query"  — SHORT generic stock-footage phrase (3–5 words, NO proper nouns,
+                    NO brand names, NO historical figures, NO text or writing visible,
+                    NO whiteboards, NO signs, NO labels, NO charts, NO screens with text)
+                    Good examples: "ancient stone ruins", "busy city street night",
+                    "scientist working lab", "mountain river aerial view"
+
+Do not add any text outside the JSON object.\
 """
 
 
-def _client_and_model():
-    from openai import OpenAI
-    if settings.kieai_api_key:
-        return OpenAI(api_key=settings.kieai_api_key, base_url=KIEAI_BASE_URL), KIEAI_MODEL
-    return OpenAI(api_key=settings.openai_api_key), "gpt-4o"
+def _load_custom_prompt(name: str) -> str | None:
+    """Load a custom prompt from prompts/<name>.txt if it exists, else return None."""
+    from pathlib import Path
+    p = Path("prompts") / f"{name}.txt"
+    return p.read_text(encoding="utf-8").strip() if p.exists() else None
+
+
+def _build_script_prompt() -> str:
+    audience = settings.target_audience.strip()
+    if audience:
+        audience_block = f"Target audience: {audience}"
+    else:
+        audience_block = "General audience — assume curious, motivated viewers who want to improve their skills."
+    template = _load_custom_prompt("script_system") or _SCRIPT_SYSTEM_PROMPT_TEMPLATE
+    return template.format(audience=audience_block)
 
 
 def _chat(system: str, user: str) -> str:
-    """Call Gemini 2.5 Flash via kie.ai (falls back to OpenAI if no kie.ai key)."""
-    client, model = _client_and_model()
-    kwargs: dict = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "response_format": {"type": "json_object"},
-        "stream": False,
-    }
-    if settings.kieai_api_key:
-        # kie.ai-specific param — must go in extra_body, not top-level
-        kwargs["extra_body"] = {"include_thoughts": False}
-    else:
-        kwargs["temperature"] = 0.7
-    response = client.chat.completions.create(**kwargs)
+    """Call Gemini 2.5 Flash via kie.ai — returns JSON string."""
+    from openai import OpenAI
+    if not settings.kieai_api_key:
+        raise RuntimeError("KIEAI_API_KEY is required. Set it in Settings.")
+    client = OpenAI(api_key=settings.kieai_api_key, base_url=KIEAI_BASE_URL)
+    response = client.chat.completions.create(
+        model=KIEAI_MODEL,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        response_format={"type": "json_object"},
+        extra_body={"include_thoughts": False},
+        stream=False,
+    )
     return response.choices[0].message.content
+
+
+_TTS_ENHANCE_PROMPT = """\
+You are a TTS voice coach. Your job is to make AI-generated narration sound HUMAN and
+natural when read by a text-to-speech voice.
+
+Given a narration text, return it with these modifications ONLY:
+1. CAPITALIZE 1–2 key words per sentence that should be spoken with strong emphasis.
+   Pick the most emotionally or informationally important word.
+   Example: "this changes everything" → "this changes EVERYTHING"
+2. Add "..." before impactful statements to create a meaningful pause.
+   Example: "And I finally got it. The secret was patience." →
+            "And I finally got it. The secret... was patience."
+3. Add "!" for genuine excitement or urgency — sparingly, max 1 per scene.
+   Only add where the speaker would naturally raise their voice with energy.
+   Example: "That's the whole trick." → "That's the whole trick!"
+4. Add commas where the speaker would naturally breathe or pause.
+5. Do NOT change any words, sentences, or meaning. Only add emphasis markers.
+6. Do NOT over-capitalize. Maximum 2 capitalized words total per scene.
+7. Do NOT use "/" (slash) at all — if you see one, replace it with " or ".
+
+Return ONLY the modified narration text. No explanation, no JSON, just the text.\
+"""
+
+
+_SCRIPT_HUMANIZE_PROMPT = """\
+You are a professional script editor who turns AI-generated YouTube narration into
+text that sounds like a real person spontaneously talking — not reading.
+
+Given a narration text, rewrite it following these rules STRICTLY:
+
+1. USE CONTRACTIONS everywhere: it's, you're, don't, I've, that's, we're, I'll, won't
+2. BREAK long sentences. Mix rhythm: short punch. Then a longer one that breathes and
+   builds. Then short again.
+3. REMOVE ALL AI-ISMS — replace or cut any of: "delve into", "it's worth noting",
+   "in conclusion", "in today's world", "leverage", "furthermore", "it's important to",
+   "navigate", "landscape", "game-changer", "at the end of the day"
+4. ADD natural imperfections: rhetorical questions ("You know what I mean?"),
+   mid-thought pauses ("And honestly..."), hesitations ("I mean, think about it.")
+5. SPEAK TO ONE PERSON: "you" not "viewers" / "everyone" / "we all"
+6. KEEP all the core information and key points — only change the delivery
+7. PRESERVE existing TTS markers if present: CAPS emphasis, "...", "!"
+8. DO NOT add new TTS markers — that's a separate step
+9. NEVER use "/" (slash) — write "or" instead: "clear or simple", not "clear/simple"
+
+Return ONLY the rewritten narration text. No explanation, no JSON, just the text.\
+"""
+
+
+_COMBINED_HUMANIZE_ENHANCE_PROMPT = """\
+You are a professional script editor AND TTS voice coach. In ONE pass, do both jobs:
+
+PART 1 — HUMANIZE (rewrite for natural speech):
+1. USE CONTRACTIONS everywhere: it's, you're, don't, I've, that's, we're, I'll, won't
+2. BREAK long sentences. Mix rhythm: short punch. Then a longer one that breathes.
+3. REMOVE ALL AI-ISMS: "delve into", "it's worth noting", "in conclusion",
+   "in today's world", "leverage", "furthermore", "navigate", "landscape", "game-changer"
+4. ADD natural imperfections: rhetorical questions, mid-thought pauses ("And honestly..."),
+   hesitations ("I mean, think about it.")
+5. SPEAK TO ONE PERSON: "you" not "viewers" / "everyone" / "we all"
+6. KEEP all core information — only change the delivery
+
+PART 2 — TTS EMPHASIS (add voice markers):
+7. CAPITALIZE 1–2 key words per scene that need strong spoken emphasis.
+   Example: "this changes everything" → "this changes EVERYTHING"
+8. Add "..." before impactful statements for a meaningful pause.
+   Example: "The secret... was patience."
+9. Add "!" for genuine excitement — sparingly, max 1 per scene.
+10. Add commas where the speaker would naturally breathe.
+11. Do NOT over-capitalize. Maximum 2 CAPS words total per scene.
+
+GLOBAL RULES:
+• NEVER use "/" (slash) — write "or" instead
+• Return ONLY the rewritten narration text. No explanation, no JSON, just the text.\
+"""
+
+
+def _gemini_call(system: str, user: str) -> str:
+    """Single Gemini API call (non-JSON, plain text response)."""
+    from openai import OpenAI
+    if not settings.kieai_api_key:
+        raise RuntimeError("KIEAI_API_KEY is required. Set it in Settings.")
+    client = OpenAI(api_key=settings.kieai_api_key, base_url=KIEAI_BASE_URL)
+    response = client.chat.completions.create(
+        model=KIEAI_MODEL,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        extra_body={"include_thoughts": False},
+        stream=False,
+    )
+    return response.choices[0].message.content.strip()
+
+
+def humanize_and_enhance_narration(narration: str) -> str:
+    """Combined pass: humanize + add TTS markers in a single Gemini call."""
+    prompt = _load_custom_prompt("script_humanize") or _COMBINED_HUMANIZE_ENHANCE_PROMPT
+    return _gemini_call(prompt, narration)
+
+
+def humanize_script_narration(narration: str) -> str:
+    """Use Gemini to rewrite narration to sound more natural/human (word-level edits)."""
+    return _gemini_call(_load_custom_prompt("script_humanize") or _SCRIPT_HUMANIZE_PROMPT, narration)
+
+
+def enhance_narration_for_tts(narration: str) -> str:
+    """Use Gemini to add TTS emphasis markers (CAPS, pauses, exclamation)."""
+    return _gemini_call(_load_custom_prompt("tts_enhance") or _TTS_ENHANCE_PROMPT, narration)
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
@@ -80,13 +244,23 @@ def _fix_scene(s: dict) -> dict:
 
 
 def generate_from_topic(topic: str) -> list[Scene]:
-    raw = _chat(SCRIPT_SYSTEM_PROMPT, f"Topic: {topic}")
+    prompt = _build_script_prompt()
+    raw = _chat(prompt, f"Topic: {topic}")
     data = json.loads(raw)
     scenes_data = (
         data if isinstance(data, list)
         else data.get("scenes", data.get("script", list(data.values())[0] if data else []))
     )
-    return [Scene(**_fix_scene(s)) for s in scenes_data]
+    scenes = [Scene(**_fix_scene(s)) for s in scenes_data]
+    both = settings.script_humanize_with_llm and settings.tts_enhance_with_llm
+    only_humanize = settings.script_humanize_with_llm and not settings.tts_enhance_with_llm
+    if both:
+        print("  [Script] Humanizing + TTS-enhancing narrations (combined Gemini pass)...")
+        scenes = [Scene(narration=humanize_and_enhance_narration(s.narration), visual_query=s.visual_query) for s in scenes]
+    elif only_humanize:
+        print("  [Script] Humanizing narrations with Gemini...")
+        scenes = [Scene(narration=humanize_script_narration(s.narration), visual_query=s.visual_query) for s in scenes]
+    return scenes
 
 
 def load_from_file(path: Path) -> list[Scene]:

@@ -21,6 +21,15 @@ export interface VideoSettings {
   videoEffect: "none" | "vignette" | "warm" | "cool" | "cinematic";
 }
 
+export interface WordEntry {
+  /** Single word text */
+  word: string;
+  /** Start frame (relative to the start of this scene) */
+  startFrame: number;
+  /** End frame (relative to the start of this scene) */
+  endFrame: number;
+}
+
 export interface SubtitleEntry {
   /** Subtitle text */
   text: string;
@@ -28,6 +37,8 @@ export interface SubtitleEntry {
   startFrame: number;
   /** End frame (relative to the start of this scene) */
   endFrame: number;
+  /** Word-level timing for karaoke highlight (optional) */
+  words?: WordEntry[];
 }
 
 export interface SceneData {

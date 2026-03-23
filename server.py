@@ -21,6 +21,22 @@ app = FastAPI(title="YTRobot")
 
 OUTPUT_DIR = Path("output")
 ENV_FILE = Path(".env")
+PROMPTS_DIR = Path("prompts")
+PRESETS_DIR = Path("presets")
+
+PROMPT_KEYS = ["script_system", "script_humanize", "metadata_system", "tts_enhance"]
+
+
+def _list_presets() -> list:
+    if not PRESETS_DIR.exists():
+        return []
+    out = []
+    for f in sorted(PRESETS_DIR.glob("*.json")):
+        try:
+            out.append({"name": f.stem, "values": json.loads(f.read_text())})
+        except Exception:
+            pass
+    return out
 
 STEPS = ["Script", "Metadata", "TTS", "Visuals", "Subtitles", "Compose"]
 STEP_MARKERS = {
@@ -111,7 +127,7 @@ def _cleanup_stale_sessions():
 
 # ── Pipeline runner ───────────────────────────────────────────────────────────
 
-def _run(sid: str, topic: Optional[str], script: Optional[str]):
+def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict = None):
     session = _read_session(sid)
     session["status"] = "running"
     session["paused"] = False
@@ -124,6 +140,10 @@ def _run(sid: str, topic: Optional[str], script: Optional[str]):
     else:
         cmd += ["--script", script]
 
+    run_env = {**os.environ}
+    if preset_env:
+        run_env.update({k: str(v) for k, v in preset_env.items()})
+
     try:
         with open(log_path, "w", encoding="utf-8") as lf:
             proc = subprocess.Popen(
@@ -133,6 +153,7 @@ def _run(sid: str, topic: Optional[str], script: Optional[str]):
                 text=True,
                 cwd=Path(__file__).parent,
                 encoding="utf-8",
+                env=run_env,
             )
             with _procs_lock:
                 _procs[sid] = proc
@@ -206,6 +227,7 @@ def get_session(sid: str):
 class RunReq(BaseModel):
     topic: Optional[str] = None
     script_file: Optional[str] = None
+    preset_name: Optional[str] = None
 
 
 @app.post("/api/run")
@@ -214,6 +236,11 @@ def start_run(req: RunReq):
         raise HTTPException(400, "Provide topic or script_file")
     sid = datetime.now().strftime("%Y%m%d_%H%M%S")
     _session_dir(sid).mkdir(parents=True, exist_ok=True)
+    preset_env = {}
+    if req.preset_name:
+        p = PRESETS_DIR / f"{req.preset_name}.json"
+        if p.exists():
+            preset_env = json.loads(p.read_text())
     session = {
         "id": sid,
         "topic": req.topic or req.script_file,
@@ -230,9 +257,10 @@ def start_run(req: RunReq):
         "output_file": None,
         "error": None,
         "metadata": None,
+        "preset_name": req.preset_name or "",
     }
     _write_session(sid, session)
-    threading.Thread(target=_run, args=(sid, req.topic, req.script_file), daemon=True).start()
+    threading.Thread(target=_run, args=(sid, req.topic, req.script_file, preset_env), daemon=True).start()
     return {"session_id": sid}
 
 
@@ -376,6 +404,139 @@ class SettingsReq(BaseModel):
 @app.put("/api/settings")
 def save_settings(body: SettingsReq):
     _write_env(body.values)
+    return {"ok": True}
+
+
+@app.get("/api/prompts")
+def get_prompts():
+    """Return custom prompt overrides. Empty string means 'use default'."""
+    result = {}
+    for key in PROMPT_KEYS:
+        p = PROMPTS_DIR / f"{key}.txt"
+        result[key] = p.read_text(encoding="utf-8") if p.exists() else ""
+    return result
+
+
+class PromptsReq(BaseModel):
+    prompts: dict
+
+
+@app.put("/api/prompts")
+def save_prompts(body: PromptsReq):
+    """Save non-empty prompts to files; delete file if empty (resets to default)."""
+    PROMPTS_DIR.mkdir(exist_ok=True)
+    for key, content in body.prompts.items():
+        if key not in PROMPT_KEYS:
+            continue
+        p = PROMPTS_DIR / f"{key}.txt"
+        if content.strip():
+            p.write_text(content, encoding="utf-8")
+        elif p.exists():
+            p.unlink()
+    return {"ok": True}
+
+
+@app.get("/api/prompts/defaults")
+def get_prompt_defaults():
+    """Return the built-in default prompt texts from source code."""
+    from pipeline.script import (
+        _SCRIPT_SYSTEM_PROMPT_TEMPLATE,
+        _SCRIPT_HUMANIZE_PROMPT,
+        _TTS_ENHANCE_PROMPT,
+    )
+    from pipeline.metadata import METADATA_SYSTEM_PROMPT
+    return {
+        "script_system": _SCRIPT_SYSTEM_PROMPT_TEMPLATE,
+        "script_humanize": _SCRIPT_HUMANIZE_PROMPT,
+        "metadata_system": METADATA_SYSTEM_PROMPT,
+        "tts_enhance": _TTS_ENHANCE_PROMPT,
+    }
+
+
+@app.get("/api/voices")
+def get_voices(provider: Optional[str] = None, api_key: Optional[str] = None):
+    """Return available voices. Pass ?provider= and &api_key= to override saved config."""
+    import requests as _requests
+    from config import settings
+
+    p = provider or settings.tts_provider
+
+    if p == "openai":
+        return {"voices": [
+            {"id": "alloy", "name": "Alloy"},
+            {"id": "ash", "name": "Ash"},
+            {"id": "coral", "name": "Coral"},
+            {"id": "echo", "name": "Echo"},
+            {"id": "fable", "name": "Fable"},
+            {"id": "nova", "name": "Nova"},
+            {"id": "onyx", "name": "Onyx"},
+            {"id": "sage", "name": "Sage"},
+            {"id": "shimmer", "name": "Shimmer"},
+        ]}
+
+    if p == "elevenlabs":
+        key = api_key or settings.elevenlabs_api_key
+        if not key:
+            raise HTTPException(status_code=400, detail="ELEVENLABS_API_KEY not set")
+        try:
+            resp = _requests.get(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": key},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            voices = [{"id": v["voice_id"], "name": v["name"]} for v in data.get("voices", [])]
+            return {"voices": voices}
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=str(e))
+
+    if p == "speshaudio":
+        key = api_key or settings.speshaudio_api_key
+        if not key:
+            raise HTTPException(status_code=400, detail="SPESHAUDIO_API_KEY not set")
+        try:
+            resp = _requests.get(
+                "https://speshaudio.com/api/v1/voices",
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            raw = data.get("voices") or data.get("data") or []
+            voices = [{"id": v.get("voice_id", v.get("id", "")), "name": v.get("name", "")} for v in raw]
+            return {"voices": voices}
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=str(e))
+
+    return {"voices": []}
+
+
+@app.get("/api/presets")
+def get_presets():
+    return _list_presets()
+
+
+class PresetReq(BaseModel):
+    name: str
+    values: dict
+
+
+@app.post("/api/presets")
+def save_preset(body: PresetReq):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "Preset name required")
+    PRESETS_DIR.mkdir(exist_ok=True)
+    (PRESETS_DIR / f"{name}.json").write_text(json.dumps(body.values, indent=2))
+    return {"ok": True, "name": name}
+
+
+@app.delete("/api/presets/{name}")
+def delete_preset(name: str):
+    p = PRESETS_DIR / f"{name}.json"
+    if p.exists():
+        p.unlink()
     return {"ok": True}
 
 

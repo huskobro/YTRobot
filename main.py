@@ -20,7 +20,7 @@ def run_full_pipeline(topic: str = None, script_file: Path = None) -> Path:
     from pipeline.metadata import generate_metadata, save_metadata
     from pipeline.tts import synthesize_scenes
     from pipeline.visuals import fetch_visuals
-    from pipeline.subtitles import generate_srt
+    from pipeline.subtitles import generate_srt, generate_word_timing
     from pipeline.composer import compose
 
     session = _session_dir(settings.output_dir)
@@ -54,6 +54,7 @@ def run_full_pipeline(topic: str = None, script_file: Path = None) -> Path:
     # 5. Subtitles
     print("\n[5/6] Subtitles...")
     srt_path = generate_srt(audio_paths, scenes, session)
+    generate_word_timing(audio_paths, scenes, session, fps=settings.video_fps)
 
     # 6. Compose
     print("\n[6/6] Composing video...")

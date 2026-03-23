@@ -136,7 +136,10 @@
             </div>
             <div class="font-semibold text-white mb-0.5 line-clamp-2 group-hover:text-indigo-300 transition-colors text-sm"
                  x-text="session.topic||session.id"></div>
-            <div class="text-xs text-slate-600 font-mono mb-3" x-text="session.id"></div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs text-slate-600 font-mono" x-text="session.id"></span>
+              <span x-show="session.preset_name" class="text-xs px-2 py-0.5 bg-indigo-900/40 border border-indigo-700/50 text-indigo-400 rounded-full font-medium" x-text="session.preset_name"></span>
+            </div>
             <!-- Mini step track -->
             <div class="flex gap-1 mb-3">
               <template x-for="(step,i) in (session.steps||[])" :key="i">
@@ -358,6 +361,18 @@
                     x-text="t('mode_script')"></button>
           </div>
 
+          <!-- Preset selector (only shown when presets exist) -->
+          <div x-show="presets.length > 0" class="mb-5">
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('preset_run_label')"></label>
+            <select x-model="selectedPreset"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+              <option value="" x-text="t('preset_run_default')"></option>
+              <template x-for="p in presets" :key="p.name">
+                <option :value="p.name" x-text="p.name"></option>
+              </template>
+            </select>
+          </div>
+
           <div x-show="mode==='topic'">
             <label class="block text-sm font-semibold text-slate-300 mb-2" x-text="t('topic_label')"></label>
             <textarea x-model="newTopic"
@@ -416,6 +431,38 @@
         <div x-show="settingsSaved" x-transition class="mb-4 px-4 py-3 bg-green-900/30 border border-green-700/50 rounded-xl text-sm text-green-400 flex items-center gap-2"
              x-text="t('settings_saved')"></div>
 
+        <!-- Presets -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_presets')"></h2>
+          <!-- Save current settings as a preset -->
+          <div class="flex gap-2 mb-4">
+            <input x-model="presetName"
+                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                   :placeholder="t('preset_name_placeholder')"
+                   @keyup.enter="savePreset()" />
+            <button @click="savePreset()" :disabled="!presetName.trim()"
+                    class="shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
+                    x-text="presetSaved ? t('preset_saved_ok') : t('preset_save_btn')"></button>
+          </div>
+          <!-- Saved preset list -->
+          <div x-show="presets.length === 0" class="text-xs text-slate-500 italic py-2" x-text="t('preset_empty')"></div>
+          <div class="space-y-2">
+            <template x-for="p in presets" :key="p.name">
+              <div class="flex items-center justify-between px-3 py-2.5 bg-slate-800/50 border border-slate-700/60 rounded-lg">
+                <span class="text-sm text-slate-200 font-medium" x-text="p.name"></span>
+                <div class="flex gap-2">
+                  <button @click="applyPreset(p)"
+                          class="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-md transition-colors"
+                          x-text="t('preset_load_btn')"></button>
+                  <button @click="deletePreset(p.name)"
+                          class="text-xs px-3 py-1.5 bg-red-900/40 hover:bg-red-800/60 text-red-400 font-medium rounded-md transition-colors"
+                          x-text="t('preset_delete_btn')"></button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <!-- LLM -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_llm')"></h2>
@@ -434,6 +481,22 @@
                 <input x-model="settings.ANTHROPIC_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
               </div>
             </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('target_audience_label')"></label>
+              <textarea x-model="settings.TARGET_AUDIENCE" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none" :placeholder="t('target_audience_placeholder')"></textarea>
+              <p class="text-xs text-slate-500 mt-1" x-text="t('target_audience_hint')"></p>
+            </div>
+            <!-- Script Humanize toggle -->
+            <div class="flex items-start justify-between gap-4 p-4 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('script_humanize_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('script_humanize_hint')"></p>
+              </div>
+              <select x-model="settings.SCRIPT_HUMANIZE_WITH_LLM" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="false" x-text="t('toggle_off')"></option>
+                <option value="true" x-text="t('toggle_on')"></option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -441,34 +504,159 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_tts')"></h2>
           <div class="space-y-4">
+
+            <!-- Provider -->
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('provider_label')"></label>
-              <select x-model="settings.TTS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+              <select x-model="settings.TTS_PROVIDER" @change="voicesList=[]" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
                 <option value="speshaudio">Spesh Audio</option>
                 <option value="elevenlabs">ElevenLabs</option>
                 <option value="openai">OpenAI TTS</option>
                 <option value="google">Google TTS</option>
               </select>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('spesh_key')"></label>
-                <input x-model="settings.SPESHAUDIO_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+
+            <!-- Speed slider -->
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-semibold text-slate-400" x-text="t('tts_speed_label')"></label>
+                <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.TTS_SPEED || 1.0).toFixed(2) + '×'"></span>
+              </div>
+              <input type="range" x-model="settings.TTS_SPEED" min="0.5" max="2.0" step="0.05"
+                     class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
+              <div class="flex justify-between text-xs text-slate-600 mt-1 px-0.5">
+                <span>0.5×</span><span>1.0×</span><span>2.0×</span>
+              </div>
+            </div>
+
+            <!-- ── OpenAI voice ── -->
+            <div x-show="settings.TTS_PROVIDER==='openai'">
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('openai_voice_label')"></label>
+              <select x-model="settings.OPENAI_TTS_VOICE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="alloy">Alloy</option>
+                <option value="ash">Ash</option>
+                <option value="coral">Coral</option>
+                <option value="echo">Echo</option>
+                <option value="fable">Fable</option>
+                <option value="nova">Nova</option>
+                <option value="onyx">Onyx</option>
+                <option value="sage">Sage</option>
+                <option value="shimmer">Shimmer</option>
+              </select>
+            </div>
+
+            <!-- ── ElevenLabs ── -->
+            <div x-show="settings.TTS_PROVIDER==='elevenlabs'" class="space-y-3">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('elevenlabs_key')"></label>
+                  <input x-model="settings.ELEVENLABS_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_id')"></label>
+                  <div class="flex gap-2">
+                    <input x-model="settings.ELEVENLABS_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" placeholder="21m00Tcm4TlvDq8ikWAM" />
+                    <button @click="fetchVoices()" :disabled="voicesLoading"
+                            class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-xs font-semibold text-slate-300 rounded-lg transition-colors"
+                            x-text="voicesLoading ? '...' : t('fetch_voices_btn')"></button>
+                  </div>
+                </div>
+              </div>
+              <div x-show="voicesFetchError" class="text-xs text-red-400 px-1" x-text="voicesFetchError"></div>
+              <div x-show="voicesList.length > 0 && voicesProvider==='elevenlabs'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_select_label')"></label>
+                <select @change="settings.ELEVENLABS_VOICE_ID = $event.target.value"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <template x-for="v in voicesList" :key="v.id">
+                    <option :value="v.id" :selected="v.id===settings.ELEVENLABS_VOICE_ID" x-text="v.name"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+
+            <!-- ── SpesAudio ── -->
+            <div x-show="settings.TTS_PROVIDER==='speshaudio'" class="space-y-3">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('spesh_key')"></label>
+                  <input x-model="settings.SPESHAUDIO_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('language_setting')"></label>
+                  <input x-model="settings.SPESHAUDIO_LANGUAGE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="en, tr, de, fr..." />
+                </div>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_id')"></label>
-                <input x-model="settings.SPESHAUDIO_VOICE_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" placeholder="21m00Tcm4TlvDq8ikWAM" />
+                <div class="flex gap-2">
+                  <input x-model="settings.SPESHAUDIO_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" placeholder="21m00Tcm4TlvDq8ikWAM" />
+                  <button @click="fetchVoices()" :disabled="voicesLoading"
+                          class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-xs font-semibold text-slate-300 rounded-lg transition-colors"
+                          x-text="voicesLoading ? '...' : t('fetch_voices_btn')"></button>
+                </div>
+              </div>
+              <div x-show="voicesFetchError" class="text-xs text-red-400 px-1" x-text="voicesFetchError"></div>
+              <div x-show="voicesList.length > 0 && voicesProvider==='speshaudio'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_select_label')"></label>
+                <select @change="settings.SPESHAUDIO_VOICE_ID = $event.target.value"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <template x-for="v in voicesList" :key="v.id">
+                    <option :value="v.id" :selected="v.id===settings.SPESHAUDIO_VOICE_ID" x-text="v.name"></option>
+                  </template>
+                </select>
+              </div>
+              <!-- SpesAudio voice quality sliders -->
+              <div class="border border-slate-700/60 rounded-xl p-4 space-y-4 bg-slate-800/30">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest" x-text="t('spesh_voice_quality_title')"></div>
+                <!-- Stability -->
+                <div>
+                  <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold text-slate-400" x-text="t('spesh_stability_label')"></label>
+                    <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.SPESHAUDIO_STABILITY || 0.5).toFixed(2)"></span>
+                  </div>
+                  <input type="range" x-model="settings.SPESHAUDIO_STABILITY" min="0" max="1" step="0.05"
+                         class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
+                  <div class="flex justify-between text-xs text-slate-600 mt-1 px-0.5">
+                    <span x-text="t('slider_expressive')"></span><span x-text="t('slider_consistent')"></span>
+                  </div>
+                </div>
+                <!-- Similarity Boost -->
+                <div>
+                  <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold text-slate-400" x-text="t('spesh_similarity_label')"></label>
+                    <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.SPESHAUDIO_SIMILARITY_BOOST || 0.75).toFixed(2)"></span>
+                  </div>
+                  <input type="range" x-model="settings.SPESHAUDIO_SIMILARITY_BOOST" min="0" max="1" step="0.05"
+                         class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
+                  <div class="flex justify-between text-xs text-slate-600 mt-1 px-0.5">
+                    <span x-text="t('slider_low')"></span><span x-text="t('slider_high')"></span>
+                  </div>
+                </div>
+                <!-- Style -->
+                <div>
+                  <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold text-slate-400" x-text="t('spesh_style_label')"></label>
+                    <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.SPESHAUDIO_STYLE || 0.3).toFixed(2)"></span>
+                  </div>
+                  <input type="range" x-model="settings.SPESHAUDIO_STYLE" min="0" max="1" step="0.05"
+                         class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
+                  <div class="flex justify-between text-xs text-slate-600 mt-1 px-0.5">
+                    <span x-text="t('slider_none')"></span><span x-text="t('slider_strong')"></span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+
+            <!-- Gemini TTS enhancement -->
+            <div class="flex items-start justify-between gap-4 p-4 border border-slate-700/60 rounded-xl bg-slate-800/30">
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('language_setting')"></label>
-                <input x-model="settings.SPESHAUDIO_LANGUAGE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="en, tr, de, fr..." />
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('tts_enhance_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('tts_enhance_hint')"></p>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('elevenlabs_key')"></label>
-                <input x-model="settings.ELEVENLABS_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
-              </div>
+              <select x-model="settings.TTS_ENHANCE_WITH_LLM" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="false" x-text="t('toggle_off')"></option>
+                <option value="true" x-text="t('toggle_on')"></option>
+              </select>
             </div>
           </div>
         </div>
@@ -711,6 +899,95 @@
           </div>
         </div>
 
+        <!-- Master Prompts -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-sm font-bold text-slate-300" x-text="t('section_prompts')"></h2>
+            <button @click="savePrompts()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
+          </div>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('prompts_hint')"></p>
+          <div x-show="promptsSaved" x-transition class="mb-4 px-4 py-2.5 bg-green-900/30 border border-green-700/50 rounded-lg text-xs text-green-400" x-text="t('prompts_saved')"></div>
+          <div class="space-y-6">
+
+            <!-- helper template: each prompt block -->
+            <!-- Script System Prompt -->
+            <div class="border border-slate-800 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_script_label')"></label>
+                <button @click="resetPrompt('script_system')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+              </div>
+              <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_script_hint')"></p>
+              <!-- default viewer -->
+              <details class="mb-2 group">
+                <summary class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span class="transition-transform group-open:rotate-90">▶</span>
+                  <span x-text="t('prompt_view_default')"></span>
+                </summary>
+                <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.script_system || t('prompt_loading')"></pre>
+              </details>
+              <textarea x-model="prompts.script_system" rows="10" spellcheck="false"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
+                :placeholder="t('prompt_default_placeholder')"></textarea>
+            </div>
+
+            <!-- Script Humanize Prompt -->
+            <div class="border border-slate-800 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_humanize_label')"></label>
+                <button @click="resetPrompt('script_humanize')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+              </div>
+              <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_humanize_hint')"></p>
+              <details class="mb-2 group">
+                <summary class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span class="transition-transform group-open:rotate-90">▶</span>
+                  <span x-text="t('prompt_view_default')"></span>
+                </summary>
+                <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.script_humanize || t('prompt_loading')"></pre>
+              </details>
+              <textarea x-model="prompts.script_humanize" rows="8" spellcheck="false"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
+                :placeholder="t('prompt_default_placeholder')"></textarea>
+            </div>
+
+            <!-- Metadata Prompt -->
+            <div class="border border-slate-800 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_metadata_label')"></label>
+                <button @click="resetPrompt('metadata_system')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+              </div>
+              <details class="mb-2 group">
+                <summary class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span class="transition-transform group-open:rotate-90">▶</span>
+                  <span x-text="t('prompt_view_default')"></span>
+                </summary>
+                <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.metadata_system || t('prompt_loading')"></pre>
+              </details>
+              <textarea x-model="prompts.metadata_system" rows="8" spellcheck="false"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
+                :placeholder="t('prompt_default_placeholder')"></textarea>
+            </div>
+
+            <!-- TTS Enhance Prompt -->
+            <div class="border border-slate-800 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_tts_enhance_label')"></label>
+                <button @click="resetPrompt('tts_enhance')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+              </div>
+              <details class="mb-2 group">
+                <summary class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span class="transition-transform group-open:rotate-90">▶</span>
+                  <span x-text="t('prompt_view_default')"></span>
+                </summary>
+                <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.tts_enhance || t('prompt_loading')"></pre>
+              </details>
+              <textarea x-model="prompts.tts_enhance" rows="7" spellcheck="false"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
+                :placeholder="t('prompt_default_placeholder')"></textarea>
+            </div>
+
+          </div>
+        </div>
+
         <button @click="saveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
                 x-text="t('save_settings')"></button>
       </div>
@@ -761,9 +1038,30 @@ const LANG = {
     section_llm: '🧠 Script & LLM',
     kieai_key: 'KIE.AI API Key (Gemini 2.5 Flash — primary)',
     openai_key: 'OpenAI API Key (fallback)', anthropic_key: 'Anthropic API Key',
+    target_audience_label: 'Target Audience (optional)',
+    target_audience_placeholder: 'e.g. beginner YouTubers under 1k subscribers who want to grow fast',
+    target_audience_hint: 'Gemini uses this to tailor the script voice, examples, and pain points to your audience.',
+    script_humanize_label: 'Gemini Script Humanization',
+    script_humanize_hint: 'After generation, Gemini rewrites each scene to sound like a real person — removes AI-isms, adds contractions, natural imperfections. Runs before TTS.',
     section_tts: '🔊 Text-to-Speech', provider_label: 'Provider',
+    tts_speed_label: 'Speech Speed',
+    speed_slow: '0.75× — Slow', speed_slightly_slow: '0.9× — Slightly Slow',
+    speed_normal: '1.0× — Normal (default)', speed_slightly_fast: '1.1× — Slightly Fast',
+    speed_fast: '1.25× — Fast', speed_very_fast: '1.5× — Very Fast',
     spesh_key: 'Spesh Audio API Key', voice_id: 'Voice ID',
     language_setting: 'Language (empty = auto-detect)', elevenlabs_key: 'ElevenLabs API Key',
+    openai_voice_label: 'Voice',
+    fetch_voices_btn: 'Fetch Voices', voice_select_label: 'Select Voice',
+    slider_expressive: 'Expressive', slider_consistent: 'Consistent',
+    slider_low: 'Low', slider_high: 'High',
+    slider_none: 'None', slider_strong: 'Strong',
+    spesh_voice_quality_title: 'Voice Quality Settings',
+    spesh_stability_label: 'Stability',
+    spesh_similarity_label: 'Similarity Boost',
+    spesh_style_label: 'Style',
+    tts_enhance_label: 'Gemini TTS Enhancement',
+    tts_enhance_hint: 'Second Gemini pass to add CAPS emphasis and "..." pauses before synthesis — makes AI voice sound more natural.',
+    toggle_on: 'Enabled', toggle_off: 'Disabled',
     section_visuals: '🎨 Visuals', zimage_aspect: 'Z-Image Aspect Ratio',
     pexels_key: 'Pexels API Key', pixabay_key: 'Pixabay API Key',
     section_subtitles: '💬 Subtitles',
@@ -836,6 +1134,29 @@ const LANG = {
     remotion_features: 'Features: Ken Burns effect, smooth fade transitions, SRT-timed subtitles.',
     section_output: '📁 Output', output_dir_label: 'Output Directory',
     resolution_label: 'Resolution', fps_label: 'FPS',
+    section_presets: '⚙️ Presets',
+    preset_name_placeholder: 'Preset name...',
+    preset_save_btn: 'Save Preset',
+    preset_saved_ok: '✓ Saved!',
+    preset_empty: 'No presets saved yet.',
+    preset_load_btn: 'Load',
+    preset_delete_btn: 'Delete',
+    preset_run_label: 'Preset',
+    preset_run_default: 'Default (.env settings)',
+    section_prompts: '✏️ Master Prompts',
+    prompts_hint: 'Override the default Gemini system prompts. Leave empty to use the built-in default. Changes take effect on the next run.',
+    save_prompts_btn: 'Save Prompts',
+    prompts_saved: '✓ Prompts saved',
+    prompt_reset: 'Reset to default',
+    prompt_script_label: '1 · Script Generation Prompt',
+    prompt_script_hint: 'Use {audience} placeholder — it will be replaced with your Target Audience setting.',
+    prompt_humanize_label: '2 · Script Humanization Prompt',
+    prompt_humanize_hint: 'Rewrites AI narration to sound like a real person. Activate with "Gemini Script Humanization" toggle above.',
+    prompt_metadata_label: '3 · YouTube Metadata Prompt (title / description / tags / thumbnail)',
+    prompt_tts_enhance_label: '4 · TTS Enhancement Prompt (CAPS emphasis, pauses, exclamation)',
+    prompt_view_default: '▸ View built-in default',
+    prompt_loading: 'Loading...',
+    prompt_default_placeholder: 'Leave empty to use the built-in default prompt...',
   },
   tr: {
     app_subtitle: 'Otomatik Video Üretici',
@@ -876,9 +1197,30 @@ const LANG = {
     section_llm: '🧠 Script & Dil Modeli',
     kieai_key: 'KIE.AI API Anahtarı (Gemini 2.5 Flash — birincil)',
     openai_key: 'OpenAI API Anahtarı (yedek)', anthropic_key: 'Anthropic API Anahtarı',
+    target_audience_label: 'Hedef Kitle (isteğe bağlı)',
+    target_audience_placeholder: 'örn. 1.000 abonenin altındaki büyümek isteyen yeni başlayan YouTuberlar',
+    target_audience_hint: 'Gemini bu bilgiyi script sesini, örnekleri ve sorun noktalarını kitlenize göre uyarlamak için kullanır.',
+    script_humanize_label: 'Gemini Script İnsanlaştırma',
+    script_humanize_hint: 'Oluşturulduktan sonra Gemini her sahneyi gerçek bir insan gibi yeniden yazar — yapay zeka klişelerini kaldırır, doğal konuşma ekler. TTS öncesi çalışır.',
     section_tts: '🔊 Metinden Sese', provider_label: 'Sağlayıcı',
+    tts_speed_label: 'Konuşma Hızı',
+    speed_slow: '0.75× — Yavaş', speed_slightly_slow: '0.9× — Biraz Yavaş',
+    speed_normal: '1.0× — Normal (varsayılan)', speed_slightly_fast: '1.1× — Biraz Hızlı',
+    speed_fast: '1.25× — Hızlı', speed_very_fast: '1.5× — Çok Hızlı',
     spesh_key: 'Spesh Audio API Anahtarı', voice_id: 'Ses ID',
     language_setting: 'Dil (boş = otomatik algıla)', elevenlabs_key: 'ElevenLabs API Anahtarı',
+    openai_voice_label: 'Ses',
+    fetch_voices_btn: 'Sesleri Getir', voice_select_label: 'Ses Seçin',
+    slider_expressive: 'İfadeli', slider_consistent: 'Tutarlı',
+    slider_low: 'Düşük', slider_high: 'Yüksek',
+    slider_none: 'Yok', slider_strong: 'Güçlü',
+    spesh_voice_quality_title: 'Ses Kalitesi Ayarları',
+    spesh_stability_label: 'Stabilite',
+    spesh_similarity_label: 'Benzerlik Artışı',
+    spesh_style_label: 'Stil',
+    tts_enhance_label: 'Gemini TTS İyileştirme',
+    tts_enhance_hint: 'Sentez öncesi BÜYÜK HARF vurgu ve "..." duraklamaları eklemek için ikinci bir Gemini geçişi — yapay zeka sesini daha doğal yapar.',
+    toggle_on: 'Etkin', toggle_off: 'Devre Dışı',
     section_visuals: '🎨 Görseller', zimage_aspect: 'Z-Image En-Boy Oranı',
     pexels_key: 'Pexels API Anahtarı', pixabay_key: 'Pixabay API Anahtarı',
     section_subtitles: '💬 Altyazılar',
@@ -951,6 +1293,29 @@ const LANG = {
     remotion_features: 'Özellikler: Ken Burns efekti, yumuşak geçişler, SRT zamanlı altyazılar.',
     section_output: '📁 Çıktı', output_dir_label: 'Çıktı Klasörü',
     resolution_label: 'Çözünürlük', fps_label: 'FPS',
+    section_presets: '⚙️ Önayarlar',
+    preset_name_placeholder: 'Önayar adı...',
+    preset_save_btn: 'Önayarı Kaydet',
+    preset_saved_ok: '✓ Kaydedildi!',
+    preset_empty: 'Henüz önayar kaydedilmedi.',
+    preset_load_btn: 'Yükle',
+    preset_delete_btn: 'Sil',
+    preset_run_label: 'Önayar',
+    preset_run_default: 'Varsayılan (.env ayarları)',
+    section_prompts: '✏️ Master Promptlar',
+    prompts_hint: 'Varsayılan Gemini sistem promptlarını özelleştirin. Boş bırakırsanız yerleşik varsayılan kullanılır. Değişiklikler sonraki çalıştırmada etkin olur.',
+    save_prompts_btn: 'Promptları Kaydet',
+    prompts_saved: '✓ Promptlar kaydedildi',
+    prompt_reset: 'Varsayılana sıfırla',
+    prompt_script_label: '1 · Script Oluşturma Promptu',
+    prompt_script_hint: '{audience} yer tutucusunu kullanın — Hedef Kitle ayarınızla değiştirilecek.',
+    prompt_humanize_label: '2 · Script İnsanlaştırma Promptu',
+    prompt_humanize_hint: 'Yapay zeka narrasyonunu gerçek bir insan gibi ses çıkaracak şekilde yeniden yazar. Yukarıdaki "Gemini Script Humanization" toggle ile etkinleştirin.',
+    prompt_metadata_label: '3 · YouTube Meta Veri Promptu (başlık / açıklama / etiketler / thumbnail)',
+    prompt_tts_enhance_label: '4 · TTS İyileştirme Promptu (BÜYÜK HARF vurgu, duraklamalar, ünlem)',
+    prompt_view_default: '▸ Yerleşik varsayılanı görüntüle',
+    prompt_loading: 'Yükleniyor...',
+    prompt_default_placeholder: 'Yerleşik varsayılan promptu kullanmak için boş bırakın...',
   }
 };
 
@@ -959,10 +1324,12 @@ function app() {
   return {
     lang: localStorage.getItem('ytrobot-lang') || 'en',
     view: 'dashboard', mode: 'topic',
-    sessions: [], currentSession: null, settings: {},
+    sessions: [], currentSession: null, settings: {}, prompts: {}, promptDefaults: {},
     newTopic: '', newScriptFile: '', notes: '', logLines: [],
     submitting: false, runError: '',
-    settingsSaved: false, notesSaved: false, metaCopied: false,
+    settingsSaved: false, notesSaved: false, metaCopied: false, promptsSaved: false,
+    voicesList: [], voicesLoading: false, voicesFetchError: '', voicesProvider: '',
+    presets: [], presetName: '', presetSaved: false, selectedPreset: '',
     filter: 'all',
     _sse: null, _timer: null,
 
@@ -972,6 +1339,7 @@ function app() {
 
     async init() {
       await this.loadSessions();
+      await this.loadPresets();
       this._timer = setInterval(() => this.loadSessions(), 3000);
     },
 
@@ -1027,6 +1395,7 @@ function app() {
         if (!this.newScriptFile.trim()) { this.runError = this.t('error_script'); return; }
         body.script_file = this.newScriptFile.trim();
       }
+      if (this.selectedPreset) body.preset_name = this.selectedPreset;
       this.submitting = true;
       try {
         const r = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
@@ -1040,11 +1409,88 @@ function app() {
       finally { this.submitting = false; }
     },
 
-    async loadSettings() { const r = await fetch('/api/settings'); this.settings = await r.json(); },
+    async loadSettings() {
+      const r = await fetch('/api/settings');
+      this.settings = await r.json();
+      await this.loadPrompts();
+      await this.loadPresets();
+    },
 
     async saveSettings() {
       await fetch('/api/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.settings }) });
       this.settingsSaved = true; setTimeout(() => this.settingsSaved = false, 3000);
+    },
+
+    async loadPrompts() {
+      const [r, rd] = await Promise.all([fetch('/api/prompts'), fetch('/api/prompts/defaults')]);
+      this.prompts = await r.json();
+      this.promptDefaults = await rd.json();
+    },
+
+    async savePrompts() {
+      await fetch('/api/prompts', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompts: this.prompts }) });
+      this.promptsSaved = true; setTimeout(() => this.promptsSaved = false, 3000);
+    },
+
+    resetPrompt(key) {
+      this.prompts[key] = '';
+    },
+
+    async fetchVoices() {
+      this.voicesLoading = true;
+      this.voicesFetchError = '';
+      const prov = this.settings.TTS_PROVIDER;
+      let key = '';
+      if (prov === 'elevenlabs') key = this.settings.ELEVENLABS_API_KEY || '';
+      if (prov === 'speshaudio') key = this.settings.SPESHAUDIO_API_KEY || '';
+      const params = new URLSearchParams({ provider: prov });
+      if (key) params.set('api_key', key);
+      try {
+        const r = await fetch('/api/voices?' + params.toString());
+        if (!r.ok) {
+          const err = await r.json();
+          this.voicesFetchError = err.detail || 'Failed to fetch voices';
+        } else {
+          const data = await r.json();
+          this.voicesList = data.voices || [];
+          this.voicesProvider = prov;
+          if (this.voicesList.length === 0) this.voicesFetchError = 'No voices returned';
+        }
+      } catch(e) {
+        this.voicesFetchError = e.message;
+      }
+      this.voicesLoading = false;
+    },
+
+    async loadPresets() {
+      try {
+        const r = await fetch('/api/presets');
+        this.presets = await r.json();
+      } catch(e) {}
+    },
+
+    async savePreset() {
+      const name = this.presetName.trim();
+      if (!name) return;
+      await fetch('/api/presets', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, values: this.settings }),
+      });
+      this.presetSaved = true;
+      setTimeout(() => this.presetSaved = false, 2500);
+      await this.loadPresets();
+      this.presetName = '';
+    },
+
+    applyPreset(preset) {
+      this.settings = { ...this.settings, ...preset.values };
+    },
+
+    async deletePreset(name) {
+      await fetch(`/api/presets/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (this.selectedPreset === name) this.selectedPreset = '';
+      await this.loadPresets();
     },
 
     async copyMetadata() {

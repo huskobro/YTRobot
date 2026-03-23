@@ -13,14 +13,15 @@ import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
 import { loadFont as loadOswald } from "@remotion/google-fonts/Oswald";
 import { loadFont as loadBebasNeue } from "@remotion/google-fonts/BebasNeue";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { SceneData, SubtitleEntry, VideoSettings } from "./types";
+import { SceneData, SubtitleEntry, VideoSettings, WordEntry } from "./types";
 
-// Load all Google Fonts at module level so Remotion can pre-fetch them
-const robotoFont = loadRoboto();
-const montserratFont = loadMontserrat();
-const oswaldFont = loadOswald();
-const bebasFont = loadBebasNeue();
-const interFont = loadInter();
+// Load Google Fonts with only 'normal' style to avoid hundreds of network requests
+// (v4.0.290 loadFont() takes a style key: 'normal' | 'italic')
+const robotoFont = loadRoboto("normal");
+const montserratFont = loadMontserrat("normal");
+const oswaldFont = loadOswald("normal");
+const bebasFont = loadBebasNeue("normal");
+const interFont = loadInter("normal");
 
 const FONT_MAP: Record<string, string> = {
   serif: '"Georgia", "Times New Roman", serif',
@@ -82,13 +83,15 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
       : 1.0;
   const transformOrigin = getTransformOrigin(s.kenBurnsDirection, sceneIndex);
 
-  // ── Subtitle text ─────────────────────────────────────────────────────────
+  // ── Subtitle text & word-level karaoke ──────────────────────────────────
   let currentText: string;
+  let activeWords: WordEntry[] | undefined;
   if (subtitles && subtitles.length > 0) {
     const active = subtitles.find(
       (sub: SubtitleEntry) => frame >= sub.startFrame && frame < sub.endFrame
     );
     currentText = active?.text ?? "";
+    activeWords = active?.words;
   } else {
     const sentences = narration
       .split(/(?<=[.!?…])\s+/)
@@ -103,7 +106,47 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
       sentences.length - 1
     );
     currentText = sentences[sentenceIdx] ?? narration;
+    activeWords = undefined;
   }
+
+  // ── Karaoke word renderer ──────────────────────────────────────────────
+  const highlightColor = "#FFD700"; // gold highlight for active word
+  const renderKaraokeWords = (words: WordEntry[]) => {
+    return words.map((w, idx) => {
+      const isActive = frame >= w.startFrame && frame < w.endFrame;
+      const isPast = frame >= w.endFrame;
+      const isFuture = frame < w.startFrame;
+
+      // Smooth scale for active word
+      const wordScale = isActive
+        ? interpolate(
+            frame,
+            [w.startFrame, Math.min(w.startFrame + 4, w.endFrame)],
+            [1.0, 1.12],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          )
+        : 1.0;
+
+      return (
+        <span
+          key={idx}
+          style={{
+            color: isActive ? highlightColor : isPast ? s.subtitleColor : s.subtitleColor,
+            opacity: isFuture ? 0.55 : 1.0,
+            transform: `scale(${wordScale})`,
+            display: "inline-block",
+            marginRight: "0.3em",
+            transition: "color 0.1s, opacity 0.1s",
+            fontWeight: isActive ? 800 : undefined,
+          }}
+        >
+          {w.word}
+        </span>
+      );
+    });
+  };
+
+  // … (rest of scene component below) 
 
   // ── Subtitle fade in/out ─────────────────────────────────────────────────
   const subFadeDur = Math.min(18, Math.floor(durationInFrames * 0.15));
@@ -262,7 +305,11 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
         }}
       >
         <div style={subtitleContainerStyle}>
-          <p style={subtitleTextStyle}>{currentText}</p>
+          <p style={subtitleTextStyle}>
+            {activeWords && activeWords.length > 0
+              ? renderKaraokeWords(activeWords)
+              : currentText}
+          </p>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

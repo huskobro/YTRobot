@@ -705,7 +705,7 @@ def start_bulletin_render(body: BulletinRenderReq):
                 "composition": comp_id,
             }
 
-            render_bulletin(props=props, output_path=output_path)
+            render_bulletin(bulletin_config=props, output_path=output_path, fps=body.fps)
 
             with _bulletin_jobs_lock:
                 _bulletin_jobs[bid]["status"] = "completed"

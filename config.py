@@ -31,6 +31,22 @@ class Settings(BaseSettings):
     speshaudio_similarity_boost: float = 0.5
     speshaudio_style: float = 0.75
 
+    # Bulletin-specific TTS (optional; falls back to global TTS if empty/sentinel)
+    bulletin_tts_provider: str = ""          # empty = use tts_provider
+    bulletin_tts_voice_id: str = ""          # empty = provider default voice
+    bulletin_tts_speed: float = 0.0          # 0.0 = use tts_speed
+    bulletin_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
+    bulletin_tts_similarity_boost: float = -1.0
+    bulletin_tts_style: float = -1.0
+
+    # Bulletin persistent render settings
+    bulletin_network_name: str = "YTRobot Haber"
+    bulletin_style: str = "breaking"
+    bulletin_format: str = "16:9"
+    bulletin_fps: int = 60
+    bulletin_default_max_items: int = 3
+    bulletin_default_language: str = ""      # empty = per-source language
+
     # Visuals
     visuals_provider: Literal["pexels", "pixabay", "dalle", "zimage"] = "pexels"
     pexels_api_key: str = ""

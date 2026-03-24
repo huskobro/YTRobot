@@ -6,6 +6,9 @@
   <title>YTRobot</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@700;900&family=Oswald:wght@600;700&family=Roboto:wght@700&family=Inter:wght@700&display=swap" rel="stylesheet">
   <style>
     [x-cloak] { display: none !important; }
     .log-line { font-family: 'Cascadia Code','Fira Code','Courier New',monospace; font-size: 12px; line-height: 1.6; }
@@ -15,6 +18,13 @@
     ::-webkit-scrollbar-track { background:transparent; }
     ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
     ::-webkit-scrollbar-thumb:hover { background:#475569; }
+    /* Preview card animations */
+    @keyframes prev-slide-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes prev-slide-left { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes prev-pop { 0%{transform:scale(1)} 50%{transform:scale(1.14)} 100%{transform:scale(1)} }
+    .prev-hype { animation: prev-slide-up 0.5s ease 3; }
+    .prev-explosive { animation: prev-slide-left 0.5s ease 3; }
+    .prev-vibrant { animation: prev-pop 0.6s ease 3; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 overflow-hidden">
@@ -48,6 +58,11 @@
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>⚙️</span> <span x-text="t('nav_settings')"></span>
+      </button>
+      <button @click="loadBulletinSources();view='bulletin';bulletinTab='sources'"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='bulletin'?'bg-red-700 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📺</span> <span x-text="t('nav_bulletin')"></span>
       </button>
     </nav>
 
@@ -351,7 +366,36 @@
       <div class="max-w-2xl mx-auto">
         <h1 class="text-2xl font-bold text-white mb-2" x-text="t('new_video_title')"></h1>
         <p class="text-slate-500 text-sm mb-6" x-text="t('new_video_subtitle')"></p>
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+
+        <!-- ── Module Type Selector ── -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div @click="videoModule='normal'"
+               class="cursor-pointer border-2 rounded-2xl p-5 transition-all select-none group"
+               :class="videoModule==='normal' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-800 bg-slate-900 hover:border-indigo-400'">
+            <div class="text-3xl mb-3">▶️</div>
+            <div class="font-bold text-white text-sm mb-1" x-text="t('module_normal_title')"></div>
+            <div class="text-slate-500 text-xs leading-relaxed" x-text="t('module_normal_desc')"></div>
+            <div class="mt-3 flex flex-wrap gap-1">
+              <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700">Script AI</span>
+              <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700">TTS</span>
+              <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700">Karaoke</span>
+            </div>
+          </div>
+          <div @click="videoModule='bulletin';loadBulletinSources();view='bulletin';bulletinTab='sources'"
+               class="cursor-pointer border-2 rounded-2xl p-5 transition-all select-none group"
+               :class="videoModule==='bulletin' ? 'border-red-500 bg-red-900/20' : 'border-slate-800 bg-slate-900 hover:border-red-400'">
+            <div class="text-3xl mb-3">📺</div>
+            <div class="font-bold text-white text-sm mb-1" x-text="t('module_bulletin_title')"></div>
+            <div class="text-slate-500 text-xs leading-relaxed" x-text="t('module_bulletin_desc')"></div>
+            <div class="mt-3 flex flex-wrap gap-1">
+              <span class="text-xs px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-700/40">RSS</span>
+              <span class="text-xs px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-700/40">Lower Third</span>
+              <span class="text-xs px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-700/40">Ticker</span>
+            </div>
+          </div>
+        </div>
+
+        <div x-show="videoModule==='normal'" class="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <div class="flex gap-1 p-1 bg-slate-800 rounded-xl mb-6">
             <button @click="mode='topic'" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
                     :class="mode==='topic'?'bg-indigo-600 text-white shadow-md':'text-slate-400 hover:text-white'"
@@ -402,7 +446,7 @@
           </button>
         </div>
 
-        <div class="mt-6 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+        <div x-show="videoModule==='normal'" class="mt-6 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
           <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3" x-text="t('pipeline_steps_title')"></div>
           <div class="grid grid-cols-2 gap-2">
             <template x-for="(step, i) in pipelineSteps()" :key="i">
@@ -431,8 +475,24 @@
         <div x-show="settingsSaved" x-transition class="mb-4 px-4 py-3 bg-green-900/30 border border-green-700/50 rounded-xl text-sm text-green-400 flex items-center gap-2"
              x-text="t('settings_saved')"></div>
 
+        <!-- Module Tab Selector -->
+        <div class="flex gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl mb-5">
+          <button @click="settingsModule='ytrobot'"
+                  class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                  :class="settingsModule==='ytrobot' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'">
+            <span>▶</span>
+            <span x-text="t('settings_module_ytrobot')"></span>
+          </button>
+          <button @click="settingsModule='bulletin'"
+                  class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                  :class="settingsModule==='bulletin' ? 'bg-red-700 text-white shadow-md shadow-red-900/40' : 'text-slate-400 hover:text-white'">
+            <span>📺</span>
+            <span x-text="t('settings_module_bulletin')"></span>
+          </button>
+        </div>
+
         <!-- Presets -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_presets')"></h2>
           <!-- Save current settings as a preset -->
           <div class="flex gap-2 mb-4">
@@ -464,7 +524,7 @@
         </div>
 
         <!-- LLM -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_llm')"></h2>
           <div class="space-y-4">
             <div>
@@ -501,7 +561,7 @@
         </div>
 
         <!-- TTS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_tts')"></h2>
           <div class="space-y-4">
 
@@ -686,7 +746,7 @@
         </div>
 
         <!-- Visuals -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_visuals')"></h2>
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
@@ -724,7 +784,7 @@
         </div>
 
         <!-- Subtitles -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_subtitles')"></h2>
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
@@ -767,7 +827,7 @@
         </div>
 
         <!-- Composer -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_composer')"></h2>
           <p class="text-xs text-slate-500 mb-4" x-text="t('composer_desc')"></p>
           <div class="space-y-4">
@@ -798,120 +858,258 @@
                   <option value="0.15" x-text="t('ken_burns_strong')"></option>
                 </select>
               </div>
-              <!-- Ken Burns Direction -->
+              <!-- Ken Burns Direction — Card picker -->
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('ken_burns_direction_label')"></label>
-                <select x-model="settings.REMOTION_KEN_BURNS_DIRECTION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                  <option value="center" x-text="t('kb_dir_center')"></option>
-                  <option value="pan-left" x-text="t('kb_dir_pan_left')"></option>
-                  <option value="pan-right" x-text="t('kb_dir_pan_right')"></option>
-                  <option value="random" x-text="t('kb_dir_random')"></option>
-                </select>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('ken_burns_direction_label')"></label>
+                <div class="flex gap-2 flex-wrap">
+                  <template x-for="[val,icon,lbl] in [['center','⊙','Center'],['pan-left','←','Pan Left'],['pan-right','→','Pan Right'],['random','⟳','Random']]" :key="val">
+                    <div @click="settings.REMOTION_KEN_BURNS_DIRECTION=val"
+                         class="w-20 h-14 rounded-lg cursor-pointer border-2 flex flex-col items-center justify-center gap-1 transition-all select-none"
+                         :class="settings.REMOTION_KEN_BURNS_DIRECTION===val ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                      <span class="text-xl text-slate-300" x-text="icon"></span>
+                      <span class="text-xs text-slate-400" x-text="lbl"></span>
+                    </div>
+                  </template>
+                </div>
               </div>
-              <!-- Subtitle Font -->
+
+              <!-- Subtitle Font — Card picker with real fonts -->
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_font_label')"></label>
-                <select x-model="settings.REMOTION_SUBTITLE_FONT" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                  <option value="bebas" x-text="t('font_bebas')"></option>
-                  <option value="montserrat" x-text="t('font_montserrat')"></option>
-                  <option value="oswald" x-text="t('font_oswald')"></option>
-                  <option value="roboto" x-text="t('font_roboto')"></option>
-                  <option value="inter" x-text="t('font_inter')"></option>
-                  <option value="serif" x-text="t('font_serif')"></option>
-                  <option value="sans" x-text="t('font_sans')"></option>
-                </select>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('remotion_subtitle_font_label')"></label>
+                <div class="flex flex-wrap gap-2">
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='bebas'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='bebas' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;color:white;letter-spacing:0.05em">BEBAS NEUE</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='montserrat'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='montserrat' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:900;color:white">Montserrat</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='oswald'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='oswald' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:'Oswald',sans-serif;font-size:15px;font-weight:700;color:white;letter-spacing:0.02em">OSWALD</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='roboto'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='roboto' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:'Roboto',sans-serif;font-size:13px;font-weight:700;color:white">Roboto Bold</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='inter'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='inter' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:white">Inter Bold</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='serif'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='serif' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:Georgia,serif;font-size:13px;color:white;font-style:italic">Georgia</span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_FONT='sans'"
+                       class="h-10 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_FONT==='sans' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'">
+                    <span style="font-family:Arial,sans-serif;font-size:12px;color:white">Arial Sans</span>
+                  </div>
+                </div>
+                <!-- Live font preview -->
+                <div class="mt-2 px-3 py-2 bg-slate-950 rounded-lg text-center overflow-hidden">
+                  <span x-text="t('preview_font_sample')"
+                        :style="`font-family:${{'bebas':&quot;'Bebas Neue',sans-serif&quot;,'montserrat':&quot;'Montserrat',sans-serif&quot;,'oswald':&quot;'Oswald',sans-serif&quot;,'roboto':&quot;'Roboto',sans-serif&quot;,'inter':&quot;'Inter',sans-serif&quot;,'serif':'Georgia,serif','sans':'Arial,sans-serif'}[settings.REMOTION_SUBTITLE_FONT]||'sans-serif'};font-size:${settings.REMOTION_SUBTITLE_SIZE||40}px;color:${settings.REMOTION_SUBTITLE_COLOR||'#fff'};font-weight:900`"></span>
+                </div>
               </div>
+
               <!-- Subtitle Size + Color -->
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_size_label')"></label>
-                  <select x-model="settings.REMOTION_SUBTITLE_SIZE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="28" x-text="t('size_small')"></option>
-                    <option value="40" x-text="t('size_medium')"></option>
-                    <option value="52" x-text="t('size_large')"></option>
-                    <option value="64" x-text="t('size_xlarge')"></option>
-                  </select>
+                  <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('remotion_subtitle_size_label')"></label>
+                  <div class="flex items-center gap-3">
+                    <input type="range" x-model="settings.REMOTION_SUBTITLE_SIZE" min="20" max="100" step="4"
+                           class="flex-1 accent-indigo-500 cursor-pointer" />
+                    <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="(settings.REMOTION_SUBTITLE_SIZE||40)+'px'"></span>
+                  </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_subtitle_color_label')"></label>
-                  <select x-model="settings.REMOTION_SUBTITLE_COLOR" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="#ffffff" x-text="t('color_white')"></option>
-                    <option value="#FFE600" x-text="t('color_yellow')"></option>
-                    <option value="#00E5FF" x-text="t('color_cyan')"></option>
-                    <option value="#FF6B35" x-text="t('color_orange')"></option>
-                    <option value="#FF4D9E" x-text="t('color_pink')"></option>
-                    <option value="#B2FF59" x-text="t('color_lime')"></option>
-                    <option value="#FF3D3D" x-text="t('color_red')"></option>
-                  </select>
+                  <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('remotion_subtitle_color_label')"></label>
+                  <div class="flex gap-1.5 items-center flex-wrap">
+                    <template x-for="[val,bg] in [['#ffffff','#ffffff'],['#FFE600','#FFE600'],['#00E5FF','#00E5FF'],['#FF6B35','#FF6B35'],['#FF4D9E','#FF4D9E'],['#B2FF59','#B2FF59'],['#FF3D3D','#FF3D3D']]" :key="val">
+                      <div @click="settings.REMOTION_SUBTITLE_COLOR=val"
+                           class="w-7 h-7 rounded-lg cursor-pointer border-2 transition-all hover:scale-110 select-none"
+                           :style="`background:${bg}`"
+                           :class="settings.REMOTION_SUBTITLE_COLOR===val ? 'border-white ring-2 ring-white/40 scale-110' : 'border-transparent'"></div>
+                    </template>
+                    <input type="color" x-model="settings.REMOTION_SUBTITLE_COLOR"
+                           class="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-slate-800 p-0" title="Custom" />
+                  </div>
                 </div>
               </div>
-              <!-- Subtitle Background + Stroke -->
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_bg_label')"></label>
-                  <select x-model="settings.REMOTION_SUBTITLE_BG" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="none" x-text="t('subtitle_bg_none')"></option>
-                    <option value="box" x-text="t('subtitle_bg_box')"></option>
-                    <option value="pill" x-text="t('subtitle_bg_pill')"></option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_stroke_label')"></label>
-                  <select x-model="settings.REMOTION_SUBTITLE_STROKE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="0" x-text="t('stroke_none')"></option>
-                    <option value="1" x-text="t('stroke_thin')"></option>
-                    <option value="2" x-text="t('stroke_medium')"></option>
-                    <option value="3" x-text="t('stroke_thick')"></option>
-                  </select>
-                </div>
-              </div>
-              <!-- Video Effect -->
+
+              <!-- Subtitle Background — Visual Cards -->
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('video_effect_label')"></label>
-                <select x-model="settings.REMOTION_VIDEO_EFFECT" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                  <option value="none" x-text="t('effect_none')"></option>
-                  <option value="vignette" x-text="t('effect_vignette')"></option>
-                  <option value="warm" x-text="t('effect_warm')"></option>
-                  <option value="cool" x-text="t('effect_cool')"></option>
-                  <option value="cinematic" x-text="t('effect_cinematic')"></option>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('subtitle_bg_label')"></label>
+                <div class="flex gap-3 flex-wrap">
+                  <div @click="settings.REMOTION_SUBTITLE_BG='none'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_BG==='none' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:152px;height:46px;background:linear-gradient(to bottom,#1e293b,#0f172a)">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <span style="color:white;font-size:12px;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,0.9)" x-text="t('preview_font_sample')"></span>
+                    </div>
+                    <div class="absolute bottom-1 right-1.5 text-xs text-slate-400 font-mono" x-text="t('subtitle_bg_none')"></div>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_BG='box'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_BG==='box' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:152px;height:46px;background:linear-gradient(to bottom,#1e293b,#0f172a)">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <span style="color:white;font-size:12px;font-weight:700;background:rgba(0,0,0,0.75);padding:2px 8px;border-radius:2px" x-text="t('preview_font_sample')"></span>
+                    </div>
+                    <div class="absolute bottom-1 right-1.5 text-xs text-slate-400 font-mono" x-text="t('subtitle_bg_box')"></div>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_BG='pill'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_BG==='pill' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:152px;height:46px;background:linear-gradient(to bottom,#1e293b,#0f172a)">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <span style="color:white;font-size:12px;font-weight:700;background:rgba(0,0,0,0.75);padding:2px 14px;border-radius:999px" x-text="t('preview_font_sample')"></span>
+                    </div>
+                    <div class="absolute bottom-1 right-1.5 text-xs text-slate-400 font-mono" x-text="t('subtitle_bg_pill')"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subtitle Stroke — compact select -->
+              <div class="w-40">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_stroke_label')"></label>
+                <select x-model="settings.REMOTION_SUBTITLE_STROKE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="0" x-text="t('stroke_none')"></option>
+                  <option value="1" x-text="t('stroke_thin')"></option>
+                  <option value="2" x-text="t('stroke_medium')"></option>
+                  <option value="3" x-text="t('stroke_thick')"></option>
                 </select>
               </div>
-              <!-- Transition Duration -->
+
+              <!-- Video Effect — Visual Cards -->
               <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('video_effect_label')"></label>
+                <div class="flex gap-2 flex-wrap">
+                  <div @click="settings.REMOTION_VIDEO_EFFECT='none'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_VIDEO_EFFECT==='none' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:78px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a)">
+                    <div class="absolute inset-0 flex items-end justify-center pb-1.5">
+                      <span class="text-xs text-slate-300 font-semibold" x-text="t('effect_none')"></span>
+                    </div>
+                  </div>
+                  <div @click="settings.REMOTION_VIDEO_EFFECT='vignette'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_VIDEO_EFFECT==='vignette' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:78px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a)">
+                    <div class="absolute inset-0" style="background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,0.82) 100%)"></div>
+                    <div class="absolute inset-0 flex items-end justify-center pb-1.5">
+                      <span class="text-xs text-slate-300 font-semibold">Vignette</span>
+                    </div>
+                  </div>
+                  <div @click="settings.REMOTION_VIDEO_EFFECT='warm'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_VIDEO_EFFECT==='warm' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:78px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a)">
+                    <div class="absolute inset-0" style="background:rgba(255,120,30,0.32)"></div>
+                    <div class="absolute inset-0 flex items-end justify-center pb-1.5">
+                      <span class="text-xs text-white font-semibold">Warm</span>
+                    </div>
+                  </div>
+                  <div @click="settings.REMOTION_VIDEO_EFFECT='cool'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_VIDEO_EFFECT==='cool' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:78px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a)">
+                    <div class="absolute inset-0" style="background:rgba(30,100,255,0.30)"></div>
+                    <div class="absolute inset-0 flex items-end justify-center pb-1.5">
+                      <span class="text-xs text-white font-semibold">Cool</span>
+                    </div>
+                  </div>
+                  <div @click="settings.REMOTION_VIDEO_EFFECT='cinematic'"
+                       class="relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all select-none"
+                       :class="settings.REMOTION_VIDEO_EFFECT==='cinematic' ? 'border-indigo-500' : 'border-transparent hover:border-indigo-400'"
+                       style="width:78px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a)">
+                    <div class="absolute inset-x-0 top-0 bg-black" style="height:8px"></div>
+                    <div class="absolute inset-x-0 bottom-0 bg-black" style="height:8px"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <span class="text-xs text-slate-300 font-semibold">Cinematic</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Transition Duration — compact select -->
+              <div class="w-48">
                 <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('remotion_transition_label')"></label>
-                <select x-model="settings.REMOTION_TRANSITION_DURATION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <select x-model="settings.REMOTION_TRANSITION_DURATION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
                   <option value="0" x-text="t('transition_none')"></option>
                   <option value="8" x-text="t('transition_fast')"></option>
                   <option value="12" x-text="t('transition_normal')"></option>
                   <option value="24" x-text="t('transition_slow')"></option>
                 </select>
               </div>
+
               <!-- Karaoke -->
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1">
+              <div class="flex items-start gap-4 flex-wrap">
+                <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('karaoke_enabled_label')"></label>
-                  <select x-model="settings.REMOTION_KARAOKE_ENABLED" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <select x-model="settings.REMOTION_KARAOKE_ENABLED" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
                     <option value="true" x-text="t('toggle_on')"></option>
                     <option value="false" x-text="t('toggle_off')"></option>
                   </select>
                 </div>
-                <div class="flex-1">
+                <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('karaoke_color_label')"></label>
                   <input type="color" x-model="settings.REMOTION_KARAOKE_COLOR"
-                    class="w-full h-10 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 cursor-pointer focus:outline-none focus:border-indigo-500 transition-colors" />
+                    class="w-10 h-10 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 cursor-pointer focus:outline-none focus:border-indigo-500 transition-colors" />
                 </div>
               </div>
-              <!-- Subtitle Animation Preset -->
+
+              <!-- Subtitle Animation — Cards with CSS demo -->
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_animation_label')"></label>
-                <select x-model="settings.REMOTION_SUBTITLE_ANIMATION" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                  <option value="hype">Hype</option>
-                  <option value="explosive">Explosive</option>
-                  <option value="vibrant">Vibrant</option>
-                  <option value="minimal">Minimal</option>
-                  <option value="none">None</option>
-                </select>
-                <p class="text-xs text-slate-500 mt-1" x-text="t('subtitle_animation_hint')"></p>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('subtitle_animation_label')"></label>
+                <div class="flex gap-2 flex-wrap">
+                  <div @click="settings.REMOTION_SUBTITLE_ANIMATION='hype'"
+                       class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1 p-2 transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_ANIMATION==='hype' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'"
+                       style="width:86px;height:62px">
+                    <span class="text-yellow-400 text-lg font-black prev-hype" style="filter:drop-shadow(0 0 5px gold)">HYPE</span>
+                    <span class="text-xs text-slate-400" x-text="t('anim_desc_hype')"></span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_ANIMATION='explosive'"
+                       class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1 p-2 transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_ANIMATION==='explosive' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'"
+                       style="width:86px;height:62px">
+                    <span class="text-orange-400 text-lg font-black prev-explosive" style="filter:drop-shadow(0 0 5px #f97316)">BOOM</span>
+                    <span class="text-xs text-slate-400" x-text="t('anim_desc_explosive')"></span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_ANIMATION='vibrant'"
+                       class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1 p-2 transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_ANIMATION==='vibrant' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'"
+                       style="width:86px;height:62px">
+                    <span class="text-purple-400 text-lg font-black prev-vibrant">POP</span>
+                    <span class="text-xs text-slate-400" x-text="t('anim_desc_vibrant')"></span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_ANIMATION='minimal'"
+                       class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1 p-2 transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_ANIMATION==='minimal' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'"
+                       style="width:86px;height:62px">
+                    <span class="text-slate-200 text-sm font-semibold">minimal</span>
+                    <span class="text-xs text-slate-400" x-text="t('anim_desc_minimal')"></span>
+                  </div>
+                  <div @click="settings.REMOTION_SUBTITLE_ANIMATION='none'"
+                       class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1 p-2 transition-all select-none"
+                       :class="settings.REMOTION_SUBTITLE_ANIMATION==='none' ? 'border-indigo-500 bg-indigo-900/20' : 'border-slate-700 bg-slate-800 hover:border-indigo-400'"
+                       style="width:86px;height:62px">
+                    <span class="text-slate-500 text-sm font-semibold">static</span>
+                    <span class="text-xs text-slate-500" x-text="t('anim_desc_none')"></span>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-500 mt-1.5" x-text="t('subtitle_animation_hint')"></p>
               </div>
               <div class="px-4 py-3 bg-indigo-900/20 border border-indigo-700/40 rounded-xl text-xs text-indigo-300 space-y-1">
                 <div class="font-semibold">Remotion <span class="text-green-400" x-text="t('remotion_free')"></span></div>
@@ -924,7 +1122,7 @@
         </div>
 
         <!-- Output -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
           <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_output')"></h2>
           <div class="grid grid-cols-3 gap-4">
             <div>
@@ -951,7 +1149,7 @@
         </div>
 
         <!-- Master Prompts -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div class="flex items-center justify-between mb-1">
             <h2 class="text-sm font-bold text-slate-300" x-text="t('section_prompts')"></h2>
             <button @click="savePrompts()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
@@ -1039,8 +1237,650 @@
           </div>
         </div>
 
+        <!-- ══ BULLETIN SETTINGS (settingsModule==='bulletin') ══════════ -->
+
+        <!-- Bulletin TTS Voice -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_tts')"></h2>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_tts_fallback_note')"></p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_provider_label')"></label>
+              <select x-model="settings.BULLETIN_TTS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="" x-text="t('bulletin_tts_inherit')"></option>
+                <option value="speshaudio">SpesAudio</option>
+                <option value="elevenlabs">ElevenLabs</option>
+                <option value="openai">OpenAI TTS</option>
+              </select>
+            </div>
+            <!-- Voice ID -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
+              <div class="flex gap-2">
+                <input x-model="settings.BULLETIN_TTS_VOICE_ID"
+                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-red-500 transition-colors"
+                       :placeholder="t('bulletin_tts_voice_placeholder')" />
+                <button @click="fetchBulletinVoices()"
+                        :disabled="bulletinVoicesLoading"
+                        class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all"
+                        x-text="bulletinVoicesLoading ? '...' : t('bulletin_fetch_voices')"></button>
+              </div>
+              <div x-show="bulletinVoicesFetchError" class="mt-1.5 text-xs text-red-400" x-text="bulletinVoicesFetchError"></div>
+            </div>
+            <!-- Fetched voices dropdown -->
+            <div x-show="bulletinVoicesList.length > 0">
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
+              <select x-model="settings.BULLETIN_TTS_VOICE_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <template x-for="v in bulletinVoicesList" :key="v.voice_id||v.id">
+                  <option :value="v.voice_id||v.id" x-text="v.name"></option>
+                </template>
+              </select>
+            </div>
+            <!-- Speed -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_speed_label')"></label>
+              <div class="flex items-center gap-3">
+                <input type="range" x-model="settings.BULLETIN_TTS_SPEED" min="0.5" max="2.0" step="0.05"
+                       class="flex-1 accent-red-500 cursor-pointer" />
+                <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="parseFloat(settings.BULLETIN_TTS_SPEED||0).toFixed(2)"></span>
+              </div>
+              <div x-show="!settings.BULLETIN_TTS_SPEED || parseFloat(settings.BULLETIN_TTS_SPEED)===0" class="text-xs text-slate-500 mt-1" x-text="t('bulletin_tts_inherit_hint')"></div>
+            </div>
+            <!-- SpesAudio sliders -->
+            <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="space-y-3 pt-1 border-t border-slate-700/50">
+              <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">SpesAudio Kalitesi</div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('spesaudio_stability')"></label>
+                <div class="flex items-center gap-3">
+                  <input type="range" x-model="settings.BULLETIN_TTS_STABILITY" min="0" max="1" step="0.05"
+                         class="flex-1 accent-red-500 cursor-pointer" />
+                  <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="parseFloat(settings.BULLETIN_TTS_STABILITY||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_STABILITY).toFixed(2)"></span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('spesaudio_similarity')"></label>
+                <div class="flex items-center gap-3">
+                  <input type="range" x-model="settings.BULLETIN_TTS_SIMILARITY_BOOST" min="0" max="1" step="0.05"
+                         class="flex-1 accent-red-500 cursor-pointer" />
+                  <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="parseFloat(settings.BULLETIN_TTS_SIMILARITY_BOOST||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_SIMILARITY_BOOST).toFixed(2)"></span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('spesaudio_style')"></label>
+                <div class="flex items-center gap-3">
+                  <input type="range" x-model="settings.BULLETIN_TTS_STYLE" min="0" max="1" step="0.05"
+                         class="flex-1 accent-red-500 cursor-pointer" />
+                  <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="parseFloat(settings.BULLETIN_TTS_STYLE||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_STYLE).toFixed(2)"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulletin Visual Style -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_bulletin_visual')"></h2>
+          <div class="space-y-5">
+            <!-- Style cards -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_style')"></label>
+              <div class="flex gap-3 flex-wrap">
+                <div @click="bulletinRenderCfg.style='breaking'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='breaking' ? 'border-red-500 ring-1 ring-red-500/40' : 'border-transparent hover:border-red-400'"
+                     style="width:155px;height:88px;background:#0d0d0d">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#dc2626"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#dc2626;font-weight:900;letter-spacing:0.1em">SON DAKİKA</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Breaking News</span>
+                    <span style="font-size:8px;color:#94a3b8">Dark + Red accent</span>
+                  </div>
+                </div>
+                <div @click="bulletinRenderCfg.style='tech'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='tech' ? 'border-cyan-500 ring-1 ring-cyan-500/40' : 'border-transparent hover:border-cyan-400'"
+                     style="width:155px;height:88px;background:#0a1628">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#00e5ff"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#00e5ff;font-weight:900;letter-spacing:0.1em">TECH</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Tech / Modern</span>
+                    <span style="font-size:8px;color:#94a3b8">Navy + Cyan accent</span>
+                  </div>
+                </div>
+                <div @click="bulletinRenderCfg.style='corporate'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='corporate' ? 'border-blue-500 ring-1 ring-blue-500/40' : 'border-transparent hover:border-blue-400'"
+                     style="width:155px;height:88px;background:#0f1f3d">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#2563eb"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Corporate</span>
+                    <span style="font-size:8px;color:#94a3b8">Navy + Cobalt accent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Format cards -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_format')"></label>
+              <div class="flex gap-3">
+                <div @click="bulletinRenderCfg.format='16:9'"
+                     class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1.5 p-3 transition-all select-none"
+                     :class="bulletinRenderCfg.format==='16:9' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                  <div class="border border-slate-500 rounded bg-slate-700" style="width:60px;height:34px"></div>
+                  <span class="text-xs text-slate-300 font-semibold">16:9</span>
+                  <span class="text-xs text-slate-500">YouTube</span>
+                </div>
+                <div @click="bulletinRenderCfg.format='9:16'"
+                     class="cursor-pointer border-2 rounded-xl flex flex-col items-center justify-center gap-1.5 p-3 transition-all select-none"
+                     :class="bulletinRenderCfg.format==='9:16' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                  <div class="border border-slate-500 rounded bg-slate-700" style="width:21px;height:37px"></div>
+                  <span class="text-xs text-slate-300 font-semibold">9:16</span>
+                  <span class="text-xs text-slate-500">Shorts/Reels</span>
+                </div>
+              </div>
+            </div>
+            <!-- Network name + FPS -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_settings_network')"></label>
+                <input x-model="bulletinRenderCfg.network_name" type="text"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_settings_fps')"></label>
+                <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="30">30 fps</option>
+                  <option value="60">60 fps</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulletin Content Defaults -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_bulletin_content')"></h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_default_max_items_label')"></label>
+              <select x-model="settings.BULLETIN_DEFAULT_MAX_ITEMS" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3 (Varsayılan)</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_default_lang_label')"></label>
+              <select x-model="settings.BULLETIN_DEFAULT_LANGUAGE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="" x-text="t('bulletin_default_lang_auto')"></option>
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3" x-text="t('bulletin_content_defaults_hint')"></p>
+        </div>
+
+        <!-- Bulletin Lower Third -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_lower_third')"></h2>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_lower_third_hint')"></p>
+          <div class="space-y-4">
+            <!-- Lower Third Enabled -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('bulletin_lower_third_enabled_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('bulletin_lower_third_enabled_hint')"></p>
+              </div>
+              <select x-model="settings.BULLETIN_LOWER_THIRD_ENABLED" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="true" x-text="t('toggle_on')"></option>
+                <option value="false" x-text="t('toggle_off')"></option>
+              </select>
+            </div>
+            <!-- Lower Third Text (Channel name override) -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_lower_third_text_label')"></label>
+              <input x-model="settings.BULLETIN_LOWER_THIRD_TEXT"
+                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
+                     :placeholder="t('bulletin_lower_third_text_ph')" />
+              <p class="text-xs text-slate-500 mt-1" x-text="t('bulletin_lower_third_text_hint')"></p>
+            </div>
+            <!-- Lower Third Font -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_lower_third_font_label')"></label>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="[val, label, css] in [['bebas','BEBAS NEUE',&quot;font-family:'Bebas Neue',sans-serif;font-size:15px&quot;],['oswald','OSWALD',&quot;font-family:'Oswald',sans-serif;font-size:14px;font-weight:700&quot;],['montserrat','Montserrat',&quot;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:900&quot;],['inter','Inter',&quot;font-family:'Inter',sans-serif;font-size:12px;font-weight:700&quot;],['roboto','Roboto',&quot;font-family:'Roboto',sans-serif;font-size:12px;font-weight:700&quot;]]" :key="val">
+                  <div @click="settings.BULLETIN_LOWER_THIRD_FONT=val"
+                       class="h-9 px-3 rounded-lg cursor-pointer border-2 flex items-center justify-center transition-all select-none"
+                       :class="settings.BULLETIN_LOWER_THIRD_FONT===val ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                    <span :style="css+';color:white'" x-text="label"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <!-- Lower Third Color & Size -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_lower_third_color_label')"></label>
+                <div class="flex gap-1.5 items-center flex-wrap">
+                  <template x-for="[val,bg] in [['#ffffff','#fff'],['#FFE600','#FFE600'],['#00E5FF','#00E5FF'],['#FF3D3D','#FF3D3D'],['#FF6B35','#FF6B35'],['#B2FF59','#B2FF59']]" :key="val">
+                    <div @click="settings.BULLETIN_LOWER_THIRD_COLOR=val"
+                         class="w-7 h-7 rounded-lg cursor-pointer border-2 transition-all hover:scale-110 select-none"
+                         :style="'background:'+bg"
+                         :class="settings.BULLETIN_LOWER_THIRD_COLOR===val ? 'border-white ring-2 ring-white/40 scale-110' : 'border-transparent'"></div>
+                  </template>
+                  <input type="color" x-model="settings.BULLETIN_LOWER_THIRD_COLOR"
+                         class="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-slate-800 p-0" title="Custom" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_lower_third_size_label')"></label>
+                <div class="flex items-center gap-3">
+                  <input type="range" x-model="settings.BULLETIN_LOWER_THIRD_SIZE" min="16" max="60" step="2"
+                         class="flex-1 accent-red-500 cursor-pointer" />
+                  <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="(settings.BULLETIN_LOWER_THIRD_SIZE||32)+'px'"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulletin Ticker (Kayan Yazı) -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_ticker')"></h2>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_ticker_hint')"></p>
+          <div class="space-y-4">
+            <!-- Ticker Enabled -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('bulletin_ticker_enabled_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('bulletin_ticker_enabled_hint')"></p>
+              </div>
+              <select x-model="settings.BULLETIN_TICKER_ENABLED" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="true" x-text="t('toggle_on')"></option>
+                <option value="false" x-text="t('toggle_off')"></option>
+              </select>
+            </div>
+            <!-- Ticker Speed -->
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-semibold text-slate-400" x-text="t('bulletin_ticker_speed_label')"></label>
+                <span class="text-xs font-mono text-red-400" x-text="(settings.BULLETIN_TICKER_SPEED||3)+'×'"></span>
+              </div>
+              <input type="range" x-model="settings.BULLETIN_TICKER_SPEED" min="1" max="6" step="0.5"
+                     class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-red-500 bg-slate-700" />
+              <div class="flex justify-between text-xs text-slate-600 mt-1 px-0.5">
+                <span x-text="t('bulletin_ticker_speed_slow')"></span><span x-text="t('bulletin_ticker_speed_fast')"></span>
+              </div>
+            </div>
+            <!-- Ticker Color -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_ticker_bg_label')"></label>
+                <div class="flex gap-1.5 items-center flex-wrap">
+                  <template x-for="[val,bg] in [['#dc2626','#dc2626'],['#2563eb','#2563eb'],['#000000','#111'],['#0a1628','#0a1628'],['#0f1f3d','#0f1f3d']]" :key="val">
+                    <div @click="settings.BULLETIN_TICKER_BG=val"
+                         class="w-7 h-7 rounded-lg cursor-pointer border-2 transition-all hover:scale-110 select-none"
+                         :style="'background:'+bg"
+                         :class="settings.BULLETIN_TICKER_BG===val ? 'border-white ring-2 ring-white/40 scale-110' : 'border-transparent'"></div>
+                  </template>
+                  <input type="color" x-model="settings.BULLETIN_TICKER_BG"
+                         class="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-slate-800 p-0" title="Custom" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_ticker_color_label')"></label>
+                <div class="flex gap-1.5 items-center flex-wrap">
+                  <template x-for="[val,bg] in [['#ffffff','#fff'],['#FFE600','#FFE600'],['#00E5FF','#00E5FF'],['#FF3D3D','#FF3D3D']]" :key="val">
+                    <div @click="settings.BULLETIN_TICKER_COLOR=val"
+                         class="w-7 h-7 rounded-lg cursor-pointer border-2 transition-all hover:scale-110 select-none"
+                         :style="'background:'+bg"
+                         :class="settings.BULLETIN_TICKER_COLOR===val ? 'border-white ring-2 ring-white/40 scale-110' : 'border-transparent'"></div>
+                  </template>
+                  <input type="color" x-model="settings.BULLETIN_TICKER_COLOR"
+                         class="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-slate-800 p-0" title="Custom" />
+                </div>
+              </div>
+            </div>
+            <!-- Live indicator -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('bulletin_show_live_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('bulletin_show_live_hint')"></p>
+              </div>
+              <select x-model="settings.BULLETIN_SHOW_LIVE_INDICATOR" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="true" x-text="t('toggle_on')"></option>
+                <option value="false" x-text="t('toggle_off')"></option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulletin Master Prompts -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_prompts')"></h2>
+            <button @click="savePrompts()" class="px-4 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
+          </div>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_prompts_hint')"></p>
+          <div x-show="promptsSaved" x-transition class="mb-4 px-4 py-2.5 bg-green-900/30 border border-green-700/50 rounded-lg text-xs text-green-400" x-text="t('prompts_saved')"></div>
+          <div class="space-y-5">
+            <!-- Bulletin Narration System Prompt -->
+            <div class="border border-slate-800 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_bulletin_narration_label')"></label>
+                <button @click="resetPrompt('bulletin_narration')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+              </div>
+              <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_bulletin_narration_hint')"></p>
+              <textarea x-model="prompts.bulletin_narration" rows="7" spellcheck="false"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-red-500 transition-colors resize-y leading-relaxed"
+                :placeholder="t('prompt_default_placeholder')"></textarea>
+            </div>
+          </div>
+        </div>
+
         <button @click="saveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
                 x-text="t('save_settings')"></button>
+      </div>
+    </div>
+
+    <!-- ══ BÜLTEN ══════════════════════════════════════════════════════ -->
+    <div x-show="view==='bulletin'" class="p-6">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-bold text-white" x-text="t('bulletin_title')"></h1>
+            <p class="text-slate-500 text-sm mt-0.5" x-text="t('bulletin_subtitle')"></p>
+          </div>
+        </div>
+
+        <!-- Sub-tab bar -->
+        <div class="flex gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl mb-6">
+          <button @click="bulletinTab='sources'"
+                  class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+                  :class="bulletinTab==='sources'?'bg-red-700 text-white shadow-md':'text-slate-400 hover:text-white'"
+                  x-text="t('bulletin_tab_sources')"></button>
+          <button @click="bulletinTab='draft'"
+                  class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+                  :class="bulletinTab==='draft'?'bg-red-700 text-white shadow-md':'text-slate-400 hover:text-white'"
+                  x-text="t('bulletin_tab_draft')"></button>
+          <button @click="bulletinTab='render'"
+                  class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+                  :class="bulletinTab==='render'?'bg-red-700 text-white shadow-md':'text-slate-400 hover:text-white'"
+                  x-text="t('bulletin_tab_render')"></button>
+        </div>
+
+        <!-- ── KAYNAKLAR ──────────────────────────────────────── -->
+        <div x-show="bulletinTab==='sources'">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
+            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_add_source')"></h2>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_name')"></label>
+                <input x-model="newSrc.name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" :placeholder="t('bulletin_src_name_ph')" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_url')"></label>
+                <input x-model="newSrc.url" type="url" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="https://..." />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_category')"></label>
+                <input x-model="newSrc.category" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" :placeholder="t('bulletin_src_category_ph')" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_lang')"></label>
+                <select x-model="newSrc.language" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="tr">Türkçe</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+            <button @click="addBulletinSource()" :disabled="!newSrc.name.trim()||!newSrc.url.trim()"
+                    class="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
+                    x-text="t('bulletin_add_btn')"></button>
+          </div>
+
+          <div x-show="bulletinSources.length===0" class="text-center py-12 text-slate-500 text-sm" x-text="t('bulletin_no_sources')"></div>
+          <div class="space-y-2">
+            <template x-for="src in bulletinSources" :key="src.id">
+              <div class="flex items-center gap-3 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl">
+                <button @click="toggleBulletinSource(src)"
+                        class="shrink-0 w-9 h-5 rounded-full transition-colors relative"
+                        :class="src.enabled ? 'bg-red-600' : 'bg-slate-700'">
+                  <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                        :class="src.enabled ? 'left-4' : 'left-0.5'"></span>
+                </button>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-medium text-sm text-white" x-text="src.name"></span>
+                    <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="src.category"></span>
+                    <span class="text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-400 rounded-full border border-indigo-700/40 uppercase" x-text="src.language"></span>
+                  </div>
+                  <div class="text-xs text-slate-500 mt-0.5 truncate" x-text="src.url"></div>
+                </div>
+                <button @click="deleteBulletinSource(src.id)"
+                        class="shrink-0 px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-red-900/40 text-slate-500 hover:text-red-400 border border-slate-700 hover:border-red-700/50 rounded-lg transition-all"
+                        x-text="t('btn_delete')"></button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- ── TASLAK ──────────────────────────────────────────── -->
+        <div x-show="bulletinTab==='draft'">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
+            <div class="flex items-center gap-4 flex-wrap">
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-400" x-text="t('bulletin_max_items')"></label>
+                <select x-model="draftMaxItems" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-400" x-text="t('bulletin_lang_override')"></label>
+                <select x-model="draftLangOverride" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="">— Auto —</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <button @click="fetchDraft()" :disabled="draftLoading || bulletinSources.filter(s=>s.enabled).length===0"
+                      class="px-5 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-all flex items-center gap-2">
+                <span x-show="draftLoading" class="animate-spin-slow">↻</span>
+                <span x-text="draftLoading ? t('bulletin_fetching') : t('bulletin_fetch_btn')"></span>
+              </button>
+              <template x-if="draftData">
+                <span class="text-xs text-slate-500" x-text="draftData.total + ' ' + t('bulletin_items_found')"></span>
+              </template>
+            </div>
+            <div x-show="draftError" class="mt-3 px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg text-xs text-red-400" x-text="draftError"></div>
+          </div>
+
+          <div x-show="!draftData && !draftLoading" class="text-center py-16 text-slate-500 text-sm" x-text="t('bulletin_draft_empty')"></div>
+          <template x-if="draftData">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-slate-500">
+                  <span x-text="selectedDraftCount()"></span> <span x-text="t('bulletin_selected')"></span>
+                </span>
+                <div class="flex gap-2">
+                  <button @click="selectAllDraft(true)" class="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all" x-text="t('bulletin_select_all')"></button>
+                  <button @click="selectAllDraft(false)" class="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all" x-text="t('bulletin_deselect_all')"></button>
+                </div>
+              </div>
+              <template x-for="[cat, items] in Object.entries(draftData.categories)" :key="cat">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                  <button @click="toggleDraftCat(cat)"
+                          class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-800/60 transition-colors">
+                    <div class="flex items-center gap-3">
+                      <span class="text-sm font-bold text-white" x-text="cat"></span>
+                      <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="items.filter(i=>i.selected).length + '/' + items.length"></span>
+                    </div>
+                    <span class="text-slate-500 text-sm" x-text="openDraftCats[cat] ? '▲' : '▼'"></span>
+                  </button>
+                  <div x-show="openDraftCats[cat]" class="divide-y divide-slate-800/60">
+                    <template x-for="item in items" :key="item.id">
+                      <div class="px-5 py-4" :class="item.selected ? '' : 'opacity-50'">
+                        <div class="flex items-start gap-3">
+                          <input type="checkbox" x-model="item.selected" class="mt-1 shrink-0 accent-red-600 w-4 h-4 cursor-pointer" />
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-start gap-3">
+                              <div class="flex-1">
+                                <div class="font-semibold text-sm text-white mb-1" x-text="item.title"></div>
+                                <div class="text-xs text-slate-500 mb-2 flex items-center gap-2">
+                                  <span x-text="item.source_name"></span>
+                                  <span x-show="item.published" class="text-slate-600" x-text="item.published.substring(0,16)"></span>
+                                </div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_narration')"></label>
+                                <textarea x-model="item.narration" rows="3"
+                                          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 resize-none focus:outline-none focus:border-red-500 transition-colors"></textarea>
+                              </div>
+                              <template x-if="item.image_url">
+                                <img :src="item.image_url" class="w-24 h-16 object-cover rounded-lg shrink-0 border border-slate-700" />
+                              </template>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+              <div x-show="draftData.errors && draftData.errors.length > 0" class="mt-2 px-4 py-3 bg-red-900/20 border border-red-800/40 rounded-xl text-xs text-red-400">
+                <span x-text="t('bulletin_fetch_errors') + ': '"></span>
+                <template x-for="err in draftData.errors" :key="err.source_id">
+                  <span x-text="err.source_name + ' (' + err.error + ') '"></span>
+                </template>
+              </div>
+              <button @click="bulletinTab='render'"
+                      :disabled="selectedDraftCount()===0"
+                      class="w-full py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all mt-4"
+                      x-text="t('bulletin_proceed_render') + ' (' + selectedDraftCount() + ')'"></button>
+            </div>
+          </template>
+        </div>
+
+        <!-- ── RENDER ──────────────────────────────────────────── -->
+        <div x-show="bulletinTab==='render'">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
+            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_render_config')"></h2>
+            <!-- Style cards -->
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_style')"></label>
+              <div class="flex gap-3 flex-wrap">
+                <div @click="bulletinRenderCfg.style='breaking'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='breaking' ? 'border-red-500' : 'border-transparent hover:border-red-400'"
+                     style="width:140px;height:72px;background:#0d0d0d">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#dc2626"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:8px;color:#dc2626;font-weight:900;letter-spacing:0.1em">SON DAKİKA</span>
+                    <span style="font-size:11px;color:white;font-weight:700">Breaking News</span>
+                  </div>
+                </div>
+                <div @click="bulletinRenderCfg.style='tech'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='tech' ? 'border-cyan-500' : 'border-transparent hover:border-cyan-400'"
+                     style="width:140px;height:72px;background:#0a1628">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#00e5ff"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:8px;color:#00e5ff;font-weight:900;letter-spacing:0.1em">TECH</span>
+                    <span style="font-size:11px;color:white;font-weight:700">Tech / Modern</span>
+                  </div>
+                </div>
+                <div @click="bulletinRenderCfg.style='corporate'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='corporate' ? 'border-blue-500' : 'border-transparent hover:border-blue-400'"
+                     style="width:140px;height:72px;background:#0f1f3d">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#2563eb"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:8px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
+                    <span style="font-size:11px;color:white;font-weight:700">Corporate</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Format + network + fps row -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_network_name')"></label>
+                <input x-model="bulletinRenderCfg.network_name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_format')"></label>
+                <div class="flex gap-2">
+                  <div @click="bulletinRenderCfg.format='16:9'"
+                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                       :class="bulletinRenderCfg.format==='16:9' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                    <div class="border border-slate-500 rounded bg-slate-700" style="width:26px;height:15px"></div>
+                    <span class="text-xs text-slate-400">16:9</span>
+                  </div>
+                  <div @click="bulletinRenderCfg.format='9:16'"
+                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                       :class="bulletinRenderCfg.format==='9:16' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                    <div class="border border-slate-500 rounded bg-slate-700" style="width:9px;height:16px"></div>
+                    <span class="text-xs text-slate-400">9:16</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_fps')"></label>
+                <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="30">30 fps</option>
+                  <option value="60">60 fps</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-4">
+              <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_selected_items')"></div>
+              <div x-show="selectedDraftCount()===0" class="text-xs text-slate-500 italic" x-text="t('bulletin_no_items_selected')"></div>
+              <div class="space-y-1.5">
+                <template x-for="item in getSelectedItems()" :key="item.id">
+                  <div class="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg text-xs">
+                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span>
+                    <span class="flex-1 truncate text-slate-300" x-text="item.title"></span>
+                    <span class="shrink-0 text-slate-500 uppercase" x-text="item.category"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <button @click="startBulletinRender()" :disabled="bulletinRendering || selectedDraftCount()===0"
+                    class="w-full py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+              <span x-show="bulletinRendering" class="animate-spin-slow">↻</span>
+              <span x-text="bulletinRendering ? t('bulletin_rendering') : t('bulletin_render_btn')"></span>
+            </button>
+          </div>
+
+          <template x-if="bulletinJobId">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-slate-300" x-text="t('bulletin_render_status')"></span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border"
+                      :class="bulletinJobStatus==='completed'?'text-green-400 bg-green-400/10 border-green-500/30':bulletinJobStatus==='failed'?'text-red-400 bg-red-400/10 border-red-500/30':'text-blue-400 bg-blue-400/10 border-blue-500/30'"
+                      x-text="bulletinJobStatus"></span>
+              </div>
+              <div class="font-mono text-xs text-slate-500 mb-3" x-text="bulletinJobId"></div>
+              <div x-show="bulletinJobStatus==='completed'" class="space-y-2">
+                <div class="text-xs text-green-400 font-semibold" x-text="t('bulletin_render_done')"></div>
+                <a :href="'/api/bulletin/download/' + bulletinJobId" target="_blank"
+                   class="inline-flex items-center gap-2 px-4 py-2 bg-green-800/40 hover:bg-green-800/70 border border-green-700/50 text-green-400 text-sm font-semibold rounded-lg transition-all"
+                   x-text="t('bulletin_download_btn')"></a>
+              </div>
+              <div x-show="bulletinJobStatus==='failed'" class="text-xs text-red-400" x-text="bulletinJobError"></div>
+              <div x-show="bulletinRendering" class="flex items-center gap-2 text-xs text-blue-400">
+                <span class="animate-spin-slow">↻</span>
+                <span x-text="t('bulletin_rendering_wait')"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
       </div>
     </div>
 
@@ -1216,6 +2056,87 @@ const LANG = {
     prompt_view_default: '▸ View built-in default',
     prompt_loading: 'Loading...',
     prompt_default_placeholder: 'Leave empty to use the built-in default prompt...',
+    nav_bulletin: 'Bulletin',
+    bulletin_title: 'News Bulletin', bulletin_subtitle: 'RSS → AI narration → video broadcast',
+    bulletin_tab_sources: '📡 Sources', bulletin_tab_draft: '📝 Draft', bulletin_tab_render: '🎬 Render',
+    bulletin_add_source: 'Add RSS Source',
+    bulletin_src_name: 'Name', bulletin_src_name_ph: 'e.g. BBC News',
+    bulletin_src_url: 'RSS Feed URL',
+    bulletin_src_category: 'Category', bulletin_src_category_ph: 'e.g. World, Economy, Tech',
+    bulletin_src_lang: 'Language',
+    bulletin_add_btn: '+ Add Source',
+    bulletin_no_sources: 'No sources yet. Add an RSS feed URL above.',
+    bulletin_max_items: 'Items per source',
+    bulletin_lang_override: 'Language',
+    bulletin_lang_auto: 'Auto (source default)',
+    bulletin_fetch_btn: '🔄 Fetch & Draft',
+    bulletin_fetching: 'Fetching…',
+    bulletin_items_found: 'items fetched',
+    bulletin_draft_empty: 'Click "Fetch & Draft" to pull the latest news from your sources.',
+    bulletin_selected: 'items selected',
+    bulletin_select_all: 'Select All', bulletin_deselect_all: 'Deselect All',
+    bulletin_narration: 'Narration (editable)',
+    bulletin_fetch_errors: 'Fetch errors',
+    bulletin_proceed_render: '▶ Proceed to Render',
+    bulletin_render_config: 'Render Configuration',
+    bulletin_network_name: 'Network Name',
+    bulletin_style: 'Visual Style',
+    bulletin_format: 'Output Format',
+    bulletin_fps: 'Frame Rate',
+    bulletin_selected_items: 'Selected items for this bulletin',
+    bulletin_no_items_selected: 'No items selected. Go to Draft tab and select items.',
+    bulletin_render_btn: '🎬 Start Render',
+    bulletin_rendering: 'Rendering…',
+    bulletin_rendering_wait: 'Rendering in progress, please wait…',
+    bulletin_render_status: 'Render Status',
+    bulletin_render_done: '✓ Render complete! Download your bulletin below.',
+    bulletin_download_btn: '⬇ Download MP4',
+    // Module selector
+    module_normal_title: '🎬 Normal Video',
+    module_normal_desc: 'Generate a full 10-scene YouTube video from a topic or custom script using AI.',
+    module_bulletin_title: '📺 News Bulletin',
+    module_bulletin_desc: 'Create a professional live-style news broadcast from RSS feeds with lower thirds & ticker.',
+    // Bulletin Lower Third
+    section_bulletin_lower_third: '📋 Lower Third',
+    bulletin_lower_third_hint: 'The bar shown at the bottom with channel name / category label.',
+    bulletin_lower_third_enabled_label: 'Show Lower Third',
+    bulletin_lower_third_enabled_hint: 'Display a lower-third bar with text over each news item.',
+    bulletin_lower_third_text_label: 'Lower Third Text Override',
+    bulletin_lower_third_text_ph: 'e.g. BREAKING NEWS — leave empty to use network name',
+    bulletin_lower_third_text_hint: 'If left empty, the network name from above is used.',
+    bulletin_lower_third_font_label: 'Lower Third Font',
+    bulletin_lower_third_color_label: 'Text Color',
+    bulletin_lower_third_size_label: 'Font Size',
+    // Bulletin Ticker
+    section_bulletin_ticker: '📰 Ticker (Scrolling Headline Bar)',
+    bulletin_ticker_hint: 'The bottom crawl bar that scrolls headlines continuously during the broadcast.',
+    bulletin_ticker_enabled_label: 'Show Ticker',
+    bulletin_ticker_enabled_hint: 'Display a scrolling news ticker at the very bottom of the screen.',
+    bulletin_ticker_speed_label: 'Scroll Speed',
+    bulletin_ticker_speed_slow: 'Slow',
+    bulletin_ticker_speed_fast: 'Fast',
+    bulletin_ticker_bg_label: 'Ticker Background',
+    bulletin_ticker_color_label: 'Ticker Text Color',
+    bulletin_show_live_label: 'Live On-Air Indicator',
+    bulletin_show_live_hint: 'Show a pulsing red dot + "LIVE" label next to the network name.',
+    // Bulletin Prompts
+    section_bulletin_prompts: '✏️ Bulletin Master Prompt',
+    bulletin_prompts_hint: 'Customize the AI prompt for generating bulletin narrations. Leave empty to use the built-in default.',
+    prompt_bulletin_narration_label: '1 · Bulletin Narration Prompt',
+    prompt_bulletin_narration_hint: 'Controls how the AI summarizes and narrates news items for TTS.',
+    anim_desc_hype: 'Zoom up', anim_desc_explosive: 'Slide left', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Fade', anim_desc_none: 'Static',
+    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bulletin',
+    section_bulletin_tts: '🔊 Bulletin TTS', bulletin_tts_fallback_note: 'Override TTS settings for the Bulletin pipeline. Leave Provider empty to inherit the main TTS settings.',
+    bulletin_tts_provider_label: 'TTS Provider', bulletin_tts_inherit: '— Inherit from YTRobot —',
+    bulletin_tts_voice_label: 'Voice ID', bulletin_tts_voice_placeholder: 'Voice ID or leave empty to inherit',
+    bulletin_fetch_voices: 'Fetch Voices',
+    bulletin_tts_speed_label: 'Speed', bulletin_tts_inherit_hint: 'Using inherited speed from YTRobot settings.',
+    spesaudio_stability: 'Stability', spesaudio_similarity: 'Similarity Boost', spesaudio_style: 'Style',
+    section_bulletin_visual: '🎨 Visual Style', bulletin_settings_network: 'Network Name', bulletin_settings_fps: 'FPS',
+    section_bulletin_content: '📋 Content Defaults',
+    bulletin_default_max_items_label: 'Default items per source', bulletin_default_lang_label: 'Default language',
+    bulletin_default_lang_auto: 'Auto (source default)', bulletin_content_defaults_hint: 'These defaults are pre-filled when you open the Draft tab.',
+    preview_font_sample: 'Hello World', anim_desc_none: 'Static',
   },
   tr: {
     app_subtitle: 'Otomatik Video Üretici',
@@ -1383,6 +2304,87 @@ const LANG = {
     prompt_view_default: '▸ Yerleşik varsayılanı görüntüle',
     prompt_loading: 'Yükleniyor...',
     prompt_default_placeholder: 'Yerleşik varsayılan promptu kullanmak için boş bırakın...',
+    nav_bulletin: 'Bülten',
+    bulletin_title: 'Haber Bülteni', bulletin_subtitle: 'RSS → Yapay zeka anlatımı → video yayını',
+    bulletin_tab_sources: '📡 Kaynaklar', bulletin_tab_draft: '📝 Taslak', bulletin_tab_render: '🎬 Render',
+    bulletin_add_source: 'RSS Kaynağı Ekle',
+    bulletin_src_name: 'Ad', bulletin_src_name_ph: 'örn. BBC Türkçe',
+    bulletin_src_url: 'RSS Besleme URL',
+    bulletin_src_category: 'Kategori', bulletin_src_category_ph: 'örn. Dünya, Ekonomi, Teknoloji',
+    bulletin_src_lang: 'Dil',
+    bulletin_add_btn: '+ Kaynak Ekle',
+    bulletin_no_sources: 'Henüz kaynak yok. Yukarıya bir RSS besleme URL ekleyin.',
+    bulletin_max_items: 'Kaynak başına haber',
+    bulletin_lang_override: 'Dil',
+    bulletin_lang_auto: 'Otomatik (kaynak varsayılanı)',
+    bulletin_fetch_btn: '🔄 Çek ve Taslak Oluştur',
+    bulletin_fetching: 'Çekiliyor…',
+    bulletin_items_found: 'haber çekildi',
+    bulletin_draft_empty: 'En son haberleri kaynaklarınızdan çekmek için "Çek ve Taslak Oluştur" düğmesine tıklayın.',
+    bulletin_selected: 'haber seçildi',
+    bulletin_select_all: 'Tümünü Seç', bulletin_deselect_all: 'Seçimi Kaldır',
+    bulletin_narration: 'Anlatım (düzenlenebilir)',
+    bulletin_fetch_errors: 'Çekme hataları',
+    bulletin_proceed_render: '▶ Render\'a Geç',
+    bulletin_render_config: 'Render Yapılandırması',
+    bulletin_network_name: 'Kanal Adı',
+    bulletin_style: 'Görsel Stil',
+    bulletin_format: 'Çıktı Formatı',
+    bulletin_fps: 'Kare Hızı',
+    bulletin_selected_items: 'Bu bülten için seçilen haberler',
+    bulletin_no_items_selected: 'Haber seçilmedi. Taslak sekmesine gidip haber seçin.',
+    bulletin_render_btn: '🎬 Renderi Başlat',
+    bulletin_rendering: 'Render ediliyor…',
+    bulletin_rendering_wait: 'Render devam ediyor, lütfen bekleyin…',
+    bulletin_render_status: 'Render Durumu',
+    bulletin_render_done: '✓ Render tamamlandı! Bülteninizi aşağıdan indirin.',
+    bulletin_download_btn: '⬇ MP4 İndir',
+    // Module selector
+    module_normal_title: '🎬 Normal Video',
+    module_normal_desc: 'Bir konu veya özel script dosyasından yapay zeka ile tam 10 sahneli YouTube videosu üret.',
+    module_bulletin_title: '📺 Haber Bülteni',
+    module_bulletin_desc: 'RSS beslemelerinden lower third ve kayan yazılı profesyonel canlı haber yayını oluştur.',
+    // Bulletin Lower Third
+    section_bulletin_lower_third: '📋 Lower Third (Alt Şerit)',
+    bulletin_lower_third_hint: 'Her haber öğesinin altında gösterilen kanal adı / kategori şeridi.',
+    bulletin_lower_third_enabled_label: 'Lower Third Göster',
+    bulletin_lower_third_enabled_hint: 'Her haber öğesinin üzerinde metin bulunan alt şeridi göster.',
+    bulletin_lower_third_text_label: 'Lower Third Metin Geçersiz Kılma',
+    bulletin_lower_third_text_ph: 'örn. SON DAKİKA — boş bırakırsanız kanal adı kullanılır',
+    bulletin_lower_third_text_hint: 'Boş bırakılırsa yukarıdaki kanal adı kullanılır.',
+    bulletin_lower_third_font_label: 'Lower Third Yazı Tipi',
+    bulletin_lower_third_color_label: 'Metin Rengi',
+    bulletin_lower_third_size_label: 'Font Boyutu',
+    // Bulletin Ticker
+    section_bulletin_ticker: '📰 Kayan Yazı (Alt Bant)',
+    bulletin_ticker_hint: 'Yayın sırasında sürekli kayan manşetlerin göründüğü alt bant.',
+    bulletin_ticker_enabled_label: 'Kayan Yazı Göster',
+    bulletin_ticker_enabled_hint: 'Ekranın en altında kayan haber manşeti bandı göster.',
+    bulletin_ticker_speed_label: 'Kaydırma Hızı',
+    bulletin_ticker_speed_slow: 'Yavaş',
+    bulletin_ticker_speed_fast: 'Hızlı',
+    bulletin_ticker_bg_label: 'Kayan Yazı Arka Planı',
+    bulletin_ticker_color_label: 'Kayan Yazı Metin Rengi',
+    bulletin_show_live_label: 'Canlı/On-Air Göstergesi',
+    bulletin_show_live_hint: 'Kanal adının yanında yanıp sönen kırmızı nokta + "CANLI" etiketi göster.',
+    // Bulletin Prompts
+    section_bulletin_prompts: '✏️ Bülten Master Promptu',
+    bulletin_prompts_hint: 'Bülten anlatımları için yapay zeka promptunu özelleştirin. Boş bırakırsanız yerleşik varsayılan kullanılır.',
+    prompt_bulletin_narration_label: '1 · Bülten Anlatım Promptu',
+    prompt_bulletin_narration_hint: 'Yapay zekanın haber öğelerini TTS için nasıl özetleyip anlattığını kontrol eder.',
+    anim_desc_hype: 'Zoom yukarı', anim_desc_explosive: 'Sola kaydır', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Solma', anim_desc_none: 'Statik',
+    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bülten',
+    section_bulletin_tts: '🔊 Bülten TTS', bulletin_tts_fallback_note: 'Bülten pipeline\'ı için TTS ayarlarını geçersiz kılın. Sağlayıcıyı boş bırakırsanız ana TTS ayarları devralınır.',
+    bulletin_tts_provider_label: 'TTS Sağlayıcı', bulletin_tts_inherit: '— YTRobot\'tan Devral —',
+    bulletin_tts_voice_label: 'Ses ID', bulletin_tts_voice_placeholder: 'Ses ID veya devralmak için boş bırakın',
+    bulletin_fetch_voices: 'Sesleri Getir',
+    bulletin_tts_speed_label: 'Hız', bulletin_tts_inherit_hint: 'YTRobot ayarlarından devralınan hız kullanılıyor.',
+    spesaudio_stability: 'Stabilite', spesaudio_similarity: 'Benzerlik Artışı', spesaudio_style: 'Stil',
+    section_bulletin_visual: '🎨 Görsel Stil', bulletin_settings_network: 'Kanal Adı', bulletin_settings_fps: 'FPS',
+    section_bulletin_content: '📋 İçerik Varsayılanları',
+    bulletin_default_max_items_label: 'Kaynak başına varsayılan haber', bulletin_default_lang_label: 'Varsayılan dil',
+    bulletin_default_lang_auto: 'Otomatik (kaynak varsayılanı)', bulletin_content_defaults_hint: 'Bu varsayılanlar Taslak sekmesini açtığınızda otomatik doldurulur.',
+    preview_font_sample: 'Merhaba Dünya',
   }
 };
 
@@ -1391,6 +2393,7 @@ function app() {
   return {
     lang: localStorage.getItem('ytrobot-lang') || 'en',
     view: 'dashboard', mode: 'topic',
+    videoModule: 'normal',
     sessions: [], currentSession: null, settings: {}, prompts: {}, promptDefaults: {},
     newTopic: '', newScriptFile: '', notes: '', logLines: [],
     submitting: false, runError: '',
@@ -1398,6 +2401,18 @@ function app() {
     voicesList: [], voicesLoading: false, voicesFetchError: '', voicesProvider: '',
     presets: [], presetName: '', presetSaved: false, selectedPreset: '',
     filter: 'all',
+    settingsModule: 'ytrobot',
+    bulletinVoicesList: [], bulletinVoicesLoading: false, bulletinVoicesFetchError: '',
+    // Bulletin state
+    bulletinTab: 'sources',
+    bulletinSources: [],
+    newSrc: { name: '', url: '', category: 'Genel', language: 'tr' },
+    draftData: null, draftLoading: false, draftError: '',
+    draftMaxItems: '3', draftLangOverride: '',
+    openDraftCats: {},
+    bulletinRenderCfg: { network_name: 'YTRobot Haber', style: 'breaking', fps: 60, format: '16:9' },
+    bulletinRendering: false, bulletinJobId: null, bulletinJobStatus: '', bulletinJobError: '',
+    _bulletinPoll: null,
     _sse: null, _timer: null,
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
@@ -1479,19 +2494,43 @@ function app() {
     async loadSettings() {
       const r = await fetch('/api/settings');
       this.settings = await r.json();
+      // Sync bulletinRenderCfg from persisted settings
+      if (this.settings.BULLETIN_NETWORK_NAME) this.bulletinRenderCfg.network_name = this.settings.BULLETIN_NETWORK_NAME;
+      if (this.settings.BULLETIN_STYLE)        this.bulletinRenderCfg.style = this.settings.BULLETIN_STYLE;
+      if (this.settings.BULLETIN_FORMAT)       this.bulletinRenderCfg.format = this.settings.BULLETIN_FORMAT;
+      if (this.settings.BULLETIN_FPS)          this.bulletinRenderCfg.fps = parseInt(this.settings.BULLETIN_FPS);
+      // Set defaults for new bulletin visual settings
+      if (!this.settings.BULLETIN_LOWER_THIRD_ENABLED) this.settings.BULLETIN_LOWER_THIRD_ENABLED = 'true';
+      if (!this.settings.BULLETIN_LOWER_THIRD_FONT) this.settings.BULLETIN_LOWER_THIRD_FONT = 'oswald';
+      if (!this.settings.BULLETIN_LOWER_THIRD_COLOR) this.settings.BULLETIN_LOWER_THIRD_COLOR = '#ffffff';
+      if (!this.settings.BULLETIN_LOWER_THIRD_SIZE) this.settings.BULLETIN_LOWER_THIRD_SIZE = '32';
+      if (!this.settings.BULLETIN_TICKER_ENABLED) this.settings.BULLETIN_TICKER_ENABLED = 'true';
+      if (!this.settings.BULLETIN_TICKER_SPEED) this.settings.BULLETIN_TICKER_SPEED = '3';
+      if (!this.settings.BULLETIN_TICKER_BG) this.settings.BULLETIN_TICKER_BG = '#dc2626';
+      if (!this.settings.BULLETIN_TICKER_COLOR) this.settings.BULLETIN_TICKER_COLOR = '#ffffff';
+      if (!this.settings.BULLETIN_SHOW_LIVE_INDICATOR) this.settings.BULLETIN_SHOW_LIVE_INDICATOR = 'false';
       await this.loadPrompts();
       await this.loadPresets();
     },
 
     async saveSettings() {
+      // Mirror bulletinRenderCfg back into settings for persistence
+      this.settings.BULLETIN_NETWORK_NAME = this.bulletinRenderCfg.network_name;
+      this.settings.BULLETIN_STYLE        = this.bulletinRenderCfg.style;
+      this.settings.BULLETIN_FORMAT       = this.bulletinRenderCfg.format;
+      this.settings.BULLETIN_FPS          = String(this.bulletinRenderCfg.fps);
       await fetch('/api/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.settings }) });
       this.settingsSaved = true; setTimeout(() => this.settingsSaved = false, 3000);
     },
 
     async loadPrompts() {
-      const [r, rd] = await Promise.all([fetch('/api/prompts'), fetch('/api/prompts/defaults')]);
-      this.prompts = await r.json();
-      this.promptDefaults = await rd.json();
+      try {
+        const [r, rd] = await Promise.all([fetch('/api/prompts'), fetch('/api/prompts/defaults')]);
+        this.prompts = await r.json();
+        this.promptDefaults = await rd.json();
+        // Ensure bulletin_narration key exists
+        if (!('bulletin_narration' in this.prompts)) this.prompts.bulletin_narration = '';
+      } catch(e) {}
     },
 
     async savePrompts() {
@@ -1527,6 +2566,29 @@ function app() {
         this.voicesFetchError = e.message;
       }
       this.voicesLoading = false;
+    },
+
+    async fetchBulletinVoices() {
+      this.bulletinVoicesLoading = true;
+      this.bulletinVoicesFetchError = '';
+      const prov = this.settings.BULLETIN_TTS_PROVIDER || this.settings.TTS_PROVIDER;
+      let key = '';
+      if (prov === 'elevenlabs') key = this.settings.ELEVENLABS_API_KEY || '';
+      if (prov === 'speshaudio') key = this.settings.SPESHAUDIO_API_KEY || '';
+      const params = new URLSearchParams({ provider: prov });
+      if (key) params.set('api_key', key);
+      try {
+        const r = await fetch('/api/voices?' + params.toString());
+        if (!r.ok) {
+          const err = await r.json();
+          this.bulletinVoicesFetchError = err.detail || 'Failed to fetch voices';
+        } else {
+          const data = await r.json();
+          this.bulletinVoicesList = data.voices || [];
+          if (this.bulletinVoicesList.length === 0) this.bulletinVoicesFetchError = 'No voices returned';
+        }
+      } catch(e) { this.bulletinVoicesFetchError = e.message; }
+      this.bulletinVoicesLoading = false;
     },
 
     async loadPresets() {
@@ -1615,6 +2677,115 @@ function app() {
       if (!iso) return '—';
       const d = new Date(iso);
       return d.toLocaleDateString(this.lang === 'tr' ? 'tr-TR' : 'en-US', { month:'short', day:'numeric' }) + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    },
+
+    // ── Bulletin methods ──────────────────────────────────────────────────
+    async loadBulletinSources() {
+      try {
+        const r = await fetch('/api/bulletin/sources');
+        this.bulletinSources = await r.json();
+      } catch(e) {}
+    },
+
+    async addBulletinSource() {
+      if (!this.newSrc.name.trim() || !this.newSrc.url.trim()) return;
+      await fetch('/api/bulletin/sources', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ...this.newSrc }),
+      });
+      this.newSrc = { name: '', url: '', category: 'Genel', language: 'tr' };
+      await this.loadBulletinSources();
+    },
+
+    async toggleBulletinSource(src) {
+      await fetch(`/api/bulletin/sources/${src.id}`, {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled: !src.enabled }),
+      });
+      await this.loadBulletinSources();
+    },
+
+    async deleteBulletinSource(srcId) {
+      if (!window.confirm(this.t('confirm_delete_msg'))) return;
+      await fetch(`/api/bulletin/sources/${srcId}`, { method: 'DELETE' });
+      await this.loadBulletinSources();
+    },
+
+    async fetchDraft() {
+      this.draftLoading = true;
+      this.draftError = '';
+      this.draftData = null;
+      this.openDraftCats = {};
+      try {
+        const r = await fetch('/api/bulletin/draft', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ max_items_per_source: parseInt(this.draftMaxItems), language_override: this.draftLangOverride }),
+        });
+        if (!r.ok) { this.draftError = (await r.json()).detail || 'Failed'; return; }
+        this.draftData = await r.json();
+        // Open all categories by default
+        for (const cat of Object.keys(this.draftData.categories)) {
+          this.openDraftCats[cat] = true;
+        }
+      } catch(e) { this.draftError = e.message; }
+      finally { this.draftLoading = false; }
+    },
+
+    toggleDraftCat(cat) {
+      this.openDraftCats[cat] = !this.openDraftCats[cat];
+    },
+
+    selectedDraftCount() {
+      if (!this.draftData) return 0;
+      return Object.values(this.draftData.categories).flat().filter(i => i.selected).length;
+    },
+
+    getSelectedItems() {
+      if (!this.draftData) return [];
+      return Object.values(this.draftData.categories).flat().filter(i => i.selected);
+    },
+
+    selectAllDraft(val) {
+      if (!this.draftData) return;
+      for (const items of Object.values(this.draftData.categories)) {
+        for (const item of items) item.selected = val;
+      }
+    },
+
+    async startBulletinRender() {
+      const items = this.getSelectedItems();
+      if (items.length === 0) return;
+      this.bulletinRendering = true;
+      this.bulletinJobId = null;
+      this.bulletinJobStatus = '';
+      this.bulletinJobError = '';
+      try {
+        const r = await fetch('/api/bulletin/render', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            items,
+            network_name: this.bulletinRenderCfg.network_name,
+            style: this.bulletinRenderCfg.style,
+            fps: parseInt(this.bulletinRenderCfg.fps),
+            format: this.bulletinRenderCfg.format,
+          }),
+        });
+        if (!r.ok) { this.bulletinRendering = false; return; }
+        const { bulletin_id } = await r.json();
+        this.bulletinJobId = bulletin_id;
+        this.bulletinJobStatus = 'running';
+        // Poll for status
+        this._bulletinPoll = setInterval(async () => {
+          const sr = await fetch(`/api/bulletin/render/${bulletin_id}`);
+          const job = await sr.json();
+          this.bulletinJobStatus = job.status;
+          this.bulletinJobError = job.error || '';
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(this._bulletinPoll);
+            this.bulletinRendering = false;
+          }
+        }, 3000);
+      } catch(e) { this.bulletinRendering = false; }
     },
   };
 }

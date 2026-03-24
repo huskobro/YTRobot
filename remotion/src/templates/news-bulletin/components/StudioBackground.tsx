@@ -1,0 +1,99 @@
+import React from "react";
+import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+
+interface Props {
+  style?: "breaking" | "tech" | "corporate";
+}
+
+const PALETTES = {
+  breaking: {
+    bg: "#0A0A0A",
+    accent: "#CC0000",
+    grid: "rgba(180,0,0,0.06)",
+  },
+  tech: {
+    bg: "#0D1B2A",
+    accent: "#00C8FF",
+    grid: "rgba(0,200,255,0.06)",
+  },
+  corporate: {
+    bg: "#0A1628",
+    accent: "#1A5CDB",
+    grid: "rgba(26,92,219,0.06)",
+  },
+};
+
+export const StudioBackground: React.FC<Props> = ({ style = "breaking" }) => {
+  const frame = useCurrentFrame();
+  const { width, height } = useVideoConfig();
+  const palette = PALETTES[style];
+
+  // Slow breathing pulse on the scanline glow (full cycle = 180 frames = 3s at 60fps)
+  const pulse = interpolate(
+    Math.sin((frame / 180) * Math.PI * 2),
+    [-1, 1],
+    [0.3, 0.7]
+  );
+
+  // Grid cell size
+  const cell = 96;
+  const cols = Math.ceil(width / cell) + 1;
+  const rows = Math.ceil(height / cell) + 1;
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: palette.bg, overflow: "hidden" }}>
+      {/* Animated grid overlay */}
+      <svg
+        width={width}
+        height={height}
+        style={{ position: "absolute", inset: 0, opacity: 0.4 }}
+      >
+        {Array.from({ length: cols }).map((_, i) => (
+          <line
+            key={`v${i}`}
+            x1={i * cell}
+            y1={0}
+            x2={i * cell}
+            y2={height}
+            stroke={palette.grid}
+            strokeWidth={1}
+          />
+        ))}
+        {Array.from({ length: rows }).map((_, i) => (
+          <line
+            key={`h${i}`}
+            x1={0}
+            y1={i * cell}
+            x2={width}
+            y2={i * cell}
+            stroke={palette.grid}
+            strokeWidth={1}
+          />
+        ))}
+      </svg>
+
+      {/* Scanline accent — horizontal glow that pulses */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "38%",
+          height: 2,
+          background: `linear-gradient(to right, transparent 0%, ${palette.accent} 40%, ${palette.accent} 60%, transparent 100%)`,
+          opacity: pulse,
+          filter: `blur(2px) drop-shadow(0 0 12px ${palette.accent})`,
+        }}
+      />
+
+      {/* Radial vignette */}
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.82) 100%)",
+          pointerEvents: "none",
+        }}
+      />
+    </AbsoluteFill>
+  );
+};

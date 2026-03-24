@@ -23,6 +23,8 @@ OUTPUT_DIR = Path("output")
 ENV_FILE = Path(".env")
 PROMPTS_DIR = Path("prompts")
 PRESETS_DIR = Path("presets")
+BULLETIN_SOURCES_FILE = Path("bulletin_sources.json")
+BULLETIN_DIR = Path("output/bulletins")
 
 PROMPT_KEYS = ["script_system", "script_humanize", "metadata_system", "tts_enhance"]
 
@@ -538,6 +540,201 @@ def delete_preset(name: str):
     if p.exists():
         p.unlink()
     return {"ok": True}
+
+
+# ── Bulletin: Sources CRUD ────────────────────────────────────────────────────
+
+def _load_bulletin_sources() -> list:
+    if not BULLETIN_SOURCES_FILE.exists():
+        return []
+    try:
+        return json.loads(BULLETIN_SOURCES_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _save_bulletin_sources(sources: list):
+    BULLETIN_SOURCES_FILE.write_text(json.dumps(sources, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.get("/api/bulletin/sources")
+def get_bulletin_sources():
+    return _load_bulletin_sources()
+
+
+class BulletinSourceReq(BaseModel):
+    name: str
+    url: str
+    category: str = "Genel"
+    language: str = "tr"
+    enabled: bool = True
+
+
+@app.post("/api/bulletin/sources")
+def add_bulletin_source(body: BulletinSourceReq):
+    import secrets as _secrets
+    sources = _load_bulletin_sources()
+    new_src = {
+        "id": "src_" + _secrets.token_hex(4),
+        "name": body.name.strip(),
+        "url": body.url.strip(),
+        "category": body.category.strip() or "Genel",
+        "language": body.language.strip() or "tr",
+        "enabled": body.enabled,
+    }
+    sources.append(new_src)
+    _save_bulletin_sources(sources)
+    return new_src
+
+
+class BulletinSourcePatch(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+    category: Optional[str] = None
+    language: Optional[str] = None
+    enabled: Optional[bool] = None
+
+
+@app.patch("/api/bulletin/sources/{src_id}")
+def update_bulletin_source(src_id: str, body: BulletinSourcePatch):
+    sources = _load_bulletin_sources()
+    for src in sources:
+        if src["id"] == src_id:
+            name = body.name
+            url = body.url
+            category = body.category
+            language = body.language
+            if name is not None:
+                src["name"] = name.strip()
+            if url is not None:
+                src["url"] = url.strip()
+            if category is not None:
+                src["category"] = category.strip()
+            if language is not None:
+                src["language"] = language.strip()
+            if body.enabled is not None:
+                src["enabled"] = body.enabled
+            _save_bulletin_sources(sources)
+            return src
+    raise HTTPException(404, "Source not found")
+
+
+@app.delete("/api/bulletin/sources/{src_id}")
+def delete_bulletin_source(src_id: str):
+    sources = _load_bulletin_sources()
+    new_sources = [s for s in sources if s["id"] != src_id]
+    if len(new_sources) == len(sources):
+        raise HTTPException(404, "Source not found")
+    _save_bulletin_sources(new_sources)
+    return {"ok": True}
+
+
+# ── Bulletin: Draft ───────────────────────────────────────────────────────────
+
+class BulletinDraftReq(BaseModel):
+    max_items_per_source: int = 3
+    language_override: str = ""
+
+
+@app.post("/api/bulletin/draft")
+def create_bulletin_draft(body: BulletinDraftReq):
+    from pipeline.news_fetcher import fetch_and_draft
+    sources = _load_bulletin_sources()
+    if not sources:
+        raise HTTPException(400, "No sources configured")
+    result = fetch_and_draft(
+        sources,
+        max_items_per_source=body.max_items_per_source,
+        language_override=body.language_override,
+    )
+    return result
+
+
+# ── Bulletin: Render ──────────────────────────────────────────────────────────
+
+_bulletin_jobs: dict[str, dict] = {}
+_bulletin_jobs_lock = threading.Lock()
+
+
+class BulletinRenderReq(BaseModel):
+    items: list  # list of DraftItem dicts (selected ones)
+    network_name: str = "YTRobot Haber"
+    style: str = "breaking"
+    fps: int = 60
+    format: str = "16:9"   # "16:9" or "9:16"
+    ticker: list = []
+
+
+@app.post("/api/bulletin/render")
+def start_bulletin_render(body: BulletinRenderReq):
+    import secrets as _secrets
+    from pipeline.news_bulletin import run_bulletin as render_bulletin
+
+    bid = "bul_" + _secrets.token_hex(6)
+    BULLETIN_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = BULLETIN_DIR / f"{bid}.mp4"
+
+    with _bulletin_jobs_lock:
+        _bulletin_jobs[bid] = {"id": bid, "status": "running", "output": None, "error": None}
+
+    def _do_render():
+        try:
+            comp_id = "NewsBulletin9x16" if body.format == "9:16" else "NewsBulletin"
+            # Build Remotion props from selected items
+            news_items = []
+            for item in body.items:
+                news_items.append({
+                    "headline": item.get("title", ""),
+                    "subtext": item.get("narration", item.get("summary", "")),
+                    "duration": body.fps * 8,  # 8 seconds per item
+                    "imageUrl": item.get("image_url", ""),
+                    "language": item.get("language", "tr"),
+                })
+
+            raw_items: list = body.items
+            ticker_items = body.ticker if body.ticker else [
+                {"text": f"• {item.get('title', '')}"} for item in raw_items[:5]
+            ]
+
+            props = {
+                "items": news_items,
+                "ticker": ticker_items,
+                "networkName": body.network_name,
+                "style": body.style,
+                "fps": body.fps,
+                "composition": comp_id,
+            }
+
+            render_bulletin(props=props, output_path=output_path)
+
+            with _bulletin_jobs_lock:
+                _bulletin_jobs[bid]["status"] = "completed"
+                _bulletin_jobs[bid]["output"] = str(output_path)
+        except Exception as exc:
+            with _bulletin_jobs_lock:
+                _bulletin_jobs[bid]["status"] = "failed"
+                _bulletin_jobs[bid]["error"] = str(exc)
+
+    threading.Thread(target=_do_render, daemon=True).start()
+    return {"bulletin_id": bid}
+
+
+@app.get("/api/bulletin/render/{bid}")
+def get_bulletin_render_status(bid: str):
+    with _bulletin_jobs_lock:
+        job = _bulletin_jobs.get(bid)
+    if job is None:
+        raise HTTPException(404, "Bulletin job not found")
+    return job
+
+
+@app.get("/api/bulletin/download/{bid}")
+def download_bulletin(bid: str):
+    from fastapi.responses import FileResponse
+    output_path = BULLETIN_DIR / f"{bid}.mp4"
+    if not output_path.exists():
+        raise HTTPException(404, "Output file not found")
+    return FileResponse(str(output_path), media_type="video/mp4", filename=f"{bid}.mp4")
 
 
 @app.get("/api/sessions/{sid}/logs")

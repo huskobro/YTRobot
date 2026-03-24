@@ -5,18 +5,19 @@ from pipeline.script import Scene
 from providers.tts.base import BaseTTSProvider
 
 
-def _load_provider() -> BaseTTSProvider:
-    if settings.tts_provider == "elevenlabs":
+def _load_provider(provider_name: str | None = None) -> BaseTTSProvider:
+    name = provider_name or settings.tts_provider
+    if name == "elevenlabs":
         from providers.tts.elevenlabs import ElevenLabsTTSProvider
         return ElevenLabsTTSProvider()
-    elif settings.tts_provider == "openai":
+    elif name == "openai":
         from providers.tts.openai_tts import OpenAITTSProvider
         return OpenAITTSProvider()
-    elif settings.tts_provider == "speshaudio":
+    elif name == "speshaudio":
         from providers.tts.speshaudio import SpeshAudioTTSProvider
         return SpeshAudioTTSProvider()
     else:
-        raise ValueError(f"Unknown TTS provider: {settings.tts_provider!r}")
+        raise ValueError(f"Unknown TTS provider: {name!r}")
 
 
 def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:

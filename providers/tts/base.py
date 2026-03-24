@@ -38,11 +38,11 @@ def trim_silence(
     threshold_db: float = -35.0,
     min_dur: float = 0.1,
 ) -> None:
-    """Remove leading AND trailing silence from an audio file in place.
+    """Remove leading silence from an audio file in place.
 
-    Uses ffmpeg's silenceremove filter:
-      - First pass removes silence at the start.
-      - areverse + second pass removes silence at the end.
+    Only trims silence at the START of the clip. The natural trailing
+    decay/breath at the end is preserved so scene transitions don't
+    produce hard audio cuts.
     A threshold of -35 dB catches normal TTS breath/pad without cutting speech.
     """
     tmp = path.with_suffix(".trim.mp3")
@@ -51,11 +51,6 @@ def trim_silence(
             f"silenceremove=start_periods=1"
             f":start_threshold={threshold_db}dB"
             f":start_duration={min_dur}"
-            f",areverse"
-            f",silenceremove=start_periods=1"
-            f":start_threshold={threshold_db}dB"
-            f":start_duration={min_dur}"
-            f",areverse"
         )
         subprocess.run(
             ["ffmpeg", "-y", "-i", str(path), "-af", af, str(tmp)],

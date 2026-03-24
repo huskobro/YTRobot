@@ -267,12 +267,26 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
     [1, 0]
   );
 
-  // ── Scene fade-in ─────────────────────────────────────────────────────────
+  // ── Scene fade-in AND fade-out (visual only) ─────────────────────────────
+  // Audio is NOT faded — narration should play at full volume to the end.
+  // Only the visual fades to/from black using a smooth cosine (ease in/out) curve,
+  // which feels much more natural than linear.
   const fadeDur = Math.max(0, s.transitionDuration);
-  const fadeIn =
-    fadeDur > 0
-      ? interpolate(frame, [0, fadeDur], [0, 1], { extrapolateRight: "clamp" })
-      : 1;
+  const effectiveFade = Math.max(0, Math.min(fadeDur, Math.floor(durationInFrames / 2) - 1));
+
+  // Smooth S-curve: t ∈ [0,1] → (1 - cos(π·t)) / 2
+  const easeInOut = (t: number) => (1 - Math.cos(Math.PI * t)) / 2;
+
+  let fadeOverlay = 0;
+  if (effectiveFade > 0) {
+    if (frame < effectiveFade) {
+      // Fade from black: overlay opacity 1 → 0
+      fadeOverlay = easeInOut(1 - frame / effectiveFade);
+    } else if (frame >= durationInFrames - effectiveFade) {
+      // Fade to black: overlay opacity 0 → 1
+      fadeOverlay = easeInOut((frame - (durationInFrames - effectiveFade)) / effectiveFade);
+    }
+  }
 
   // ── Font & subtitle styles ─────────────────────────────────────────────────
   const fontFamily = FONT_MAP[s.subtitleFont] ?? FONT_MAP.serif;
@@ -381,10 +395,10 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
         </>
       )}
 
-      {/* Fade-in overlay */}
-      {fadeDur > 0 && (
+      {/* Fade-in / fade-out black overlay */}
+      {effectiveFade > 0 && (
         <AbsoluteFill
-          style={{ backgroundColor: "#000", opacity: 1 - fadeIn, pointerEvents: "none" }}
+          style={{ backgroundColor: "#000", opacity: fadeOverlay, pointerEvents: "none" }}
         />
       )}
 
@@ -399,7 +413,7 @@ export const VideoScene: React.FC<VideoSceneProps> = ({
         />
       )}
 
-      {/* Audio */}
+      {/* Audio — full volume throughout; visual handles the transition */}
       <Audio src={audio} />
 
       {/* Subtitle */}

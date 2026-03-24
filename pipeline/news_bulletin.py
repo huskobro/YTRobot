@@ -349,12 +349,13 @@ def run_bulletin(
                 "items": props_items,
                 "ticker": ticker,
                 "fps": fps,
+                "composition": bulletin_config.get("composition") or "NewsBulletin",
             }
 
             print("[NewsBulletin] Rendering with Remotion...")
             remotion_dir = Path(__file__).parent.parent / "remotion"
             # Determine composition id based on orientation in props (or default 16:9)
-            comp_id: str = str(props.get("composition") or "NewsBulletin")
+            comp_id: str = str(props.get("composition"))
             raw_out = output_path.parent / (output_path.stem + "_raw" + output_path.suffix)
             cmd = [
                 "npx", "remotion", "render", comp_id,

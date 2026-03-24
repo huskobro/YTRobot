@@ -24,9 +24,15 @@ import { NewsTicker } from "./components/NewsTicker";
 //  no media            →  Text fills full usable area with decorative accent elements
 
 const ACCENT = {
-  breaking: "#CC0000",
-  tech: "#00C8FF",
-  corporate: "#1A5CDB",
+  breaking: "#DC2626",
+  tech: "#00E5FF",
+  corporate: "#2563EB",
+  sport: "#10B981",
+  finance: "#F59E0B",
+  weather: "#38BDF8",
+  science: "#8B5CF6",
+  entertainment: "#EC4899",
+  dark: "#94A3B8",
 };
 
 const KARAOKE_COLOR = "#FFD700";
@@ -543,7 +549,16 @@ const LayoutNoMedia: React.FC<{ item: NewsItem; accent: string; frame: number; f
 
 interface CardProps {
   item: NewsItem;
-  bulletinStyle?: "breaking" | "tech" | "corporate";
+  bulletinStyle?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
   index?: number;
 }
 
@@ -586,9 +601,19 @@ const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "brea
 
 // ── "SON DAKİKA" vertical flash banner ───────────────────────────────────────
 
-const BreakingFlash9x16: React.FC<{ networkName: string; bulletinStyle?: "breaking" | "tech" | "corporate" }> = (
-  { networkName, bulletinStyle = "breaking" }
-) => {
+const BreakingFlash9x16: React.FC<{
+  networkName: string;
+  bulletinStyle?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
+}> = ({ networkName, bulletinStyle = "breaking" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const accent = ACCENT[bulletinStyle];

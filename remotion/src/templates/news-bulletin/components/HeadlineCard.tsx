@@ -28,14 +28,29 @@ function isVideo(url: string): boolean {
 
 interface Props {
   item: NewsItem;
-  style?: "breaking" | "tech" | "corporate";
+  style?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
   index?: number;
 }
 
 const ACCENT = {
-  breaking: "#CC0000",
-  tech: "#00C8FF",
-  corporate: "#1A5CDB",
+  breaking: "#DC2626",
+  tech: "#00E5FF",
+  corporate: "#2563EB",
+  sport: "#10B981",
+  finance: "#F59E0B",
+  weather: "#38BDF8",
+  science: "#8B5CF6",
+  entertainment: "#EC4899",
+  dark: "#94A3B8",
 };
 
 const KARAOKE_COLOR = "#FFD700";

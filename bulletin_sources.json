@@ -6,5 +6,13 @@
     "category": "Spor",
     "language": "tr",
     "enabled": true
+  },
+  {
+    "id": "src_c88c7075",
+    "name": "CNN Ekonomi",
+    "url": "https://www.cnnturk.com/feed/rss/ekonomi/news",
+    "category": "Finans",
+    "language": "tr",
+    "enabled": true
   }
 ]

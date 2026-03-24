@@ -262,6 +262,7 @@ def run_bulletin(
     work_dir: Optional[Path] = None,
     fps: int = 60,
     serve_base: Optional[Path] = None,
+    category_templates: dict | None = None,
 ) -> Path:
     """Full pipeline: TTS → align → render.
 
@@ -281,6 +282,22 @@ def run_bulletin(
     style = bulletin_config.get("style", "breaking")
     default_language = bulletin_config.get("language", "")
 
+    # Design settings
+    lower_third = {
+        "enabled": bulletin_config.get("lowerThirdEnabled", True),
+        "text": bulletin_config.get("lowerThirdText", ""),
+        "font": bulletin_config.get("lowerThirdFont", "bebas"),
+        "color": bulletin_config.get("lowerThirdColor", "#ffffff"),
+        "size": bulletin_config.get("lowerThirdSize", 32),
+    }
+    ticker_settings = {
+        "enabled": bulletin_config.get("tickerEnabled", True),
+        "speed": bulletin_config.get("tickerSpeed", 3),
+        "bg": bulletin_config.get("tickerBg", "#000000"),
+        "color": bulletin_config.get("tickerColor", "#ffffff"),
+    }
+    show_live = bulletin_config.get("showLive", True)
+
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -295,6 +312,7 @@ def run_bulletin(
 
     try:
         # Parse items
+        _cat_templates = category_templates or {}
         bulletin_items: list[BulletinItem] = []
         for raw in items_raw:
             narration = raw.get("narration") or raw.get("subtext") or raw.get("headline", "")
@@ -305,6 +323,9 @@ def run_bulletin(
                 image_url=raw.get("imageUrl", ""),
                 language=raw.get("language", default_language),
             )
+            # Carry category + styleOverride from server-side props if present
+            bi.__dict__["category"] = (raw.get("category") or "").lower()
+            bi.__dict__["styleOverride"] = raw.get("styleOverride") or _cat_templates.get(bi.__dict__["category"])
             bulletin_items.append(bi)
 
         print(f"[NewsBulletin] {len(bulletin_items)} items — starting TTS...")
@@ -341,6 +362,9 @@ def run_bulletin(
                 }
                 if item.image_url:
                     entry["imageUrl"] = item.image_url
+                style_override = item.__dict__.get("styleOverride")
+                if style_override:
+                    entry["styleOverride"] = style_override
                 props_items.append(entry)
 
             props = {
@@ -350,6 +374,10 @@ def run_bulletin(
                 "ticker": ticker,
                 "fps": fps,
                 "composition": bulletin_config.get("composition") or "NewsBulletin",
+                # New design props
+                "lowerThird": lower_third,
+                "tickerSettings": ticker_settings,
+                "showLive": show_live,
             }
 
             print("[NewsBulletin] Rendering with Remotion...")

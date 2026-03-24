@@ -492,9 +492,10 @@
         </div>
 
         <!-- Presets -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_presets')"></h2>
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_presets')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
           <!-- Save current settings as a preset -->
+          <div x-show="open" x-transition>
           <div class="flex gap-2 mb-4">
             <input x-model="presetName"
                    class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
@@ -521,12 +522,13 @@
               </div>
             </template>
           </div>
+          </div>
         </div>
 
         <!-- LLM -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_llm')"></h2>
-          <div class="space-y-4">
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_llm')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition class="space-y-4" style="margin-top:0.75rem">
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('kieai_key')"></label>
               <input x-model="settings.KIEAI_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
@@ -561,9 +563,9 @@
         </div>
 
         <!-- TTS -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_tts')"></h2>
-          <div class="space-y-4">
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_tts')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition class="space-y-4" style="margin-top:0.75rem">
 
             <!-- Provider -->
             <div>
@@ -746,9 +748,9 @@
         </div>
 
         <!-- Visuals -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_visuals')"></h2>
-          <div class="space-y-4">
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_visuals')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition class="space-y-4" style="margin-top:0.75rem">
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('provider_label')"></label>
@@ -784,9 +786,9 @@
         </div>
 
         <!-- Subtitles -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_subtitles')"></h2>
-          <div class="space-y-4">
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_subtitles')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition class="space-y-4" style="margin-top:0.75rem">
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('subtitle_provider_label')"></label>
@@ -827,8 +829,9 @@
         </div>
 
         <!-- Composer -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_composer')"></h2>
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_composer')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('composer_desc')"></p>
           <div class="space-y-4">
             <div>
@@ -1119,11 +1122,13 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- Output -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_output')"></h2>
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_output')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('output_dir_label')"></label>
@@ -1146,10 +1151,11 @@
               </select>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- Master Prompts -->
-        <div x-show="settingsModule==='ytrobot'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='ytrobot'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div class="flex items-center justify-between mb-1">
             <h2 class="text-sm font-bold text-slate-300" x-text="t('section_prompts')"></h2>
             <button @click="savePrompts()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
@@ -1240,8 +1246,9 @@
         <!-- ══ BULLETIN SETTINGS (settingsModule==='bulletin') ══════════ -->
 
         <!-- Bulletin TTS Voice -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_tts')"></h2>
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_tts')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_tts_fallback_note')"></p>
           <div class="space-y-4">
             <div>
@@ -1315,12 +1322,13 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- Bulletin Visual Style -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_bulletin_visual')"></h2>
-          <div class="space-y-5">
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_visual')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition class="space-y-5" style="margin-top:0.75rem">
             <!-- Style cards -->
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_style')"></label>
@@ -1356,6 +1364,78 @@
                     <span style="font-size:9px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
                     <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Corporate</span>
                     <span style="font-size:8px;color:#94a3b8">Navy + Cobalt accent</span>
+                  </div>
+                </div>
+                <!-- Sport -->
+                <div @click="bulletinRenderCfg.style='sport'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='sport' ? 'border-orange-500 ring-1 ring-orange-500/40' : 'border-transparent hover:border-orange-400'"
+                     style="width:155px;height:88px;background:#0d1a0d">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#ea580c"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#fb923c;font-weight:900;letter-spacing:0.1em">SPOR</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Sport</span>
+                    <span style="font-size:8px;color:#94a3b8">Dark green + Orange</span>
+                  </div>
+                </div>
+                <!-- Finance -->
+                <div @click="bulletinRenderCfg.style='finance'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='finance' ? 'border-emerald-500 ring-1 ring-emerald-500/40' : 'border-transparent hover:border-emerald-400'"
+                     style="width:155px;height:88px;background:#061a10">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#059669"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#34d399;font-weight:900;letter-spacing:0.1em">FİNANS</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Finance</span>
+                    <span style="font-size:8px;color:#94a3b8">Dark + Emerald accent</span>
+                  </div>
+                </div>
+                <!-- Weather -->
+                <div @click="bulletinRenderCfg.style='weather'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='weather' ? 'border-sky-500 ring-1 ring-sky-500/40' : 'border-transparent hover:border-sky-400'"
+                     style="width:155px;height:88px;background:#0c1a2e">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#0284c7"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#38bdf8;font-weight:900;letter-spacing:0.1em">HAVA DURUMU</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Weather</span>
+                    <span style="font-size:8px;color:#94a3b8">Deep blue + Sky accent</span>
+                  </div>
+                </div>
+                <!-- Science -->
+                <div @click="bulletinRenderCfg.style='science'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='science' ? 'border-violet-500 ring-1 ring-violet-500/40' : 'border-transparent hover:border-violet-400'"
+                     style="width:155px;height:88px;background:#130d2e">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#7c3aed"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#a78bfa;font-weight:900;letter-spacing:0.1em">BİLİM</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Science</span>
+                    <span style="font-size:8px;color:#94a3b8">Deep purple + Violet</span>
+                  </div>
+                </div>
+                <!-- Entertainment -->
+                <div @click="bulletinRenderCfg.style='entertainment'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='entertainment' ? 'border-pink-500 ring-1 ring-pink-500/40' : 'border-transparent hover:border-pink-400'"
+                     style="width:155px;height:88px;background:#1a0a1a">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#db2777"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#f472b6;font-weight:900;letter-spacing:0.1em">EĞLENCE</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Entertainment</span>
+                    <span style="font-size:8px;color:#94a3b8">Dark + Pink accent</span>
+                  </div>
+                </div>
+                <!-- Dark Minimal -->
+                <div @click="bulletinRenderCfg.style='dark'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='dark' ? 'border-slate-400 ring-1 ring-slate-400/40' : 'border-transparent hover:border-slate-400'"
+                     style="width:155px;height:88px;background:#070707">
+                  <div class="absolute top-0 inset-x-0 h-2" style="background:#374151"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-3 pt-2 gap-0.5">
+                    <span style="font-size:9px;color:#9ca3af;font-weight:900;letter-spacing:0.1em">KOYU MİNİMAL</span>
+                    <span style="font-size:12px;color:white;font-weight:700;line-height:1.2">Dark Minimal</span>
+                    <span style="font-size:8px;color:#6b7280">Near black + Gray</span>
                   </div>
                 </div>
               </div>
@@ -1399,8 +1479,9 @@
         </div>
 
         <!-- Bulletin Content Defaults -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('section_bulletin_content')"></h2>
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_content')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_default_max_items_label')"></label>
@@ -1422,11 +1503,13 @@
             </div>
           </div>
           <p class="text-xs text-slate-500 mt-3" x-text="t('bulletin_content_defaults_hint')"></p>
+          </div>
         </div>
 
         <!-- Bulletin Lower Third -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_lower_third')"></h2>
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_lower_third')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_lower_third_hint')"></p>
           <div class="space-y-4">
             <!-- Lower Third Enabled -->
@@ -1486,11 +1569,13 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- Bulletin Ticker (Kayan Yazı) -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_ticker')"></h2>
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_ticker')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_ticker_hint')"></p>
           <div class="space-y-4">
             <!-- Ticker Enabled -->
@@ -1557,11 +1642,13 @@
               </select>
             </div>
           </div>
+          </div>
         </div>
 
         <!-- Bulletin Channel Presets -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_presets')"></h2>
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_presets')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_presets_hint')"></p>
           <!-- Save current as preset -->
           <div class="flex gap-2 mb-4">
@@ -1591,10 +1678,11 @@
               </div>
             </template>
           </div>
+          </div>
         </div>
 
         <!-- Bulletin Master Prompts -->
-        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+        <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div class="flex items-center justify-between mb-1">
             <h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_prompts')"></h2>
             <button @click="savePrompts()" class="px-4 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
@@ -1658,7 +1746,8 @@
         <!-- ── KAYNAKLAR ──────────────────────────────────────── -->
         <div x-show="bulletinTab==='sources'">
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
-            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_add_source')"></h2>
+            <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_add_source')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-transition>
             <div class="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_name')"></label>
@@ -1709,10 +1798,80 @@
               </div>
             </template>
           </div>
+          </div>
+
+          <!-- Category -> Template Mapping Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4" x-show="bulletinSources.length > 0">
+            <h2 class="text-sm font-bold text-slate-300 mb-3" x-text="t('bulletin_category_mapping')"></h2>
+            <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_mapping_hint')"></p>
+            
+            <div class="space-y-3">
+              <template x-for="cat in uniqueCategories" :key="cat">
+                <div class="flex items-center justify-between gap-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs px-2.5 py-1 text-white font-bold rounded-md shadow-sm"
+                          :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                    <span class="text-xs text-slate-400">→</span>
+                  </div>
+                  <select x-model="categoryTemplates[cat]" 
+                          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors min-w-[140px]">
+                    <option value="">— Default Style —</option>
+                    <option value="breaking">Breaking / Son Dakika</option>
+                    <option value="tech">Tech / Teknoloji</option>
+                    <option value="corporate">Corporate / Kurumsal</option>
+                    <option value="sport">Sport / Spor</option>
+                    <option value="finance">Finance / Ekonomi</option>
+                    <option value="weather">Weather / Hava Durumu</option>
+                    <option value="science">Science / Bilim</option>
+                    <option value="entertainment">Entertainment / Eğlence</option>
+                    <option value="dark">Dark Minimal</option>
+                  </select>
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
 
         <!-- ── TASLAK ──────────────────────────────────────────── -->
         <div x-show="bulletinTab==='draft'">
+          <!-- Source selection panel -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3" x-data="{open:false}">
+            <button @click="open=!open" class="w-full flex items-center justify-between text-left">
+              <span class="text-xs font-bold text-slate-300" x-text="t('bulletin_source_select')"></span>
+              <span class="text-xs text-slate-500 flex items-center gap-1.5">
+                <span x-text="bulletinSelectAllSources ? t('bulletin_src_all') : (bulletinSelectedSources.length + ' ' + t('bulletin_src_selected'))"></span>
+                <span :class="open ? 'rotate-180' : ''" class="transition-transform inline-block">▼</span>
+              </span>
+            </button>
+            <div x-show="open" x-transition class="mt-3 space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" x-model="bulletinSelectAllSources" class="accent-red-600 w-3.5 h-3.5" />
+                <span class="text-xs text-slate-400" x-text="t('bulletin_select_all_sources')"></span>
+              </label>
+              <div class="grid grid-cols-2 gap-1.5 mt-2" x-show="!bulletinSelectAllSources">
+                <template x-for="src in bulletinSources.filter(s=>s.enabled)" :key="src.id">
+                  <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                    <input type="checkbox" :value="src.id" x-model="bulletinSelectedSources" class="accent-red-600 w-3.5 h-3.5 shrink-0" />
+                    <div class="min-w-0">
+                      <div class="text-xs font-medium text-white truncate" x-text="src.name"></div>
+                      <div class="text-xs text-slate-500" x-text="src.category + ' · ' + src.language.toUpperCase()"></div>
+                    </div>
+                  </label>
+                </template>
+              </div>
+              <!-- Active preset + dedup info -->
+              <div x-show="bulletinActivePreset" class="mt-2 px-3 py-2 bg-slate-800/60 rounded-lg text-xs text-slate-400 flex items-center gap-2">
+                <span>🎬</span>
+                <span x-text="t('bulletin_active_preset') + ': ' + bulletinActivePreset"></span>
+              </div>
+              <div x-show="bulletinActivePreset && bulletinHistory[bulletinActivePreset]?.length > 0"
+                   class="px-3 py-2 bg-amber-900/20 border border-amber-800/40 rounded-lg text-xs text-amber-400 flex items-center justify-between">
+                <span x-text="(bulletinHistory[bulletinActivePreset]?.length || 0) + ' ' + t('bulletin_dedup_note')"></span>
+                <button @click="clearBulletinHistory()" class="ml-2 underline hover:text-amber-300 shrink-0" x-text="t('bulletin_dedup_clear')"></button>
+              </div>
+            </div>
+          </div>
+
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
             <div class="flex items-center gap-4 flex-wrap">
               <div class="flex items-center gap-2">
@@ -1813,8 +1972,9 @@
         <!-- ── RENDER ──────────────────────────────────────────── -->
         <div x-show="bulletinTab==='render'">
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
-            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_render_config')"></h2>
+            <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_render_config')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
             <!-- Style cards -->
+          <div x-show="open" x-transition>
             <div class="mb-4">
               <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_style')"></label>
               <div class="flex gap-2 flex-wrap">
@@ -1910,32 +2070,99 @@
                   </div>
                 </div>
 
-                <!-- Entertainment — Hot Pink -->
-                <div @click="bulletinRenderCfg.style='entertainment'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='entertainment' ? 'border-pink-500 ring-1 ring-pink-500/30' : 'border-transparent hover:border-pink-400'"
-                     style="width:125px;height:68px;background:#1a0020">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#ec4899"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#ec4899;font-weight:900;letter-spacing:0.1em">EĞLENCE</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Entertainment</span>
-                    <span style="font-size:7px;color:#6b7280">Koyu + Pembe</span>
+              </div>
+            </div>
+
+            <!-- Detailed Design Controls (Lower Third, Ticker, Live) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+              <!-- Lower Third Column -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider" x-text="t('section_bulletin_lower_third')"></h3>
+                  <button @click="settings.BULLETIN_LOWER_THIRD_ENABLED = settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'false' : 'true'"
+                          class="w-9 h-5 rounded-full transition-colors relative"
+                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'bg-indigo-600' : 'bg-slate-700'">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
+                  </button>
+                </div>
+                
+                <div class="space-y-3" x-show="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true'" x-transition>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_text_label')"></label>
+                    <input x-model="settings.BULLETIN_LOWER_THIRD_TEXT" type="text" :placeholder="t('bulletin_lower_third_text_ph')" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_font_label')"></label>
+                      <select x-model="settings.BULLETIN_LOWER_THIRD_FONT" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
+                        <option value="bebas">Bebas Neue</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="oswald">Oswald</option>
+                        <option value="inter">Inter</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_color_label')"></label>
+                      <div class="flex gap-2 items-center">
+                        <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
+                        <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Dark / Minimal — Slate -->
-                <div @click="bulletinRenderCfg.style='dark'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='dark' ? 'border-slate-400 ring-1 ring-slate-400/30' : 'border-transparent hover:border-slate-500'"
-                     style="width:125px;height:68px;background:#000">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#94a3b8"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#94a3b8;font-weight:900;letter-spacing:0.1em">MİNİMAL</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Dark Minimal</span>
-                    <span style="font-size:7px;color:#6b7280">Siyah + Gri</span>
-                  </div>
+              <!-- Ticker Column -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider" x-text="t('section_bulletin_ticker')"></h3>
+                  <button @click="settings.BULLETIN_TICKER_ENABLED = settings.BULLETIN_TICKER_ENABLED === 'true' ? 'false' : 'true'"
+                          class="w-9 h-5 rounded-full transition-colors relative"
+                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'bg-red-600' : 'bg-slate-700'">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
+                  </button>
                 </div>
 
+                <div class="space-y-3" x-show="settings.BULLETIN_TICKER_ENABLED === 'true'" x-transition>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_speed_label')"></label>
+                      <select x-model="settings.BULLETIN_TICKER_SPEED" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
+                        <option value="2" x-text="t('bulletin_ticker_speed_slow')"></option>
+                        <option value="3">Normal</option>
+                        <option value="5" x-text="t('bulletin_ticker_speed_fast')"></option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_show_live_label')"></label>
+                      <button @click="settings.BULLETIN_SHOW_LIVE_INDICATOR = settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'false' : 'true'"
+                              class="w-full py-2 px-3 rounded-lg border flex items-center justify-center gap-2 transition-all"
+                              :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-900/40 border-red-500 text-red-400' : 'bg-slate-900 border-slate-700 text-slate-500'">
+                        <span class="w-2 h-2 rounded-full" :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-500 animate-pulse' : 'bg-slate-700'"></span>
+                        <span class="text-[10px] font-bold uppercase" x-text="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'LIVE' : 'OFF'"></span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_bg_label')"></label>
+                      <div class="flex gap-2 items-center">
+                        <input x-model="settings.BULLETIN_TICKER_BG" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
+                        <input x-model="settings.BULLETIN_TICKER_BG" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_color_label')"></label>
+                      <div class="flex gap-2 items-center">
+                        <input x-model="settings.BULLETIN_TICKER_COLOR" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
+                        <input x-model="settings.BULLETIN_TICKER_COLOR" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <!-- Format + network + fps row -->
@@ -2011,6 +2238,7 @@
               </div>
             </div>
           </template>
+          </div>
         </div>
 
       </div>
@@ -2223,6 +2451,15 @@ const LANG = {
     bulletin_render_status: 'Render Status',
     bulletin_render_done: '✓ Render complete! Download your bulletin below.',
     bulletin_download_btn: '⬇ Download MP4',
+    bulletin_source_select: 'Source Selection',
+    bulletin_src_all: 'All Sources',
+    bulletin_src_selected: 'sources selected',
+    bulletin_select_all_sources: 'Select all enabled sources',
+    bulletin_active_preset: 'Active Channel Preset',
+    bulletin_dedup_note: 'items already used in this channel and will be skipped.',
+    bulletin_dedup_clear: 'Clear channel history',
+    bulletin_category_mapping: 'Category → Visual Style Mapping',
+    bulletin_mapping_hint: 'Automatically apply a specific visual style based on the news category. If unmapped, the global style is used.',
     // Module selector
     module_normal_title: '🎬 Normal Video',
     module_normal_desc: 'Generate a full 10-scene YouTube video from a topic or custom script using AI.',
@@ -2277,7 +2514,7 @@ const LANG = {
     section_bulletin_content: '📋 Content Defaults',
     bulletin_default_max_items_label: 'Default items per source', bulletin_default_lang_label: 'Default language',
     bulletin_default_lang_auto: 'Auto (source default)', bulletin_content_defaults_hint: 'These defaults are pre-filled when you open the Draft tab.',
-    preview_font_sample: 'Hello World', anim_desc_none: 'Static',
+    preview_font_sample: 'Hello World',
   },
   tr: {
     app_subtitle: 'Otomatik Video Üretici',
@@ -2480,6 +2717,15 @@ const LANG = {
     bulletin_render_status: 'Render Durumu',
     bulletin_render_done: '✓ Render tamamlandı! Bülteninizi aşağıdan indirin.',
     bulletin_download_btn: '⬇ MP4 İndir',
+    bulletin_source_select: 'Kaynak Seçimi',
+    bulletin_src_all: 'Tüm Kaynaklar',
+    bulletin_src_selected: 'kaynak seçildi',
+    bulletin_select_all_sources: 'Tüm aktif kaynakları seç',
+    bulletin_active_preset: 'Aktif Kanal Önayarı',
+    bulletin_dedup_note: 'haber bu kanalda daha önce kullanıldı ve atlanacak.',
+    bulletin_dedup_clear: 'Kanal geçmişini temizle',
+    bulletin_category_mapping: 'Kategori → Görsel Stil Eşleştirme',
+    bulletin_mapping_hint: 'Haber kategorisine göre otomatik olarak belirli bir görsel stil uygular. Eşleşme yoksa genel stil kullanılır.',
     // Module selector
     module_normal_title: '🎬 Normal Video',
     module_normal_desc: 'Bir konu veya özel script dosyasından yapay zeka ile tam 10 sahneli YouTube videosu üret.',
@@ -2568,6 +2814,14 @@ function app() {
     bulletinPresets: [],
     bulletinPresetName: '',
     bulletinPresetSaved: false,
+    // Bulletin source selection for draft
+    bulletinSelectedSources: [],
+    bulletinSelectAllSources: true,
+    // Category → Template mapping
+    categoryTemplates: {},
+    // History deduplication
+    bulletinHistory: {},
+    bulletinActivePreset: '',
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
@@ -2577,6 +2831,7 @@ function app() {
       await this.loadSessions();
       await this.loadPresets();
       this.loadBulletinPresets();
+      this.loadBulletinHistory();
       this._timer = setInterval(() => this.loadSessions(), 3000);
     },
 
@@ -2605,6 +2860,7 @@ function app() {
         style: this.bulletinRenderCfg.style,
         format: this.bulletinRenderCfg.format,
         fps: this.bulletinRenderCfg.fps,
+        category_templates: JSON.parse(JSON.stringify(this.categoryTemplates)),
       };
       // Remove existing preset with same name
       this.bulletinPresets = this.bulletinPresets.filter(p => p.name !== name);
@@ -2631,6 +2887,8 @@ function app() {
       if (v.ticker_bg) this.settings.BULLETIN_TICKER_BG = v.ticker_bg;
       if (v.ticker_color) this.settings.BULLETIN_TICKER_COLOR = v.ticker_color;
       if (v.show_live !== undefined) this.settings.BULLETIN_SHOW_LIVE_INDICATOR = v.show_live;
+      if (v.category_templates) this.categoryTemplates = JSON.parse(JSON.stringify(v.category_templates));
+      this.bulletinActivePreset = preset.name;
     },
 
     deleteBulletinPreset(name) {
@@ -2937,6 +3195,23 @@ function app() {
       } catch(e) {}
     },
 
+    async loadBulletinHistory() {
+      try {
+        const r = await fetch('/api/bulletin/history');
+        if (r.ok) this.bulletinHistory = await r.json();
+      } catch(e) {}
+    },
+
+    async clearBulletinHistory() {
+      if (!this.bulletinActivePreset) return;
+      await fetch(`/api/bulletin/history/${encodeURIComponent(this.bulletinActivePreset)}`, { method: 'DELETE' });
+      await this.loadBulletinHistory();
+    },
+
+    get uniqueCategories() {
+      return [...new Set(this.bulletinSources.map(s => s.category))].filter(Boolean);
+    },
+
     async addBulletinSource() {
       if (!this.newSrc.name.trim() || !this.newSrc.url.trim()) return;
       await fetch('/api/bulletin/sources', {
@@ -2969,7 +3244,12 @@ function app() {
       try {
         const r = await fetch('/api/bulletin/draft', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ max_items_per_source: parseInt(this.draftMaxItems), language_override: this.draftLangOverride }),
+          body: JSON.stringify({
+            max_items_per_source: parseInt(this.draftMaxItems),
+            language_override: this.draftLangOverride,
+            source_ids: this.bulletinSelectAllSources ? null : (this.bulletinSelectedSources.length ? this.bulletinSelectedSources : null),
+            preset_name: this.bulletinActivePreset,
+          }),
         });
         if (!r.ok) { this.draftError = (await r.json()).detail || 'Failed'; return; }
         this.draftData = await r.json();
@@ -3018,6 +3298,19 @@ function app() {
             style: this.bulletinRenderCfg.style,
             fps: parseInt(this.bulletinRenderCfg.fps),
             format: this.bulletinRenderCfg.format,
+            preset_name: this.bulletinActivePreset,
+            category_templates: this.categoryTemplates,
+            // Design settings
+            lower_third_enabled: this.settings.BULLETIN_LOWER_THIRD_ENABLED === 'true',
+            lower_third_text: this.settings.BULLETIN_LOWER_THIRD_TEXT,
+            lower_third_font: this.settings.BULLETIN_LOWER_THIRD_FONT,
+            lower_third_color: this.settings.BULLETIN_LOWER_THIRD_COLOR,
+            lower_third_size: parseInt(this.settings.BULLETIN_LOWER_THIRD_SIZE || '32'),
+            ticker_enabled: this.settings.BULLETIN_TICKER_ENABLED === 'true',
+            ticker_speed: parseInt(this.settings.BULLETIN_TICKER_SPEED || '3'),
+            ticker_bg: this.settings.BULLETIN_TICKER_BG,
+            ticker_color: this.settings.BULLETIN_TICKER_COLOR,
+            show_live: this.settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true',
           }),
         });
         if (!r.ok) { this.bulletinRendering = false; return; }

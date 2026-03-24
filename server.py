@@ -24,6 +24,7 @@ ENV_FILE = Path(".env")
 PROMPTS_DIR = Path("prompts")
 PRESETS_DIR = Path("presets")
 BULLETIN_SOURCES_FILE = Path("bulletin_sources.json")
+BULLETIN_HISTORY_FILE = Path("bulletin_history.json")
 BULLETIN_DIR = Path("output/bulletins")
 
 PROMPT_KEYS = ["script_system", "script_humanize", "metadata_system", "tts_enhance"]
@@ -557,6 +558,36 @@ def _save_bulletin_sources(sources: list):
     BULLETIN_SOURCES_FILE.write_text(json.dumps(sources, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _load_bulletin_history() -> dict:
+    if not BULLETIN_HISTORY_FILE.exists():
+        return {}
+    try:
+        return json.loads(BULLETIN_HISTORY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _append_bulletin_history(preset_name: str, urls: list):
+    history = _load_bulletin_history()
+    existing = set(history.get(preset_name, []))
+    existing.update(u for u in urls if u)
+    history[preset_name] = list(existing)
+    BULLETIN_HISTORY_FILE.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.get("/api/bulletin/history")
+def get_bulletin_history():
+    return _load_bulletin_history()
+
+
+@app.delete("/api/bulletin/history/{preset_name}")
+def clear_bulletin_history(preset_name: str):
+    history = _load_bulletin_history()
+    history.pop(preset_name, None)
+    BULLETIN_HISTORY_FILE.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True}
+
+
 @app.get("/api/bulletin/sources")
 def get_bulletin_sources():
     return _load_bulletin_sources()
@@ -634,6 +665,8 @@ def delete_bulletin_source(src_id: str):
 class BulletinDraftReq(BaseModel):
     max_items_per_source: int = 3
     language_override: str = ""
+    source_ids: list[str] | None = None   # None = all enabled sources
+    preset_name: str = ""                 # used to load history for dedup
 
 
 @app.post("/api/bulletin/draft")
@@ -642,10 +675,16 @@ def create_bulletin_draft(body: BulletinDraftReq):
     sources = _load_bulletin_sources()
     if not sources:
         raise HTTPException(400, "No sources configured")
+    used_urls: set[str] = set()
+    if body.preset_name:
+        history = _load_bulletin_history()
+        used_urls = set(history.get(body.preset_name, []))
     result = fetch_and_draft(
         sources,
         max_items_per_source=body.max_items_per_source,
         language_override=body.language_override,
+        source_ids=body.source_ids,
+        used_urls=used_urls if used_urls else None,
     )
     return result
 
@@ -663,6 +702,19 @@ class BulletinRenderReq(BaseModel):
     fps: int = 60
     format: str = "16:9"   # "16:9" or "9:16"
     ticker: list = []
+    preset_name: str = ""       # used to record history after render
+    category_templates: dict = {}  # {"spor": "sport", "finans": "finance", ...}
+    # Design settings
+    lower_third_enabled: bool = True
+    lower_third_text: str = ""
+    lower_third_font: str = "bebas"
+    lower_third_color: str = "#ffffff"
+    lower_third_size: int = 32
+    ticker_enabled: bool = True
+    ticker_speed: int = 3
+    ticker_bg: str = "#000000"
+    ticker_color: str = "#ffffff"
+    show_live: bool = True
 
 
 @app.post("/api/bulletin/render")
@@ -683,13 +735,19 @@ def start_bulletin_render(body: BulletinRenderReq):
             # Build Remotion props from selected items
             news_items = []
             for item in body.items:
-                news_items.append({
+                cat = (item.get("category") or "").lower()
+                style_override = body.category_templates.get(cat) if body.category_templates else None
+                news_item = {
                     "headline": item.get("title", ""),
                     "subtext": item.get("narration", item.get("summary", "")),
                     "duration": body.fps * 8,  # 8 seconds per item
                     "imageUrl": item.get("image_url", ""),
                     "language": item.get("language", "tr"),
-                })
+                    "category": cat,
+                }
+                if style_override:
+                    news_item["styleOverride"] = style_override
+                news_items.append(news_item)
 
             raw_items: list = body.items
             ticker_items = body.ticker if body.ticker else [
@@ -703,9 +761,31 @@ def start_bulletin_render(body: BulletinRenderReq):
                 "style": body.style,
                 "fps": body.fps,
                 "composition": comp_id,
+                # Design settings
+                "lowerThirdEnabled": body.lower_third_enabled,
+                "lowerThirdText": body.lower_third_text,
+                "lowerThirdFont": body.lower_third_font,
+                "lowerThirdColor": body.lower_third_color,
+                "lowerThirdSize": body.lower_third_size,
+                "tickerEnabled": body.ticker_enabled,
+                "tickerSpeed": body.ticker_speed,
+                "tickerBg": body.ticker_bg,
+                "tickerColor": body.ticker_color,
+                "showLive": body.show_live,
             }
 
-            render_bulletin(bulletin_config=props, output_path=output_path, fps=body.fps)
+            render_bulletin(
+                bulletin_config=props,
+                output_path=output_path,
+                fps=body.fps,
+                category_templates=body.category_templates,
+            )
+
+            # Save used URLs to history for deduplication
+            if body.preset_name:
+                urls = [item.get("source_url", "") for item in body.items if item.get("source_url")]
+                if urls:
+                    _append_bulletin_history(body.preset_name, urls)
 
             with _bulletin_jobs_lock:
                 _bulletin_jobs[bid]["status"] = "completed"

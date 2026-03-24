@@ -216,9 +216,16 @@ def fetch_and_draft(
     sources: list[dict],
     max_items_per_source: int = 3,
     language_override: str = "",
+    source_ids: list[str] | None = None,
+    used_urls: set[str] | None = None,
 ) -> dict:
     """
-    Fetch all enabled sources, scrape OG data, generate narrations.
+    Fetch sources, scrape OG data, generate narrations.
+
+    Args:
+        source_ids: If provided, only fetch from these source IDs (ignores enabled flag).
+                    If None, fetch all enabled sources.
+        used_urls:  Set of URLs to skip (deduplication — previously rendered items).
 
     Returns:
         {
@@ -231,7 +238,10 @@ def fetch_and_draft(
         id, source_id, source_name, category, language,
         title, summary, image_url, source_url, published, narration, selected
     """
-    enabled = [s for s in sources if s.get("enabled", True)]
+    if source_ids is not None:
+        enabled = [s for s in sources if s.get("id") in source_ids]
+    else:
+        enabled = [s for s in sources if s.get("enabled", True)]
     categories: dict[str, list[dict]] = {}
     errors: list[dict] = []
     total = 0
@@ -245,6 +255,11 @@ def fetch_and_draft(
             continue
 
         for fetched in raw_items:
+            # Skip previously rendered items (deduplication)
+            if used_urls and fetched.source_url and fetched.source_url in used_urls:
+                print(f"    → skipping (already used): {fetched.title[:60]}")
+                continue
+
             # OG scrape for image + body text
             og_image, body_text = _fetch_og(fetched.source_url)
             if og_image and not fetched.image_url:

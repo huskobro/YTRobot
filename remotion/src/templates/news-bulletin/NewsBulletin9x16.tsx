@@ -35,7 +35,6 @@ const ACCENT = {
   dark: "#94A3B8",
 };
 
-const KARAOKE_COLOR = "#FFD700";
 const NETWORK_BAR_H = 96;
 const TICKER_H = 64;
 
@@ -56,7 +55,7 @@ function isVideo(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 }
 
-function renderSubtitles(frame: number, subtitles: SubtitleEntry[]) {
+function renderSubtitles(frame: number, subtitles: SubtitleEntry[], accentColor: string = "#FFD700") {
   const active = subtitles.find((s) => frame >= s.startFrame && frame < s.endFrame);
   if (!active) return null;
 
@@ -74,10 +73,10 @@ function renderSubtitles(frame: number, subtitles: SubtitleEntry[]) {
         {active.words.map((w, i) => {
           const isActive = frame >= w.startFrame && frame < w.endFrame;
           const isPast = frame >= w.endFrame;
-          const color = isActive ? KARAOKE_COLOR : isPast ? "#FFFFFF" : "#AAAAAA";
+          const color = isActive ? accentColor : isPast ? "#FFFFFF" : "#AAAAAA";
           const opacity = isActive ? 1 : isPast ? 0.9 : 0.45;
           const textShadow = isActive
-            ? `-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 12px ${KARAOKE_COLOR}88`
+            ? `-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 16px ${accentColor}CC`
             : "0 2px 8px rgba(0,0,0,0.8)";
           return (
             <span key={i} style={{ color, opacity, textShadow, display: "inline-block", marginRight: "0.22em" }}>
@@ -123,9 +122,11 @@ interface TextBlockProps {
   index: number;
   /** If true, uses larger font (full-screen no-image layout) */
   expanded?: boolean;
+  /** If true, stretch subtext/karaoke to fill available container height */
+  fillHeight?: boolean;
 }
 
-const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, durationInFrames, index, expanded = false }) => {
+const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, durationInFrames, index, expanded = false, fillHeight = false }) => {
   const fromLeft = index % 2 === 0;
   const progress = spring({ frame, fps, config: { damping: 16, stiffness: 160 } });
   const slideX = interpolate(progress, [0, 1], [fromLeft ? -80 : 80, 0]);
@@ -139,8 +140,17 @@ const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, duratio
     ? interpolate(frame, [durationInFrames - 12, durationInFrames], [1, 0], { extrapolateRight: "clamp" })
     : 1;
 
+  // Priority: if subtitles exist → show karaoke only (hides subtext)
+  // Otherwise → show subtext narration
+  const hasSubtitles = item.subtitles && item.subtitles.length > 0;
+
+  // Font sizes: fillHeight uses larger text to fill available space
+  const subtextFontSize = fillHeight ? 44 : expanded ? 42 : 36;
+  const karaokesFontSize = fillHeight ? 40 : expanded ? 42 : 36;
+  const lineHeight = fillHeight ? 1.7 : 1.6;
+
   return (
-    <div style={{ transform: `translateX(${slideX}px)`, opacity }}>
+    <div style={{ transform: `translateX(${slideX}px)`, opacity, display: "flex", flexDirection: "column", height: fillHeight ? "100%" : undefined }}>
       {/* Accent bar */}
       <div style={{
         height: 5,
@@ -149,6 +159,7 @@ const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, duratio
         borderRadius: 3,
         boxShadow: `0 0 20px ${accent}88`,
         marginBottom: expanded ? 28 : 18,
+        flexShrink: 0,
       }} />
 
       {/* Headline */}
@@ -160,41 +171,44 @@ const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, duratio
         lineHeight: 1.0,
         margin: `0 0 ${expanded ? 28 : 18}px 0`,
         textShadow: `0 0 60px rgba(0,0,0,0.9),0 4px 24px rgba(0,0,0,0.9),0 0 120px ${accent}33`,
+        flexShrink: 0,
       }}>
         {item.headline}
       </h1>
 
-      {/* Subtext */}
-      {item.subtext && (
-        <p style={{
-          color: "rgba(220,220,220,0.92)",
-          fontSize: expanded ? 42 : 36,
-          fontFamily: '"Montserrat", Arial, sans-serif',
-          fontWeight: 400,
-          margin: `0 0 ${expanded ? 32 : 24}px 0`,
-          letterSpacing: "0.03em",
-          lineHeight: 1.45,
-          textShadow: "0 2px 12px rgba(0,0,0,0.9)",
-          transform: `translateY(${subY}px)`,
-          opacity: subOpacity,
-        }}>
-          {item.subtext}
-        </p>
-      )}
-
-      {/* Subtitles */}
-      {item.subtitles && item.subtitles.length > 0 && (
+      {/* Karaoke subtitles — shown when subtitles present (hides subtext) */}
+      {hasSubtitles && (
         <div style={{
           opacity: subFadeOut,
-          fontSize: expanded ? 40 : 34,
+          fontSize: karaokesFontSize,
           fontFamily: '"Montserrat", Arial, sans-serif',
           fontWeight: 600,
           color: "#FFFFFF",
           textShadow: "0 2px 12px rgba(0,0,0,0.95)",
-          lineHeight: 1.5,
+          lineHeight,
+          flex: fillHeight ? 1 : undefined,
         }}>
-          {renderSubtitles(frame, item.subtitles)}
+          {renderSubtitles(frame, item.subtitles!, accent)}
         </div>
+      )}
+
+      {/* Subtext (Narration) — shown only when NO subtitles */}
+      {!hasSubtitles && item.subtext && (
+        <p style={{
+          color: "rgba(220,220,220,0.92)",
+          fontSize: subtextFontSize,
+          fontFamily: '"Montserrat", Arial, sans-serif',
+          fontWeight: 400,
+          margin: `0 0 ${expanded ? 32 : 24}px 0`,
+          letterSpacing: "0.03em",
+          lineHeight,
+          textShadow: "0 2px 12px rgba(0,0,0,0.9)",
+          transform: `translateY(${subY}px)`,
+          opacity: subOpacity,
+          flex: fillHeight ? 1 : undefined,
+        }}>
+          {item.subtext}
+        </p>
       )}
     </div>
   );
@@ -221,18 +235,19 @@ const Layout169: React.FC<{ item: NewsItem; accent: string; frame: number; fps: 
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(to right, transparent, ${accent}, transparent)` }} />
       </div>
 
-      {/* Text block — overlaps bottom of image slightly, fills rest of screen */}
+      {/* Text block — starts cleanly below image, fills available height */}
       <div style={{
         position: "absolute",
-        top: IMAGE_TOP + IMAGE_H - 60,
+        top: IMAGE_TOP + IMAGE_H + 24,
         left: 0, right: 0,
         bottom: TICKER_H + 16,
         paddingLeft: 60, paddingRight: 60,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-start",
+        overflowY: "hidden",
       }}>
-        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />
+        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} fillHeight />
       </div>
     </AbsoluteFill>
   );
@@ -395,8 +410,20 @@ const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: num
           {item.headline}
         </h1>
 
-        {/* Subtext — single line, clipped */}
-        {item.subtext && (
+        {/* Karaoke subtitles — priority over subtext */}
+        {item.subtitles && item.subtitles.length > 0 ? (
+          <div style={{
+            opacity: subFadeOut,
+            fontSize: 32,
+            fontFamily: '"Montserrat", Arial, sans-serif',
+            fontWeight: 600,
+            color: "#FFFFFF",
+            textShadow: "0 2px 10px rgba(0,0,0,0.95)",
+            lineHeight: 1.5,
+          }}>
+            {renderSubtitles(frame, item.subtitles, accent)}
+          </div>
+        ) : item.subtext ? (
           <p style={{
             color: "rgba(210,210,210,0.88)",
             fontSize: 30,
@@ -406,30 +433,16 @@ const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: num
             letterSpacing: "0.02em",
             lineHeight: 1.3,
             textShadow: "0 2px 8px rgba(0,0,0,0.9)",
-            whiteSpace: "nowrap",
             overflow: "hidden",
-            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
             transform: `translateX(${headX}px)`,
             opacity: headOpacity,
-          }}>
+          } as React.CSSProperties}>
             {item.subtext}
           </p>
-        )}
-
-        {/* Karaoke subtitles */}
-        {item.subtitles && item.subtitles.length > 0 && (
-          <div style={{
-            opacity: subFadeOut,
-            fontSize: 28,
-            fontFamily: '"Montserrat", Arial, sans-serif',
-            fontWeight: 600,
-            color: "#FFFFFF",
-            textShadow: "0 2px 10px rgba(0,0,0,0.95)",
-            lineHeight: 1.4,
-          }}>
-            {renderSubtitles(frame, item.subtitles)}
-          </div>
-        )}
+        ) : null}
       </div>
     </AbsoluteFill>
   );
@@ -565,7 +578,11 @@ interface CardProps {
 const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "breaking", index = 0 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const accent = ACCENT[bulletinStyle];
+  // Per-item styleOverride takes priority over bulletin-level style
+  const effectiveStyle = (item.styleOverride as keyof typeof ACCENT | undefined) && ACCENT[item.styleOverride as keyof typeof ACCENT]
+    ? (item.styleOverride as keyof typeof ACCENT)
+    : bulletinStyle;
+  const accent = ACCENT[effectiveStyle];
 
   const fadeOutStart = durationInFrames - 18;
   const exitOpacity = frame >= fadeOutStart
@@ -595,6 +612,53 @@ const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "brea
     <AbsoluteFill style={{ opacity: exitOpacity, pointerEvents: "none" }}>
       {item.audioUrl && <Audio src={item.audioUrl} />}
       {layout}
+    </AbsoluteFill>
+  );
+};
+
+// ── Category flash constants (shared with 16:9 via props) ────────────────────
+
+export const CATEGORY_FLASH_DUR = 90; // 1.5s at 60fps
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  breaking: "SON DAKİKA",
+  tech: "TEKNOLOJİ",
+  corporate: "KURUMSAL",
+  sport: "SPOR",
+  finance: "FİNANS",
+  weather: "HAVA",
+  science: "BİLİM",
+  entertainment: "EĞLENCE",
+  dark: "GÜNDEM",
+};
+
+// ── Category flash banner — shown between headlines ───────────────────────────
+
+const CategoryFlash9x16: React.FC<{ label: string; accent: string }> = ({ label, accent }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const progress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
+  const slideY = interpolate(progress, [0, 1], [-100, 0]);
+  const exitOpacity = interpolate(frame, [70, 90], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const flashOpacity = interpolate(frame, [0, 6, 14, 22, 28], [0, 0.5, 0.05, 0.4, 0], { extrapolateRight: "clamp" });
+
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {/* Accent colour flash overlay */}
+      <div style={{ position: "absolute", inset: 0, backgroundColor: accent, opacity: flashOpacity, zIndex: 1 }} />
+      {/* Category label badge */}
+      <div style={{
+        position: "absolute", top: "42%", left: 0, right: 0,
+        transform: `translateY(${slideY}px)`, opacity: exitOpacity, zIndex: 2,
+        display: "flex", flexDirection: "column", alignItems: "center",
+      }}>
+        <div style={{ backgroundColor: accent, paddingTop: 20, paddingBottom: 20, paddingLeft: 72, paddingRight: 72, boxShadow: `0 0 60px ${accent}88` }}>
+          <span style={{ color: "#FFF", fontSize: 88, fontFamily: '"Bebas Neue","Oswald",Impact,sans-serif', letterSpacing: "0.14em", fontWeight: 900 }}>
+            {label}
+          </span>
+        </div>
+      </div>
     </AbsoluteFill>
   );
 };
@@ -654,6 +718,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   networkName,
   style = "breaking",
   showLiveIndicator = false,
+  showCategoryFlash = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -668,11 +733,13 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   const OVERLAY_DUR = 50;
   const HEADLINES_START = 70;
 
+  const FLASH_DUR = showCategoryFlash ? CATEGORY_FLASH_DUR : 0;
   let cumulativeOffset = HEADLINES_START;
   const sequenced = items.map((item, idx) => {
-    const from = cumulativeOffset;
-    cumulativeOffset += item.duration;
-    return { item, from, idx };
+    const flashFrom = cumulativeOffset;
+    const contentFrom = cumulativeOffset + FLASH_DUR;
+    cumulativeOffset += FLASH_DUR + item.duration;
+    return { item, flashFrom, contentFrom, idx };
   });
 
   return (
@@ -715,11 +782,21 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
         <BreakingFlash9x16 networkName={networkName} bulletinStyle={style} />
       </Sequence>
 
-      {/* Headlines */}
-      {sequenced.map(({ item, from, idx }) => (
-        <Sequence key={idx} from={from} durationInFrames={item.duration}>
-          <VerticalHeadlineCard item={item} bulletinStyle={style} index={idx} />
-        </Sequence>
+      {/* Headlines (with optional category flash prefix) */}
+      {sequenced.map(({ item, flashFrom, contentFrom, idx }) => (
+        <React.Fragment key={idx}>
+          {showCategoryFlash && (
+            <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
+              <CategoryFlash9x16
+                label={CATEGORY_LABELS[(item.styleOverride || style) as string] ?? String(item.styleOverride || style).toUpperCase()}
+                accent={ACCENT[(item.styleOverride || style) as keyof typeof ACCENT] ?? ACCENT[style]}
+              />
+            </Sequence>
+          )}
+          <Sequence from={contentFrom} durationInFrames={item.duration}>
+            <VerticalHeadlineCard item={item} bulletinStyle={style} index={idx} />
+          </Sequence>
+        </React.Fragment>
       ))}
 
       {/* Ticker */}

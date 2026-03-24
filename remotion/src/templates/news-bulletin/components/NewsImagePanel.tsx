@@ -3,7 +3,7 @@ import { Img, OffthreadVideo, interpolate, spring, useCurrentFrame, useVideoConf
 
 interface Props {
   imageUrl: string;
-  style?: "breaking" | "tech" | "corporate";
+  style?: "breaking" | "tech" | "corporate" | "sport" | "finance" | "weather" | "science" | "entertainment" | "dark";
   /** When true, renders an OffthreadVideo instead of Img */
   isVideo?: boolean;
 }
@@ -12,6 +12,12 @@ const ACCENT = {
   breaking: "#CC0000",
   tech: "#00C8FF",
   corporate: "#1A5CDB",
+  sport: "#10B981",       // Emerald
+  finance: "#F59E0B",     // Amber
+  weather: "#38BDF8",     // Sky
+  science: "#8B5CF6",     // Violet
+  entertainment: "#EC4899", // Pink
+  dark: "#94A3B8",        // Slate
 };
 
 export const NewsImagePanel: React.FC<Props> = ({ imageUrl, style = "breaking", isVideo = false }) => {

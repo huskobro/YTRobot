@@ -70,6 +70,7 @@ def _get_bulletin_tts() -> dict:
         "stability": settings.bulletin_tts_stability if settings.bulletin_tts_stability >= 0.0 else settings.speshaudio_stability,
         "similarity_boost": settings.bulletin_tts_similarity_boost if settings.bulletin_tts_similarity_boost >= 0.0 else settings.speshaudio_similarity_boost,
         "style_val": settings.bulletin_tts_style if settings.bulletin_tts_style >= 0.0 else settings.speshaudio_style,
+        "language_override": settings.bulletin_tts_language or None,
     }
 
 
@@ -142,108 +143,161 @@ def _r4(x: float) -> float:
     return round(round(x * 10000)) / 10000
 
 
-def _build_anchors(segs):
-    full = " ".join(s["text"].strip() for s in segs)
-    anchors = []
-    offset = 0
-    for seg in segs:
-        seg_text = seg["text"].strip()
-        if not seg_text:
-            continue
-        frac_start = offset / max(1, len(full))
-        frac_end = (offset + len(seg_text)) / max(1, len(full))
-        anchors.append((frac_start, seg["start"]))
-        anchors.append((frac_end, seg["end"]))
-        offset += len(seg_text) + 1
-    return anchors
+def _normalize_word(text: str) -> str:
+    """Lowercase + strip all non-alphanumeric chars for fuzzy matching."""
+    return re.sub(r"[^\w]", "", text.lower().strip())
 
 
-def _anchor_lookup(frac: float, anchors: list) -> float:
-    if not anchors:
-        return 0.0
-    if frac <= anchors[0][0]:
-        return anchors[0][1]
-    if frac >= anchors[-1][0]:
+def _align_words_anchored(script_text: str, whisper_result: dict, total_dur: float) -> list:
+    """Fallback: segment-anchored character-fraction mapping."""
+    segs = whisper_result.get("segments", [])
+    script_words = script_text.split()
+    if not script_words or not segs:
+        return []
+
+    # Build anchors based on Whisper segment boundaries
+    full_w_text = " ".join(s.get("text", "").strip() for s in segs)
+    total_w_chars = max(len(full_w_text), 1)
+    
+    anchors = [(0.0, float(segs[0]["start"]))]
+    curr_char = 0
+    for s in segs:
+        txt = s.get("text", "").strip()
+        curr_char += len(txt) + 1
+        anchors.append((curr_char / total_w_chars, float(s["end"])))
+
+    def lookup(frac: float) -> float:
+        frac = max(0.0, min(1.0, frac))
+        for i in range(len(anchors) - 1):
+            f0, t0 = anchors[i]; f1, t1 = anchors[i+1]
+            if f0 <= frac <= f1 and f1 > f0:
+                return t0 + (frac - f0) / (f1 - f0) * (t1 - t0)
         return anchors[-1][1]
-    for i in range(len(anchors) - 1):
-        f0, t0 = anchors[i]
-        f1, t1 = anchors[i + 1]
-        if f0 <= frac <= f1 and f1 > f0:
-            return t0 + (frac - f0) / (f1 - f0) * (t1 - t0)
-    return anchors[-1][1]
+
+    total_chars = max(len(script_text), 1)
+    aligned = []
+    char_pos = 0
+    for word in script_words:
+        f0 = char_pos / total_chars
+        f1 = (char_pos + len(word)) / total_chars
+        aligned.append({
+            "word": word,
+            "startSec": _r4(lookup(f0)),
+            "endSec":   _r4(lookup(f1)),
+        })
+        char_pos += len(word) + 1
+
+    for i in range(len(aligned) - 1):
+        aligned[i]["endSec"] = aligned[i+1]["startSec"]
+    return aligned
 
 
 def _align_subtitles(narration: str, audio_path: Path, fps: int) -> list:
-    """Return list of SubtitleEntry dicts with frame-accurate word timing."""
+    """Return list of SubtitleEntry dicts using greedy word matching for sync."""
     model = _get_whisper()
     result = model.transcribe(
         str(audio_path),
         word_timestamps=True,
         initial_prompt=narration,
-        language=None,  # auto-detect
+        language=None,
     )
-
-    segments = result.get("segments", [])
-    anchors = _build_anchors(segments)
+    
+    segs = result.get("segments", [])
     total_dur = _audio_duration(audio_path)
+    script_words = narration.split()
+    if not script_words or not segs:
+        return []
 
-    # Split narration into chunks (sentences)
+    # 1. Collect Whisper per-word entries
+    wh_words = []
+    for s in segs:
+        for w in s.get("words", []):
+            txt = str(w.get("word", "")).strip()
+            if not txt: continue
+            wh_words.append({
+                "norm":  _normalize_word(txt),
+                "start": float(w.get("start", 0.0)),
+                "end":   float(w.get("end", 0.0)),
+            })
+
+    if not wh_words:
+        aligned_words = _align_words_anchored(narration, result, total_dur)
+    else:
+        # 2. Greedily match script words to Whisper words
+        timestamps = [None] * len(script_words)
+        w_idx = 0
+        for s_idx, sw in enumerate(script_words):
+            ns = _normalize_word(sw)
+            for lookahead in range(min(7, len(wh_words) - w_idx)):
+                j = w_idx + lookahead
+                if wh_words[j]["norm"] == ns:
+                    timestamps[s_idx] = (wh_words[j]["start"], wh_words[j]["end"])
+                    w_idx = j + 1
+                    break
+        
+        # 3. Interpolate gaps
+        matched = [(i, t) for i, t in enumerate(timestamps) if t is not None]
+        if not matched:
+            aligned_words = _align_words_anchored(narration, result, total_dur)
+        else:
+            for s_idx in range(len(script_words)):
+                if timestamps[s_idx] is not None: continue
+                # Linear interpolation between matched neighbours
+                left  = next((m for m in reversed(matched) if m[0] < s_idx), None)
+                right = next((m for m in matched          if m[0] > s_idx), None)
+                if left and right:
+                    li, lt = left; ri, rt = right
+                    span = ri - li; pos = s_idx - li
+                    t0 = lt[1] + (rt[0] - lt[1]) * (pos / span)
+                    t1 = lt[1] + (rt[0] - lt[1]) * ((pos + 1) / span)
+                elif left:
+                    offset = s_idx - left[0]
+                    t0 = min(left[1][1] + offset * 0.25, total_dur)
+                    t1 = min(t0 + 0.25, total_dur)
+                else:
+                    ri, rt = right; count = ri - s_idx
+                    t0 = max(0.0, rt[0] - count * 0.25)
+                    t1 = t0 + 0.25
+                timestamps[s_idx] = (_r4(t0), _r4(t1))
+            
+            aligned_words = []
+            for s_idx, sw in enumerate(script_words):
+                t = timestamps[s_idx]
+                aligned_words.append({"word": sw, "startSec": _r4(t[0]), "endSec": _r4(max(t[0]+0.01, t[1]))})
+
+    for i in range(len(aligned_words) - 1):
+        aligned_words[i]["endSec"] = aligned_words[i+1]["startSec"]
+
+    # 4. Group into sentence-level entries for the "types.ts" SubtitleEntry format
     chunks = [c.strip() for c in re.split(r"(?<=[.!?…])\s+", narration) if c.strip()]
-    if not chunks:
-        chunks = [narration]
+    if not chunks: chunks = [narration]
 
-    # Build word list from narration
-    all_words = narration.split()
-    n = len(all_words)
-
-    # Assign each word a time via anchor interpolation
-    word_times: list[float] = []
-    for idx, w in enumerate(all_words):
-        char_offset = sum(len(w2) + 1 for w2 in all_words[:idx])
-        total_chars = max(1, len(narration))
-        frac = char_offset / total_chars
-        t = _anchor_lookup(frac, anchors)
-        word_times.append(t)
-
-    # Build per-chunk subtitle entries
     entries = []
-    wi = 0  # global word index
+    wi = 0
     for chunk in chunks:
         chunk_words = chunk.split()
-        if not chunk_words:
-            continue
+        if not chunk_words: continue
+        
         start_wi = wi
-        end_wi = wi + len(chunk_words) - 1
-
-        if start_wi >= n:
-            break
-
-        start_sec = word_times[start_wi]
-        end_sec = word_times[min(end_wi, n - 1)]
-
-        # Close gap to next entry
-        next_start = word_times[min(end_wi + 1, n - 1)] if end_wi + 1 < n else total_dur
-        end_sec = next_start
-
         words_out = []
-        for ci, cw in enumerate(chunk_words):
-            w_start = word_times[wi] if wi < n else total_dur
-            w_end = word_times[wi + 1] if wi + 1 < n else total_dur
-            # Close gap
+        for cw in chunk_words:
+            if wi >= len(aligned_words): break
+            w = aligned_words[wi]
             words_out.append({
                 "word": cw,
-                "startFrame": int(_r4(w_start) * fps),
-                "endFrame": int(_r4(w_end) * fps),
+                "startFrame": int(w["startSec"] * fps),
+                "endFrame": int(w["endSec"] * fps),
             })
             wi += 1
-
+            
+        if not words_out: continue
+        
         entries.append({
             "text": chunk,
-            "startFrame": int(_r4(start_sec) * fps),
-            "endFrame": int(_r4(end_sec) * fps),
+            "startFrame": words_out[0]["startFrame"],
+            "endFrame": words_out[-1]["endFrame"],
             "words": words_out,
         })
-
     return entries
 
 
@@ -263,6 +317,9 @@ def run_bulletin(
     fps: int = 60,
     serve_base: Optional[Path] = None,
     category_templates: dict | None = None,
+    on_progress=None,    # callable(progress: int, step: str, step_label: str)
+    stop_event=None,     # threading.Event — set to request cancellation
+    pause_event=None,    # threading.Event — set means "paused, wait"
 ) -> Path:
     """Full pipeline: TTS → align → render.
 
@@ -328,19 +385,49 @@ def run_bulletin(
             bi.__dict__["styleOverride"] = raw.get("styleOverride") or _cat_templates.get(bi.__dict__["category"])
             bulletin_items.append(bi)
 
-        print(f"[NewsBulletin] {len(bulletin_items)} items — starting TTS...")
+        n = len(bulletin_items)
+        print(f"[NewsBulletin] {n} items — starting TTS...")
 
-        # Step 1: TTS
+        def _check_stop():
+            """Raise if stop requested."""
+            if stop_event and stop_event.is_set():
+                raise InterruptedError("Render durduruldu.")
+
+        def _check_pause():
+            """Block while paused; raise if stop is set during wait."""
+            if pause_event:
+                while pause_event.is_set():
+                    if stop_event and stop_event.is_set():
+                        raise InterruptedError("Render durduruldu.")
+                    import time as _t; _t.sleep(0.3)
+
+        def _prog(progress: int, step: str, label: str):
+            print(f"[NewsBulletin] [{progress}%] {label}")
+            if on_progress:
+                on_progress(progress, step, label)
+
+        # Step 1: TTS  (0–35%)
+        _prog(2, "tts", f"Ses sentezi başlıyor... (0/{n})")
         for i, item in enumerate(bulletin_items):
-            print(f"  TTS [{i+1}/{len(bulletin_items)}]: {item.headline[:50]}")
+            _check_stop()
+            _check_pause()
+            print(f"  TTS [{i+1}/{n}]: {item.headline[:50]}")
             item.audio_path = _synthesize(item, work_dir, i)
             item.duration_frames = _frames_for_audio(item.audio_path, fps)
+            pct = 2 + int((i + 1) / n * 33)
+            _prog(pct, "tts", f"Ses sentezi: {i+1}/{n}")
 
-        # Step 2: Subtitle alignment
+        # Step 2: Subtitle alignment (35–60%)
+        _check_stop()
+        _prog(35, "whisper", f"Altyazı hizalama başlıyor... (0/{n})")
         print("[NewsBulletin] Aligning subtitles with Whisper...")
         for i, item in enumerate(bulletin_items):
-            print(f"  Align [{i+1}/{len(bulletin_items)}]")
+            _check_stop()
+            _check_pause()
+            print(f"  Align [{i+1}/{n}]")
             item.subtitles = _align_subtitles(item.narration, item.audio_path, fps)
+            pct = 35 + int((i + 1) / n * 25)
+            _prog(pct, "whisper", f"Altyazı hizalama: {i+1}/{n}")
 
         # Step 3: Build Remotion props + render via HTTP server
         serve_root = serve_base or work_dir
@@ -380,9 +467,10 @@ def run_bulletin(
                 "showLive": show_live,
             }
 
+            _check_stop()
+            _prog(60, "remotion", "Video render başlıyor...")
             print("[NewsBulletin] Rendering with Remotion...")
             remotion_dir = Path(__file__).parent.parent / "remotion"
-            # Determine composition id based on orientation in props (or default 16:9)
             comp_id: str = str(props.get("composition"))
             raw_out = output_path.parent / (output_path.stem + "_raw" + output_path.suffix)
             cmd = [
@@ -391,13 +479,50 @@ def run_bulletin(
                 f"--props={json.dumps(props)}",
                 f"--concurrency={settings.remotion_concurrency}",
             ]
-            result = subprocess.run(cmd, cwd=str(remotion_dir), capture_output=False)
-            if result.returncode != 0:
-                raise RuntimeError(f"Remotion render failed (exit code {result.returncode})")
+            # Stream Remotion output and parse frame progress
+            import re as _re
+            proc = subprocess.Popen(cmd, cwd=str(remotion_dir), stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, bufsize=1)
+            # Expose proc so server can kill/suspend it
+            if on_progress:
+                try:
+                    on_progress(-1, "_proc", str(proc.pid))
+                except Exception:
+                    pass
+            _last_remotion_pct = 60
+            for line in proc.stdout:  # type: ignore[union-attr]
+                print(line, end="")
+                # Remotion prints lines like: "Rendering frame 42 (50%)"
+                m = _re.search(r"(\d+)\s*%", line)
+                if m:
+                    frame_pct = int(m.group(1))
+                    overall = 60 + int(frame_pct * 0.28)
+                    if overall > _last_remotion_pct:
+                        _last_remotion_pct = overall
+                        _prog(overall, "remotion", f"Video render: {frame_pct}%")
+                # Stop check inside render loop
+                if stop_event and stop_event.is_set():
+                    proc.terminate()
+                    proc.wait()
+                    raise InterruptedError("Render durduruldu.")
+                # Pause check — SIGSTOP/SIGCONT on unix
+                if pause_event and pause_event.is_set():
+                    import signal as _sig, os as _os
+                    try:
+                        _os.kill(proc.pid, _sig.SIGSTOP)
+                    except Exception:
+                        pass
+                    _check_pause()   # blocks until unpaused
+                    try:
+                        _os.kill(proc.pid, _sig.SIGCONT)
+                    except Exception:
+                        pass
+            proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"Remotion render failed (exit code {proc.returncode})")
 
+            _prog(88, "ffmpeg", "Renk dönüşümü yapılıyor...")
             # Post-process: fix color range/space for QuickTime/Apple compatibility.
-            # Remotion outputs yuvj420p (full-range) + bt470bg — Apple devices expect
-            # yuv420p (tv-range) + bt709. Without this fix videos stutter in QuickTime.
             print("[NewsBulletin] Fixing color metadata for QuickTime compatibility...")
             fix_cmd = [
                 "ffmpeg", "-i", str(raw_out.resolve()),
@@ -418,6 +543,7 @@ def run_bulletin(
                 print(f"  [warn] color fix failed, keeping raw output: {fix_result.stderr[-200:]}")
                 raw_out.rename(output_path)
 
+        _prog(100, "done", "Tamamlandı!")
         print(f"[NewsBulletin] Done → {output_path}")
         return output_path
 

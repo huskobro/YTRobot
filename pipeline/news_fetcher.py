@@ -29,8 +29,7 @@ KIEAI_BASE_URL = "https://api.kie.ai/gemini-2.5-flash/v1"
 KIEAI_MODEL = "gemini-2.5-flash"
 
 _NARRATION_SYSTEM = """\
-You are a professional broadcast news anchor writer. Your job is to rewrite a \
-news article as a short spoken narration for a TV news bulletin.
+You are a professional broadcast news anchor writer. Your job is to rewrite a news article as a short spoken narration for a TV news bulletin.
 
 RULES (follow all strictly):
 1. Write 2-4 sentences of natural spoken news language — authoritative but clear.
@@ -42,8 +41,17 @@ RULES (follow all strictly):
 6. Never invent facts not present in the provided text.
 7. End with a single strong declarative sentence that closes the item cleanly.
 8. Length: 40-80 words total.
+9. ANTI-CLICKBAIT — absolutely no sensationalism:
+   - Never use exaggerated language like "shocking", "unbelievable", "you won't believe", "explosive", "mind-blowing".
+   - Never omit key facts to create artificial suspense.
+   - Never use question headlines ("Will X happen?") or cliffhangers.
+   - Report only verified facts present in the source text.
+   - Titles and content must reflect the actual news — not a dramatised version.
+10. If any language did not specified, auto detect it and write a formal content.
 
-Return ONLY the narration text. No JSON, no explanation, no quotation marks around the text.\
+Return ONLY the narration text. No JSON, no explanation, no quotation marks around the text.
+
+11. Strictly follow language rules (even if you auto detected a language strictly follow rules for that language) and the other rules.\
 """
 
 
@@ -85,7 +93,14 @@ def save_sources(sources: list[dict]) -> None:
 
 def _gemini_narration(title: str, summary: str, body_text: str, source_name: str, language: str) -> str:
     """Call Gemini to generate a broadcast narration. Returns fallback to summary on error."""
-    from openai import OpenAI  # type: ignore
+    try:
+        from openai import OpenAI  # type: ignore
+        from pipeline.script import _load_custom_prompt
+
+        system_prompt = _load_custom_prompt("bulletin_narration") or _NARRATION_SYSTEM
+    except ImportError:
+        print("  [news_fetcher] openai or pipeline.script not found, cannot generate narration.")
+        return summary or title
 
     if not settings.kieai_api_key:
         return summary or title
@@ -102,7 +117,7 @@ def _gemini_narration(title: str, summary: str, body_text: str, source_name: str
         response = client.chat.completions.create(
             model=KIEAI_MODEL,
             messages=[
-                {"role": "system", "content": _NARRATION_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg},
             ],
             extra_body={"include_thoughts": False},

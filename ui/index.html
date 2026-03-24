@@ -59,7 +59,7 @@
               :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>⚙️</span> <span x-text="t('nav_settings')"></span>
       </button>
-      <button @click="loadBulletinSources();view='bulletin';bulletinTab='sources'"
+      <button @click="view='bulletin';bulletinTab='sources';loadBulletinSources();"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='bulletin'?'bg-red-700 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📺</span> <span x-text="t('nav_bulletin')"></span>
@@ -381,7 +381,7 @@
               <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700">Karaoke</span>
             </div>
           </div>
-          <div @click="videoModule='bulletin';loadBulletinSources();view='bulletin';bulletinTab='sources'"
+          <div @click="view='bulletin';bulletinTab='sources';videoModule='bulletin';loadBulletinSources();"
                class="cursor-pointer border-2 rounded-2xl p-5 transition-all select-none group"
                :class="videoModule==='bulletin' ? 'border-red-500 bg-red-900/20' : 'border-slate-800 bg-slate-900 hover:border-red-400'">
             <div class="text-3xl mb-3">📺</div>
@@ -468,7 +468,7 @@
             <h1 class="text-2xl font-bold text-white" x-text="t('settings_title')"></h1>
             <p class="text-slate-500 text-sm mt-0.5" x-text="t('settings_subtitle')"></p>
           </div>
-          <button @click="saveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all"
+          <button @click="handleSaveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all font-sans"
                   x-text="t('save_settings')"></button>
         </div>
 
@@ -1263,25 +1263,34 @@
             <!-- Voice ID -->
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
-              <div class="flex gap-2">
-                <input x-model="settings.BULLETIN_TTS_VOICE_ID"
-                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-red-500 transition-colors"
-                       :placeholder="t('bulletin_tts_voice_placeholder')" />
-                <button @click="fetchBulletinVoices()"
-                        :disabled="bulletinVoicesLoading"
-                        class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all"
-                        x-text="bulletinVoicesLoading ? '...' : t('bulletin_fetch_voices')"></button>
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-2">
+                  <select x-model="settings.BULLETIN_TTS_VOICE_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    <option value="" x-text="t('bulletin_tts_default')"></option>
+                    <template x-for="v in bulletinVoicesList" :key="v.voice_id||v.id">
+                      <option :value="v.voice_id||v.id" x-text="v.name"></option>
+                    </template>
+                  </select>
+                  <button @click="fetchBulletinVoices()"
+                          :disabled="bulletinVoicesLoading"
+                          class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all"
+                          x-text="bulletinVoicesLoading ? '...' : t('bulletin_fetch_voices')"></button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="text" x-model="settings.BULLETIN_TTS_VOICE_ID"
+                         class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:border-red-500"
+                         :placeholder="t('bulletin_tts_manual_voice_ph') || 'Veya Manuel Ses ID girin...'" />
+                </div>
               </div>
               <div x-show="bulletinVoicesFetchError" class="mt-1.5 text-xs text-red-400" x-text="bulletinVoicesFetchError"></div>
             </div>
-            <!-- Fetched voices dropdown -->
-            <div x-show="bulletinVoicesList.length > 0">
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
-              <select x-model="settings.BULLETIN_TTS_VOICE_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
-                <template x-for="v in bulletinVoicesList" :key="v.voice_id||v.id">
-                  <option :value="v.voice_id||v.id" x-text="v.name"></option>
-                </template>
-              </select>
+            <!-- Bulletin TTS Language -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_lang_label')"></label>
+              <input type="text" x-model="settings.BULLETIN_TTS_LANGUAGE"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 font-mono transition-colors"
+                :placeholder="t('bulletin_tts_lang_placeholder')">
+              <p class="text-[10px] text-slate-500 mt-1" x-text="t('bulletin_tts_lang_hint')"></p>
             </div>
             <!-- Speed -->
             <div>
@@ -1641,7 +1650,142 @@
                 <option value="false" x-text="t('toggle_off')"></option>
               </select>
             </div>
+            <!-- TTS Language -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_tts_lang') || 'TTS Dili (Override)'"></label>
+              <select x-model="settings.BULLETIN_TTS_LANGUAGE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <option value="">— Varsayılan (Kaynak Dili) —</option>
+                <option value="tr">Türkçe</option>
+                <option value="en">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="es">Español</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+              </select>
+            </div>
           </div>
+          </div>
+        </div>
+
+        <!-- Bulletin Source Management (Moved from Bulletin view) -->
+        <div x-show="settingsModule==='bulletin'">
+          <div x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+            <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_add_source')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+            <div x-show="open" x-transition class="mt-3">
+              <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_name')"></label>
+                  <input x-model="newSrc.name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" :placeholder="t('bulletin_src_name_ph')" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_url')"></label>
+                  <input x-model="newSrc.url" type="url" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="https://..." />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_category')"></label>
+                  <select x-model="newSrc.category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    <option value="Gündem">Gündem</option>
+                    <option value="Son Dakika">Son Dakika</option>
+                    <option value="Dünya">Dünya</option>
+                    <option value="Siyaset">Siyaset</option>
+                    <option value="Ekonomi">Ekonomi</option>
+                    <option value="Spor">Spor</option>
+                    <option value="Magazin">Magazin</option>
+                    <option value="Teknoloji">Teknoloji</option>
+                    <option value="Bilim">Bilim</option>
+                    <option value="Hava Durumu">Hava Durumu</option>
+                    <option value="Kurumsal">Kurumsal</option>
+                    <option value="Eğlence">Eğlence</option>
+                    <option value="Genel">Genel</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_lang')"></label>
+                  <select x-model="newSrc.language" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    <option value="tr">Türkçe</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+              </div>
+              <button @click="addBulletinSource()" :disabled="!newSrc.name.trim()||!newSrc.url.trim()"
+                      class="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
+                      x-text="t('bulletin_add_btn')"></button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 mt-4 mb-2">
+              <div class="flex-1">
+                <input x-model="bulletinSearch" type="text" :placeholder="t('search_placeholder')"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
+              </div>
+              <div class="flex gap-2">
+                <select x-model="bulletinCatFilter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none transition-colors min-w-[120px]">
+                  <option value="" x-text="t('filter_all_categories') || 'Tüm Kategoriler'"></option>
+                  <template x-for="cat in uniqueCategories()" :key="cat">
+                    <option :value="cat" x-text="cat"></option>
+                  </template>
+                </select>
+                <select x-model="bulletinPresetFilter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none transition-colors min-w-[120px]">
+                  <option value="" x-text="t('filter_all_presets') || 'Tüm Ön Ayarlar'"></option>
+                  <option value="current" x-text="t('filter_current_preset') || 'Aktif Ön Ayar'"></option>
+                </select>
+              </div>
+            </div>
+
+            <div x-show="filteredBulletinSources().length===0" class="text-center py-12 text-slate-500 text-sm" x-text="t('bulletin_no_sources')"></div>
+            <div class="space-y-2 mt-2">
+              <template x-for="src in filteredBulletinSources()" :key="src.id">
+                <div class="flex items-center gap-3 px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl">
+                  <button @click="toggleBulletinSource(src)"
+                          class="shrink-0 w-9 h-5 rounded-full transition-colors relative"
+                          :class="src.enabled ? 'bg-red-600' : 'bg-slate-700'">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          :class="src.enabled ? 'left-4' : 'left-0.5'"></span>
+                  </button>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-medium text-sm text-white" x-text="src.name"></span>
+                      <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="src.category"></span>
+                      <span class="text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-400 rounded-full border border-indigo-700/40 uppercase" x-text="src.language"></span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-0.5 truncate" x-text="src.url"></div>
+                  </div>
+                  <button @click="deleteBulletinSource(src.id)"
+                          class="shrink-0 px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-red-900/40 text-slate-500 hover:text-red-400 border border-slate-700 hover:border-red-700/50 rounded-lg transition-all"
+                          x-text="t('btn_delete')"></button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Category -> Template Mapping Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4" x-show="bulletinSources.length > 0">
+            <h2 class="text-sm font-bold text-slate-300 mb-3" x-text="t('bulletin_category_mapping')"></h2>
+            <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_mapping_hint')"></p>
+            
+            <div class="space-y-3">
+              <template x-for="cat in uniqueCategories()" :key="cat">
+                <div class="flex items-center justify-between gap-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs px-2.5 py-1 text-white font-bold rounded-md shadow-sm"
+                          :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                    <span class="text-xs text-slate-400">→</span>
+                  </div>
+                  <select x-model="categoryTemplates[cat]" 
+                          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors min-w-[140px]">
+                    <option value="">— Varsayılan Stil —</option>
+                    <option value="breaking">Breaking / Son Dakika</option>
+                    <option value="tech">Tech / Teknoloji</option>
+                    <option value="corporate">Corporate / Kurumsal</option>
+                    <option value="sport">Sport / Spor</option>
+                    <option value="finance">Finance / Ekonomi</option>
+                    <option value="weather">Weather / Hava Durumu</option>
+                    <option value="science">Science / Bilim</option>
+                    <option value="entertainment">Entertainment / Eğlence</option>
+                    <option value="dark">Dark Minimal</option>
+                  </select>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -1652,8 +1796,8 @@
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_presets_hint')"></p>
           <!-- Save current as preset -->
           <div class="flex gap-2 mb-4">
-            <input x-model="bulletinPresetName"
-                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
+            <input x-model="bulletinPresetName" type="text"
+                   class="flex-1 bg-slate-950/50 border border-slate-700/60 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-red-500/50 transition-all font-medium"
                    :placeholder="t('bulletin_preset_name_ph')"
                    @keyup.enter="saveBulletinPreset()" />
             <button @click="saveBulletinPreset()" :disabled="!bulletinPresetName.trim()"
@@ -1712,7 +1856,7 @@
           </div>
         </div>
 
-        <button @click="saveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
+        <button @click="handleSaveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
                 x-text="t('save_settings')"></button>
       </div>
     </div>
@@ -1720,10 +1864,18 @@
     <!-- ══ BÜLTEN ══════════════════════════════════════════════════════ -->
     <div x-show="view==='bulletin'" class="p-6">
       <div class="max-w-4xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex items-start justify-between mb-6">
           <div>
             <h1 class="text-2xl font-bold text-white" x-text="t('bulletin_title')"></h1>
             <p class="text-slate-500 text-sm mt-0.5" x-text="t('bulletin_subtitle')"></p>
+          </div>
+          <!-- Active preset info (Moved to main bulletin header) -->
+          <div x-show="bulletinActivePreset" class="px-3 py-2 bg-indigo-900/40 border border-indigo-700/50 rounded-xl flex items-center gap-3 shadow-md">
+            <span class="text-xl">🎬</span>
+            <div>
+              <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider" x-text="t('bulletin_active_preset')"></div>
+              <div class="text-sm font-semibold text-white truncate max-w-[200px]" x-text="bulletinActivePreset"></div>
+            </div>
           </div>
         </div>
 
@@ -1745,131 +1897,79 @@
 
         <!-- ── KAYNAKLAR ──────────────────────────────────────── -->
         <div x-show="bulletinTab==='sources'">
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
-            <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_add_source')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
-          <div x-show="open" x-transition>
-            <div class="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_name')"></label>
-                <input x-model="newSrc.name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" :placeholder="t('bulletin_src_name_ph')" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_url')"></label>
-                <input x-model="newSrc.url" type="url" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="https://..." />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_category')"></label>
-                <input x-model="newSrc.category" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" :placeholder="t('bulletin_src_category_ph')" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_src_lang')"></label>
-                <select x-model="newSrc.language" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
-                  <option value="tr">Türkçe</option>
-                  <option value="en">English</option>
-                </select>
+          <!-- Source selection panel -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_source_select')"></h2>
+            
+            <div class="mb-4">
+              <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_filter_cat') || 'Kategori Filtresi'"></div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="bulletinSourceFilterCat='All'"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all"
+                        :class="bulletinSourceFilterCat==='All' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'">Tümü</button>
+                <template x-for="c in uniqueCategories()" :key="c">
+                  <button @click="bulletinSourceFilterCat=c"
+                          class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all uppercase"
+                          :class="bulletinSourceFilterCat===c ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'"
+                          x-text="c"></button>
+                </template>
               </div>
             </div>
-            <button @click="addBulletinSource()" :disabled="!newSrc.name.trim()||!newSrc.url.trim()"
-                    class="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
-                    x-text="t('bulletin_add_btn')"></button>
-          </div>
 
-          <div x-show="bulletinSources.length===0" class="text-center py-12 text-slate-500 text-sm" x-text="t('bulletin_no_sources')"></div>
-          <div class="space-y-2">
-            <template x-for="src in bulletinSources" :key="src.id">
-              <div class="flex items-center gap-3 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl">
-                <button @click="toggleBulletinSource(src)"
-                        class="shrink-0 w-9 h-5 rounded-full transition-colors relative"
-                        :class="src.enabled ? 'bg-red-600' : 'bg-slate-700'">
-                  <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
-                        :class="src.enabled ? 'left-4' : 'left-0.5'"></span>
-                </button>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="font-medium text-sm text-white" x-text="src.name"></span>
-                    <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="src.category"></span>
-                    <span class="text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-400 rounded-full border border-indigo-700/40 uppercase" x-text="src.language"></span>
-                  </div>
-                  <div class="text-xs text-slate-500 mt-0.5 truncate" x-text="src.url"></div>
-                </div>
-                <button @click="deleteBulletinSource(src.id)"
-                        class="shrink-0 px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-red-900/40 text-slate-500 hover:text-red-400 border border-slate-700 hover:border-red-700/50 rounded-lg transition-all"
-                        x-text="t('btn_delete')"></button>
+            <div class="mb-6 border-b border-slate-800 pb-4" x-show="bulletinPresets.length > 0">
+              <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_filter_preset') || 'Önayar Filtresi'"></div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="bulletinSourceFilterPreset='All'"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all"
+                        :class="bulletinSourceFilterPreset==='All' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'">Tümü</button>
+                <template x-for="p in bulletinPresets" :key="p.name">
+                  <button @click="bulletinSourceFilterPreset=p.name"
+                          class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all"
+                          :class="bulletinSourceFilterPreset===p.name ? 'bg-emerald-600 text-white shadow' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'"
+                          x-text="p.name"></button>
+                </template>
               </div>
-            </template>
-          </div>
-          </div>
+            </div>
 
-          <!-- Category -> Template Mapping Card -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4" x-show="bulletinSources.length > 0">
-            <h2 class="text-sm font-bold text-slate-300 mb-3" x-text="t('bulletin_category_mapping')"></h2>
-            <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_mapping_hint')"></p>
-            
-            <div class="space-y-3">
-              <template x-for="cat in uniqueCategories" :key="cat">
-                <div class="flex items-center justify-between gap-4 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
-                  <div class="flex items-center gap-3">
-                    <span class="text-xs px-2.5 py-1 text-white font-bold rounded-md shadow-sm"
-                          :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
-                    <span class="text-xs text-slate-400">→</span>
-                  </div>
-                  <select x-model="categoryTemplates[cat]" 
-                          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors min-w-[140px]">
-                    <option value="">— Default Style —</option>
-                    <option value="breaking">Breaking / Son Dakika</option>
-                    <option value="tech">Tech / Teknoloji</option>
-                    <option value="corporate">Corporate / Kurumsal</option>
-                    <option value="sport">Sport / Spor</option>
-                    <option value="finance">Finance / Ekonomi</option>
-                    <option value="weather">Weather / Hava Durumu</option>
-                    <option value="science">Science / Bilim</option>
-                    <option value="entertainment">Entertainment / Eğlence</option>
-                    <option value="dark">Dark Minimal</option>
-                  </select>
-                </div>
-              </template>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer mb-4 p-2 bg-slate-800/40 rounded-lg">
+                <input type="checkbox" x-model="bulletinSelectAllSources" class="accent-red-600 w-4 h-4 ml-1" />
+                <span class="text-sm font-medium text-slate-300" x-text="t('bulletin_select_all_sources')"></span>
+              </label>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <template x-for="src in (bulletinSources || []).filter(s => {
+                  if(bulletinSourceFilterCat !== 'All' && s.category !== bulletinSourceFilterCat) return false;
+                  if(bulletinSourceFilterPreset !== 'All') {
+                    const p = bulletinPresets.find(pr => pr.name === bulletinSourceFilterPreset);
+                    if(!p || !p.values || !p.values.selected_sources) return true; 
+                    if(!p.values.selected_sources.includes(s.id)) return false;
+                  }
+                  return true;
+                })" :key="src.id">
+                  <label class="flex items-center gap-3 px-4 py-3 bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-700 border border-slate-700/50 hover:border-red-500/50 transition-all"
+                         :class="!src.enabled ? 'opacity-40 grayscale-[0.5]' : ''">
+                    <input type="checkbox" :value="src.id" x-model="bulletinSelectedSources" class="accent-red-600 w-4 h-4 shrink-0" :disabled="bulletinSelectAllSources" />
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-bold text-white truncate" x-text="src.name"></div>
+                      <div class="text-xs text-slate-400 mt-0.5 flex gap-2">
+                        <span class="px-1.5 py-0.5 rounded bg-slate-900" x-text="src.category"></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-900 uppercase" x-text="src.language"></span>
+                      </div>
+                    </div>
+                  </label>
+                </template>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- ── TASLAK ──────────────────────────────────────────── -->
         <div x-show="bulletinTab==='draft'">
-          <!-- Source selection panel -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3" x-data="{open:false}">
-            <button @click="open=!open" class="w-full flex items-center justify-between text-left">
-              <span class="text-xs font-bold text-slate-300" x-text="t('bulletin_source_select')"></span>
-              <span class="text-xs text-slate-500 flex items-center gap-1.5">
-                <span x-text="bulletinSelectAllSources ? t('bulletin_src_all') : (bulletinSelectedSources.length + ' ' + t('bulletin_src_selected'))"></span>
-                <span :class="open ? 'rotate-180' : ''" class="transition-transform inline-block">▼</span>
-              </span>
-            </button>
-            <div x-show="open" x-transition class="mt-3 space-y-2">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" x-model="bulletinSelectAllSources" class="accent-red-600 w-3.5 h-3.5" />
-                <span class="text-xs text-slate-400" x-text="t('bulletin_select_all_sources')"></span>
-              </label>
-              <div class="grid grid-cols-2 gap-1.5 mt-2" x-show="!bulletinSelectAllSources">
-                <template x-for="src in bulletinSources.filter(s=>s.enabled)" :key="src.id">
-                  <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
-                    <input type="checkbox" :value="src.id" x-model="bulletinSelectedSources" class="accent-red-600 w-3.5 h-3.5 shrink-0" />
-                    <div class="min-w-0">
-                      <div class="text-xs font-medium text-white truncate" x-text="src.name"></div>
-                      <div class="text-xs text-slate-500" x-text="src.category + ' · ' + src.language.toUpperCase()"></div>
-                    </div>
-                  </label>
-                </template>
-              </div>
-              <!-- Active preset + dedup info -->
-              <div x-show="bulletinActivePreset" class="mt-2 px-3 py-2 bg-slate-800/60 rounded-lg text-xs text-slate-400 flex items-center gap-2">
-                <span>🎬</span>
-                <span x-text="t('bulletin_active_preset') + ': ' + bulletinActivePreset"></span>
-              </div>
-              <div x-show="bulletinActivePreset && bulletinHistory[bulletinActivePreset]?.length > 0"
-                   class="px-3 py-2 bg-amber-900/20 border border-amber-800/40 rounded-lg text-xs text-amber-400 flex items-center justify-between">
-                <span x-text="(bulletinHistory[bulletinActivePreset]?.length || 0) + ' ' + t('bulletin_dedup_note')"></span>
-                <button @click="clearBulletinHistory()" class="ml-2 underline hover:text-amber-300 shrink-0" x-text="t('bulletin_dedup_clear')"></button>
-              </div>
-            </div>
+          <!-- Active preset dedup info -->
+          <div x-show="bulletinActivePreset && bulletinHistory[bulletinActivePreset]?.length > 0"
+               class="mb-4 px-4 py-3 bg-amber-900/20 border border-amber-800/40 rounded-xl text-xs text-amber-400 flex items-center justify-between shadow-sm">
+            <span x-text="(bulletinHistory[bulletinActivePreset]?.length || 0) + ' ' + t('bulletin_dedup_note')"></span>
+            <button @click="clearBulletinHistory()" class="underline hover:text-amber-300 font-medium ml-2 px-2 py-1" x-text="t('bulletin_dedup_clear')"></button>
           </div>
 
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
@@ -2070,6 +2170,32 @@
                   </div>
                 </div>
 
+                <!-- Entertainment — Hot Pink -->
+                <div @click="bulletinRenderCfg.style='entertainment'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='entertainment' ? 'border-pink-500 ring-1 ring-pink-500/30' : 'border-transparent hover:border-pink-400'"
+                     style="width:125px;height:68px;background:#2a0f2e">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#ec4899"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#ec4899;font-weight:900;letter-spacing:0.1em">EĞLENCE</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Entertainment</span>
+                    <span style="font-size:7px;color:#6b7280">Mor + Pembe</span>
+                  </div>
+                </div>
+
+                <!-- Dark Minimal — Monochrome -->
+                <div @click="bulletinRenderCfg.style='dark'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='dark' ? 'border-slate-400 ring-1 ring-slate-400/30' : 'border-transparent hover:border-slate-500'"
+                     style="width:125px;height:68px;background:#050505">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#94a3b8"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#94a3b8;font-weight:900;letter-spacing:0.1em">GENEL</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Dark Minimal</span>
+                    <span style="font-size:7px;color:#6b7280">Siyah + Gri</span>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -2165,6 +2291,41 @@
                 </div>
               </div>
             </div>
+
+            <!-- Category -> Template Mapping inline in Render -->
+            <div class="mb-5 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50" x-show="[...new Set(getSelectedItems().map(i=>i.category))].filter(Boolean).length > 0">
+              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2" x-text="t('bulletin_category_mapping') || 'Kategori → Görsel Stil'"></h3>
+              <p class="text-[10px] text-slate-500 mb-3" x-text="t('bulletin_mapping_render_hint') || 'Seçili haberlerdeki kategorilerin hangi şablonla çizileceğini ayarlayın.'"></p>
+              
+              <div class="space-y-2">
+                <template x-for="cat in [...new Set(getSelectedItems().map(i=>i.category))].filter(Boolean)" :key="cat">
+                  <div class="p-2.5 bg-slate-900/50 rounded border border-slate-700/30">
+                    <div class="flex items-center justify-between gap-4">
+                      <div class="flex items-center gap-2 text-[10px] font-bold">
+                        <span class="px-2 py-0.5 text-white rounded shadow-sm" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                        <span class="text-slate-500">→</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <select x-model="categoryTemplates[cat]" @change="saveSettings()"
+                                class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-red-500 transition-colors w-32">
+                          <option value="">— Varsayılan —</option>
+                          <option value="breaking">Breaking / Son Dakika</option>
+                          <option value="tech">Tech / Teknoloji</option>
+                          <option value="corporate">Corporate / Kurumsal</option>
+                          <option value="sport">Sport / Spor</option>
+                          <option value="finance">Finance / Ekonomi</option>
+                          <option value="weather">Weather / Hava Durumu</option>
+                          <option value="science">Science / Bilim</option>
+                          <option value="entertainment">Entertainment / Eğlence</option>
+                          <option value="dark">Dark Minimal</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
             <!-- Format + network + fps row -->
             <div class="grid grid-cols-3 gap-4 mb-4">
               <div>
@@ -2209,6 +2370,36 @@
                 </template>
               </div>
             </div>
+            <!-- Render modu -->
+            <div class="bg-slate-800/60 border border-slate-700/40 rounded-xl p-3 mb-3">
+              <div class="text-xs font-semibold text-slate-400 mb-2.5">Render Modu</div>
+              <div class="space-y-1">
+                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
+                  <input type="radio" name="bRenderMode" value="combined" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
+                  <div><div class="text-xs font-semibold text-white">Tek Video</div><div class="text-xs text-slate-500">Tüm haberler tek MP4'te</div></div>
+                </label>
+                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
+                  <input type="radio" name="bRenderMode" value="per_category" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
+                  <div><div class="text-xs font-semibold text-white">Kategoriye Göre Ayrı</div><div class="text-xs text-slate-500">Her kategori ayrı stilinde ayrı MP4</div></div>
+                </label>
+                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
+                  <input type="radio" name="bRenderMode" value="per_item" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
+                  <div><div class="text-xs font-semibold text-white">Her Haber Ayrı Video</div><div class="text-xs text-slate-500">Her haber kendi stilinde ayrı MP4</div></div>
+                </label>
+              </div>
+            </div>
+            <!-- Kategori geçiş flash toggle -->
+            <label class="flex items-center justify-between px-3 py-2.5 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors mb-3 select-none">
+              <div>
+                <div class="text-xs font-semibold text-slate-300">Kategori geçiş animasyonu</div>
+                <div class="text-xs text-slate-500 mt-0.5">Her haber öncesinde 1.5sn kategori flash ekranı</div>
+              </div>
+              <div class="relative ml-3 shrink-0">
+                <input type="checkbox" x-model="bulletinShowCategoryFlash" class="sr-only peer" />
+                <div class="w-10 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+              </div>
+            </label>
+
             <button @click="startBulletinRender()" :disabled="bulletinRendering || selectedDraftCount()===0"
                     class="w-full py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2">
               <span x-show="bulletinRendering" class="animate-spin-slow">↻</span>
@@ -2224,18 +2415,79 @@
                       :class="bulletinJobStatus==='completed'?'text-green-400 bg-green-400/10 border-green-500/30':bulletinJobStatus==='failed'?'text-red-400 bg-red-400/10 border-red-500/30':'text-blue-400 bg-blue-400/10 border-blue-500/30'"
                       x-text="bulletinJobStatus"></span>
               </div>
-              <div class="font-mono text-xs text-slate-500 mb-3" x-text="bulletinJobId"></div>
+
+              <!-- Progress bar (running veya completed) -->
+              <div x-show="bulletinJobStatus==='running' || bulletinJobStatus==='completed'" class="mb-4">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs text-slate-400 flex items-center gap-1.5">
+                    <span x-show="bulletinJobStatus==='running'" class="animate-spin-slow inline-block">↻</span>
+                    <span x-text="bulletinStepLabel || t('bulletin_rendering_wait')"></span>
+                  </span>
+                  <span class="text-xs font-mono font-bold"
+                        :class="bulletinJobStatus==='completed'?'text-green-400':'text-blue-400'"
+                        x-text="bulletinProgress + '%'"></span>
+                </div>
+                <!-- Bar -->
+                <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                  <div class="h-2.5 rounded-full transition-all duration-700"
+                       :class="bulletinJobStatus==='completed'?'bg-green-500':'bg-blue-500'"
+                       :style="'width:' + bulletinProgress + '%'"></div>
+                </div>
+                <!-- Süre satırı -->
+                <div x-show="bulletinJobStatus==='running'" class="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                  <span>⏱ <span x-text="Math.floor(bulletinElapsed/60).toString().padStart(2,'0') + ':' + (bulletinElapsed%60).toString().padStart(2,'0')"></span> geçti</span>
+                  <span x-show="bulletinEta !== null">
+                    ~ <span x-text="Math.floor(bulletinEta/60).toString().padStart(2,'0') + ':' + (bulletinEta%60).toString().padStart(2,'0')"></span> kaldı
+                  </span>
+                </div>
+                <!-- Kontrol butonları -->
+                <div x-show="bulletinJobStatus==='running'" class="flex items-center gap-2 mt-3">
+                  <!-- Duraksat / Devam -->
+                  <button x-show="!bulletinPaused"
+                          @click="pauseBulletinRender()"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-900/30 hover:bg-yellow-800/50 border border-yellow-700/40 text-yellow-400 text-xs font-semibold rounded-lg transition-all">
+                    ⏸ Duraksat
+                  </button>
+                  <button x-show="bulletinPaused"
+                          @click="resumeBulletinRender()"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-900/30 hover:bg-green-800/50 border border-green-700/40 text-green-400 text-xs font-semibold rounded-lg transition-all">
+                    ▶ Devam Et
+                  </button>
+                  <!-- Durdur -->
+                  <button @click="if(confirm('Render durdurulsun mu?')) stopBulletinRender()"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 hover:bg-red-800/50 border border-red-700/40 text-red-400 text-xs font-semibold rounded-lg transition-all">
+                    ⏹ Durdur
+                  </button>
+                  <!-- Duraklatıldı badge -->
+                  <span x-show="bulletinPaused" class="text-xs text-yellow-400 animate-pulse font-semibold">⏸ Duraklatıldı</span>
+                </div>
+              </div>
+
               <div x-show="bulletinJobStatus==='completed'" class="space-y-2">
                 <div class="text-xs text-green-400 font-semibold" x-text="t('bulletin_render_done')"></div>
-                <a :href="'/api/bulletin/download/' + bulletinJobId" target="_blank"
+                <!-- Per-category downloads -->
+                <template x-if="Object.keys(bulletinCategoryOutputs).length > 0">
+                  <div class="space-y-1.5">
+                    <div class="text-xs text-slate-400 mb-1">Kategori videoları:</div>
+                    <template x-for="[cat, path] in Object.entries(bulletinCategoryOutputs)" :key="cat">
+                      <a :href="'/api/bulletin/download/' + bulletinJobId + '/' + cat" target="_blank"
+                         class="flex items-center gap-2 px-3 py-2 bg-green-800/30 hover:bg-green-800/60 border border-green-700/40 text-green-400 text-xs font-semibold rounded-lg transition-all">
+                        <span>⬇</span>
+                        <span x-text="cat.toUpperCase() + ' videosu'"></span>
+                      </a>
+                    </template>
+                  </div>
+                </template>
+                <!-- Single combined download -->
+                <a x-show="Object.keys(bulletinCategoryOutputs).length === 0"
+                   :href="'/api/bulletin/download/' + bulletinJobId" target="_blank"
                    class="inline-flex items-center gap-2 px-4 py-2 bg-green-800/40 hover:bg-green-800/70 border border-green-700/50 text-green-400 text-sm font-semibold rounded-lg transition-all"
                    x-text="t('bulletin_download_btn')"></a>
               </div>
-              <div x-show="bulletinJobStatus==='failed'" class="text-xs text-red-400" x-text="bulletinJobError"></div>
-              <div x-show="bulletinRendering" class="flex items-center gap-2 text-xs text-blue-400">
-                <span class="animate-spin-slow">↻</span>
-                <span x-text="t('bulletin_rendering_wait')"></span>
+              <div x-show="bulletinJobStatus==='cancelled'" class="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                <span>⏹</span> <span>Render durduruldu.</span>
               </div>
+              <div x-show="bulletinJobStatus==='failed'" class="text-xs text-red-400 mt-1" x-text="bulletinJobError"></div>
             </div>
           </template>
           </div>
@@ -2245,6 +2497,23 @@
     </div>
 
   </main>
+
+  <!-- Global Confirm Save Modal -->
+  <div x-show="showSaveModal" x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style="display:none;" x-cloak>
+    <div @click.away="showSaveModal = false" class="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-md w-full" x-transition.scale.origin.bottom>
+      <h3 class="text-xl font-bold text-white mb-2" x-text="t('save_modal_title')"></h3>
+      <p class="text-slate-400 text-sm mb-6 mt-1" x-text="t('save_modal_desc').replace('%s', settingsModule === 'bulletin' ? bulletinActivePreset : selectedPreset)"></p>
+      <div class="flex flex-col gap-3">
+        <button @click="confirmSaveSettings('global')" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold rounded-xl transition-all"
+                x-text="t('save_modal_global')"></button>
+        <button @click="confirmSaveSettings('preset')" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/30 font-semibold rounded-xl transition-all"
+                x-text="t('save_modal_preset').replace('%s', settingsModule === 'bulletin' ? bulletinActivePreset : selectedPreset)"></button>
+        <button @click="showSaveModal = false" class="w-full py-2.5 mt-2 bg-transparent hover:bg-slate-800/50 text-slate-400 hover:text-white font-medium rounded-xl transition-all"
+                x-text="t('save_modal_cancel')"></button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -2298,7 +2567,7 @@ const LANG = {
     tts_speed_label: 'Speech Speed',
     speed_slow: '0.75× — Slow', speed_slightly_slow: '0.9× — Slightly Slow',
     speed_normal: '1.0× — Normal (default)', speed_slightly_fast: '1.1× — Slightly Fast',
-    speed_fast: '1.25× — Fast', speed_very_fast: '1.5× — Very Fast',
+    speed_fast: '1.25× — Very Fast', speed_very_fast: '1.5× — Very Fast',
     spesh_key: 'Spesh Audio API Key', voice_id: 'Voice ID',
     language_setting: 'Language (empty = auto-detect)', elevenlabs_key: 'ElevenLabs API Key',
     openai_voice_label: 'Voice',
@@ -2490,16 +2759,20 @@ const LANG = {
     bulletin_show_live_hint: 'Show a pulsing red dot + "LIVE" label next to the network name.',
     // Bulletin Prompts
     section_bulletin_prompts: '✏️ Bulletin Master Prompt',
-    bulletin_prompts_hint: 'Customize the AI prompt for generating bulletin narrations. Leave empty to use the built-in default.',
+    bulletin_prompts_hint: 'Customize the AI prompt for generating bulletin narrations. Leave empty to use the built-in default. Changes take effect on the next run.',
     prompt_bulletin_narration_label: '1 · Bulletin Narration Prompt',
     prompt_bulletin_narration_hint: 'Controls how the AI summarizes and narrates news items for TTS.',
     anim_desc_hype: 'Zoom up', anim_desc_explosive: 'Slide left', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Fade', anim_desc_none: 'Static',
     settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bulletin',
     section_bulletin_tts: '🔊 Bulletin TTS', bulletin_tts_fallback_note: 'Override TTS settings for the Bulletin pipeline. Leave Provider empty to inherit the main TTS settings.',
     bulletin_tts_provider_label: 'TTS Provider', bulletin_tts_inherit: '— Inherit from YTRobot —',
-    bulletin_tts_voice_label: 'Voice ID', bulletin_tts_voice_placeholder: 'Voice ID or leave empty to inherit',
+    bulletin_tts_voice_label: 'Voice ID', bulletin_tts_default: '— Default Voice —',
+    bulletin_tts_manual_voice_ph: 'Enter manual Voice ID...',
     bulletin_fetch_voices: 'Fetch Voices',
     bulletin_tts_speed_label: 'Speed', bulletin_tts_inherit_hint: 'Using inherited speed from YTRobot settings.',
+    bulletin_tts_lang_label: 'TTS Language (Optional)',
+    bulletin_tts_lang_placeholder: 'e.g. en, tr',
+    bulletin_tts_lang_hint: 'Leave empty to inherit from global settings. Recommended to set "tr" for Turkish.',
     section_bulletin_presets: '⚙️ Channel Presets',
     bulletin_presets_hint: 'Save and reload complete channel configurations (name, style, colors, font, ticker settings) for quick switching between different broadcast styles.',
     bulletin_preset_name_ph: 'e.g. Breaking News Channel, Sports 9:16...',
@@ -2509,12 +2782,17 @@ const LANG = {
     bulletin_style_sport: 'Sport', bulletin_style_finance: 'Finance',
     bulletin_style_weather: 'Weather', bulletin_style_science: 'Science',
     bulletin_style_entertainment: 'Entertainment', bulletin_style_dark: 'Dark Minimal',
-    spesaudio_stability: 'Stability', spesaudio_similarity: 'Similarity Boost', spesaudio_style: 'Style',
-    section_bulletin_visual: '🎨 Visual Style', bulletin_settings_network: 'Network Name', bulletin_settings_fps: 'FPS',
+    spesaudio_stability: 'Stability', spesaudio_similarity: 'Benzerlik Artışı', spesaudio_style: 'Stil',
+    section_bulletin_visual: '🎨 Görsel Stil', bulletin_settings_network: 'Network Name', bulletin_settings_fps: 'FPS',
     section_bulletin_content: '📋 Content Defaults',
     bulletin_default_max_items_label: 'Default items per source', bulletin_default_lang_label: 'Default language',
     bulletin_default_lang_auto: 'Auto (source default)', bulletin_content_defaults_hint: 'These defaults are pre-filled when you open the Draft tab.',
     preview_font_sample: 'Hello World',
+    save_modal_title: 'Save Settings',
+    save_modal_desc: 'You have an active preset "%s". Where do you want to save these settings?',
+    save_modal_global: 'Save Globally (Default)',
+    save_modal_preset: 'Update Preset "%s"',
+    save_modal_cancel: 'Cancel',
   },
   tr: {
     app_subtitle: 'Otomatik Video Üretici',
@@ -2564,7 +2842,7 @@ const LANG = {
     tts_speed_label: 'Konuşma Hızı',
     speed_slow: '0.75× — Yavaş', speed_slightly_slow: '0.9× — Biraz Yavaş',
     speed_normal: '1.0× — Normal (varsayılan)', speed_slightly_fast: '1.1× — Biraz Hızlı',
-    speed_fast: '1.25× — Hızlı', speed_very_fast: '1.5× — Çok Hızlı',
+    speed_fast: '1.25× — Çok Hızlı', speed_very_fast: '1.5× — Çok Hızlı',
     spesh_key: 'Spesh Audio API Anahtarı', voice_id: 'Ses ID',
     language_setting: 'Dil (boş = otomatik algıla)', elevenlabs_key: 'ElevenLabs API Anahtarı',
     openai_voice_label: 'Ses',
@@ -2763,9 +3041,13 @@ const LANG = {
     settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bülten',
     section_bulletin_tts: '🔊 Bülten TTS', bulletin_tts_fallback_note: 'Bülten pipeline\'ı için TTS ayarlarını geçersiz kılın. Sağlayıcıyı boş bırakırsanız ana TTS ayarları devralınır.',
     bulletin_tts_provider_label: 'TTS Sağlayıcı', bulletin_tts_inherit: '— YTRobot\'tan Devral —',
-    bulletin_tts_voice_label: 'Ses ID', bulletin_tts_voice_placeholder: 'Ses ID veya devralmak için boş bırakın',
+    bulletin_tts_voice_label: 'Ses ID', bulletin_tts_default: '— Varsayılan Ses —',
+    bulletin_tts_manual_voice_ph: 'Manuel Ses ID girin...',
     bulletin_fetch_voices: 'Sesleri Getir',
     bulletin_tts_speed_label: 'Hız', bulletin_tts_inherit_hint: 'YTRobot ayarlarından devralınan hız kullanılıyor.',
+    bulletin_tts_lang_label: 'TTS Dili (İsteğe Bağlı)',
+    bulletin_tts_lang_placeholder: 'örn. en, tr',
+    bulletin_tts_lang_hint: 'Boş bırakılırsa global ayarlardan devralınır. Türkçe için "tr" olarak ayarlanması önerilir.',
     section_bulletin_presets: '⚙️ Kanal Önayarları',
     bulletin_presets_hint: 'Farklı yayın stilleri arasında hızlı geçiş için tam kanal yapılandırmalarını (ad, stil, renkler, font, kayan yazı ayarları) kaydedin ve yeniden yükleyin.',
     bulletin_preset_name_ph: 'örn. Son Dakika Kanalı, Spor 9:16...',
@@ -2781,6 +3063,11 @@ const LANG = {
     bulletin_default_max_items_label: 'Kaynak başına varsayılan haber', bulletin_default_lang_label: 'Varsayılan dil',
     bulletin_default_lang_auto: 'Otomatik (kaynak varsayılanı)', bulletin_content_defaults_hint: 'Bu varsayılanlar Taslak sekmesini açtığınızda otomatik doldurulur.',
     preview_font_sample: 'Merhaba Dünya',
+    save_modal_title: 'Ayarları Kaydet',
+    save_modal_desc: '"%s" adlı aktif bir önayar var. Bu ayarları nereye kaydetmek istersiniz?',
+    save_modal_global: 'Global (Varsayılan) Olarak Kaydet',
+    save_modal_preset: '"%s" Önayarını Güncelle',
+    save_modal_cancel: 'İptal',
   }
 };
 
@@ -2808,6 +3095,11 @@ function app() {
     openDraftCats: {},
     bulletinRenderCfg: { network_name: 'YTRobot Haber', style: 'breaking', fps: 60, format: '16:9' },
     bulletinRendering: false, bulletinJobId: null, bulletinJobStatus: '', bulletinJobError: '',
+    bulletinProgress: 0, bulletinStepLabel: '', bulletinElapsed: 0, bulletinEta: null,
+    bulletinPaused: false,
+    bulletinRenderMode: 'combined',
+    bulletinShowCategoryFlash: false,
+    bulletinCategoryOutputs: {},
     _bulletinPoll: null,
     _sse: null, _timer: null,
     // Bulletin presets
@@ -2816,18 +3108,43 @@ function app() {
     bulletinPresetSaved: false,
     // Bulletin source selection for draft
     bulletinSelectedSources: [],
-    bulletinSelectAllSources: true,
+    bulletinSelectAllSources: false,
+    bulletinSourceFilterCat: 'All',
+    bulletinSourceFilterPreset: 'All',
     // Category → Template mapping
     categoryTemplates: {},
     // History deduplication
     bulletinHistory: {},
     bulletinActivePreset: '',
+    bulletinSearch: '',
+    bulletinCatFilter: '',
+    bulletinPresetFilter: '',
+    showSaveModal: false,
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
+
+    filteredBulletinSources() {
+      let sources = this.bulletinSources || [];
+      if (this.bulletinCatFilter) {
+        sources = sources.filter(s => s.category === this.bulletinCatFilter);
+      }
+      if (this.bulletinPresetFilter === 'current' && this.bulletinActivePreset) {
+        const history = this.bulletinHistory[this.bulletinActivePreset] || [];
+        sources = sources.filter(s => history.includes(s.url));
+      }
+      if (this.bulletinSearch) {
+        const q = this.bulletinSearch.toLowerCase();
+        sources = sources.filter(s => s.name.toLowerCase().includes(q) || s.url.toLowerCase().includes(q));
+      }
+      return sources;
+    },
     pipelineSteps() { return this.t('pipeline_steps'); },
 
     async init() {
+      await this.loadSettings();
+      await this.loadPrompts();
+      await this.loadBulletinSources();
       await this.loadSessions();
       await this.loadPresets();
       this.loadBulletinPresets();
@@ -2861,6 +3178,8 @@ function app() {
         format: this.bulletinRenderCfg.format,
         fps: this.bulletinRenderCfg.fps,
         category_templates: JSON.parse(JSON.stringify(this.categoryTemplates)),
+        selected_sources: [...this.bulletinSelectedSources],
+        tts_lang_override: this.settings.BULLETIN_TTS_LANG_OVERRIDE,
       };
       // Remove existing preset with same name
       this.bulletinPresets = this.bulletinPresets.filter(p => p.name !== name);
@@ -2868,7 +3187,6 @@ function app() {
       localStorage.setItem('ytrobot-bulletin-presets', JSON.stringify(this.bulletinPresets));
       this.bulletinPresetSaved = true;
       setTimeout(() => this.bulletinPresetSaved = false, 2500);
-      this.bulletinPresetName = '';
     },
 
     applyBulletinPreset(preset) {
@@ -2888,7 +3206,13 @@ function app() {
       if (v.ticker_color) this.settings.BULLETIN_TICKER_COLOR = v.ticker_color;
       if (v.show_live !== undefined) this.settings.BULLETIN_SHOW_LIVE_INDICATOR = v.show_live;
       if (v.category_templates) this.categoryTemplates = JSON.parse(JSON.stringify(v.category_templates));
+      if (v.selected_sources) {
+        this.bulletinSelectAllSources = false;
+        this.bulletinSelectedSources = [...v.selected_sources];
+      }
+      if (v.tts_lang_override !== undefined) this.settings.BULLETIN_TTS_LANGUAGE = v.tts_lang_override;
       this.bulletinActivePreset = preset.name;
+      this.bulletinPresetName = preset.name;
     },
 
     deleteBulletinPreset(name) {
@@ -2980,8 +3304,10 @@ function app() {
       if (!this.settings.BULLETIN_TICKER_BG) this.settings.BULLETIN_TICKER_BG = '#dc2626';
       if (!this.settings.BULLETIN_TICKER_COLOR) this.settings.BULLETIN_TICKER_COLOR = '#ffffff';
       if (!this.settings.BULLETIN_SHOW_LIVE_INDICATOR) this.settings.BULLETIN_SHOW_LIVE_INDICATOR = 'false';
-      await this.loadPrompts();
-      await this.loadPresets();
+      if (this.settings.BULLETIN_CATEGORY_MAPPING) {
+        try { this.categoryTemplates = JSON.parse(this.settings.BULLETIN_CATEGORY_MAPPING); } catch(e) { this.categoryTemplates = {}; }
+      }
+      await Promise.all([this.loadPrompts(), this.loadPresets(), this.loadBulletinSources()]);
     },
 
     async saveSettings() {
@@ -2990,8 +3316,35 @@ function app() {
       this.settings.BULLETIN_STYLE        = this.bulletinRenderCfg.style;
       this.settings.BULLETIN_FORMAT       = this.bulletinRenderCfg.format;
       this.settings.BULLETIN_FPS          = String(this.bulletinRenderCfg.fps);
+      this.settings.BULLETIN_NETWORK_NAME = this.bulletinRenderCfg.network_name;
+      this.settings.BULLETIN_CATEGORY_MAPPING = JSON.stringify(this.categoryTemplates);
       await fetch('/api/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.settings }) });
       this.settingsSaved = true; setTimeout(() => this.settingsSaved = false, 3000);
+    },
+
+    handleSaveSettings() {
+      if (this.settingsModule === 'bulletin' && this.bulletinActivePreset) {
+        this.showSaveModal = true;
+      } else if (this.settingsModule === 'ytrobot' && this.selectedPreset) {
+        this.showSaveModal = true;
+      } else {
+        this.saveSettings();
+      }
+    },
+
+    async confirmSaveSettings(type) {
+      this.showSaveModal = false;
+      if (type === 'global') {
+        await this.saveSettings();
+      } else if (type === 'preset') {
+        if (this.settingsModule === 'bulletin' && this.bulletinActivePreset) {
+          this.bulletinPresetName = this.bulletinActivePreset;
+          await this.saveBulletinPreset();
+        } else if (this.settingsModule === 'ytrobot' && this.selectedPreset) {
+          this.presetName = this.selectedPreset;
+          await this.savePreset();
+        }
+      }
     },
 
     async loadPrompts() {
@@ -3122,6 +3475,8 @@ function app() {
 
     applyPreset(preset) {
       this.settings = { ...this.settings, ...preset.values };
+      this.selectedPreset = preset.name;
+      this.presetName = preset.name;
     },
 
     async deletePreset(name) {
@@ -3191,8 +3546,9 @@ function app() {
     async loadBulletinSources() {
       try {
         const r = await fetch('/api/bulletin/sources');
-        this.bulletinSources = await r.json();
-      } catch(e) {}
+        const data = await r.json();
+        this.bulletinSources = Array.isArray(data) ? data : [];
+      } catch(e) { this.bulletinSources = []; }
     },
 
     async loadBulletinHistory() {
@@ -3208,8 +3564,8 @@ function app() {
       await this.loadBulletinHistory();
     },
 
-    get uniqueCategories() {
-      return [...new Set(this.bulletinSources.map(s => s.category))].filter(Boolean);
+    uniqueCategories() {
+      return [...new Set((this.bulletinSources || []).map(s => s.category))].filter(Boolean);
     },
 
     async addBulletinSource() {
@@ -3233,6 +3589,21 @@ function app() {
     async deleteBulletinSource(srcId) {
       if (!window.confirm(this.t('confirm_delete_msg'))) return;
       await fetch(`/api/bulletin/sources/${srcId}`, { method: 'DELETE' });
+      await this.loadBulletinSources();
+    },
+
+    async toggleAllBulletinSources() {
+      const filtered = this.filteredBulletinSources();
+      const allEnabled = filtered.every(s => s.enabled);
+      const newState = !allEnabled;
+      for (const s of filtered) {
+        if (s.enabled !== newState) {
+          await fetch(`/api/bulletin/sources/${s.id}`, {
+            method: 'PATCH', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ enabled: newState }),
+          });
+        }
+      }
       await this.loadBulletinSources();
     },
 
@@ -3300,6 +3671,8 @@ function app() {
             format: this.bulletinRenderCfg.format,
             preset_name: this.bulletinActivePreset,
             category_templates: this.categoryTemplates,
+            render_mode: this.bulletinRenderMode,
+            show_category_flash: this.bulletinShowCategoryFlash,
             // Design settings
             lower_third_enabled: this.settings.BULLETIN_LOWER_THIRD_ENABLED === 'true',
             lower_third_text: this.settings.BULLETIN_LOWER_THIRD_TEXT,
@@ -3317,18 +3690,50 @@ function app() {
         const { bulletin_id } = await r.json();
         this.bulletinJobId = bulletin_id;
         this.bulletinJobStatus = 'running';
-        // Poll for status
+        this.bulletinProgress = 0;
+        this.bulletinStepLabel = 'Başlatılıyor...';
+        this.bulletinElapsed = 0;
+        this.bulletinEta = null;
+        this.bulletinCategoryOutputs = {};
+        // Poll for status every 2s
         this._bulletinPoll = setInterval(async () => {
-          const sr = await fetch(`/api/bulletin/render/${bulletin_id}`);
-          const job = await sr.json();
-          this.bulletinJobStatus = job.status;
-          this.bulletinJobError = job.error || '';
-          if (job.status === 'completed' || job.status === 'failed') {
-            clearInterval(this._bulletinPoll);
-            this.bulletinRendering = false;
-          }
-        }, 3000);
+          try {
+            const sr = await fetch(`/api/bulletin/render/${bulletin_id}`);
+            const job = await sr.json();
+            this.bulletinJobStatus = job.status;
+            this.bulletinJobError = job.error || '';
+            this.bulletinProgress = job.progress || 0;
+            this.bulletinStepLabel = job.step_label || '';
+            this.bulletinElapsed = job.elapsed || 0;
+            this.bulletinEta = job.eta ?? null;
+            this.bulletinPaused = job.paused || false;
+            if (job.outputs) this.bulletinCategoryOutputs = job.outputs;
+            if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+              clearInterval(this._bulletinPoll);
+              this.bulletinRendering = false;
+              this.bulletinPaused = false;
+              if (job.status === 'completed') this.bulletinProgress = 100;
+            }
+          } catch(e) {}
+        }, 2000);
       } catch(e) { this.bulletinRendering = false; }
+    },
+
+    async stopBulletinRender() {
+      if (!this.bulletinJobId) return;
+      await fetch(`/api/bulletin/render/${this.bulletinJobId}/stop`, { method: 'POST' });
+    },
+
+    async pauseBulletinRender() {
+      if (!this.bulletinJobId) return;
+      await fetch(`/api/bulletin/render/${this.bulletinJobId}/pause`, { method: 'POST' });
+      this.bulletinPaused = true;
+    },
+
+    async resumeBulletinRender() {
+      if (!this.bulletinJobId) return;
+      await fetch(`/api/bulletin/render/${this.bulletinJobId}/resume`, { method: 'POST' });
+      this.bulletinPaused = false;
     },
   };
 }

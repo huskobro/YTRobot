@@ -53,12 +53,10 @@ const ACCENT = {
   dark: "#94A3B8",
 };
 
-const KARAOKE_COLOR = "#FFD700";
-
 function renderSubtitles(
   frame: number,
   subtitles: SubtitleEntry[],
-  subtitleColor: string
+  accentColor: string = "#FFD700"
 ) {
   const active = subtitles.find((s) => frame >= s.startFrame && frame < s.endFrame);
   if (!active) return null;
@@ -85,10 +83,10 @@ function renderSubtitles(
         {active.words.map((w, i) => {
           const isActive = frame >= w.startFrame && frame < w.endFrame;
           const isPast = frame >= w.endFrame;
-          const color = isActive ? KARAOKE_COLOR : isPast ? "#FFFFFF" : "#AAAAAA";
+          const color = isActive ? accentColor : isPast ? "#FFFFFF" : "#AAAAAA";
           const opacity = isActive ? 1 : isPast ? 0.9 : 0.45;
           const textShadow = isActive
-            ? `-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000, 0 0 12px ${KARAOKE_COLOR}88`
+            ? `-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 16px ${accentColor}CC`
             : "0 2px 8px rgba(0,0,0,0.8)";
           return (
             <span
@@ -104,13 +102,17 @@ function renderSubtitles(
   }
 
   // Plain text
-  return <span>{active.text}</span>;
+  return <span style={{ color: "#FFFFFF" }}>{active.text}</span>;
 }
 
 export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index = 0 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const accent = ACCENT[style];
+  // Per-item styleOverride takes priority over bulletin-level style
+  const effectiveStyle = (item.styleOverride as keyof typeof ACCENT | undefined) && ACCENT[item.styleOverride as keyof typeof ACCENT]
+    ? (item.styleOverride as keyof typeof ACCENT)
+    : style;
+  const accent = ACCENT[effectiveStyle];
   const mediaUrl = getMediaUrl(item);
   const aspect = getAspect(item);
   const hasImage = Boolean(mediaUrl);
@@ -197,7 +199,8 @@ export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index 
         </h1>
 
         {/* Subtext */}
-        {item.subtext && (
+        {/* Subtext (Narration) — only if no dynamic subtitles */}
+        {item.subtext && (!item.subtitles || item.subtitles.length === 0) && (
           <p
             style={{
               color: "rgba(220,220,220,0.9)",
@@ -229,17 +232,17 @@ export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index 
               lineHeight: 1.5,
             }}
           >
-            {renderSubtitles(frame, item.subtitles, "#FFFFFF")}
+            {renderSubtitles(frame, item.subtitles, accent)}
           </div>
         )}
       </div>
 
       {/* Right media panel — image or video */}
       {hasImage && !isPortraitVideo && (
-        <NewsImagePanel imageUrl={mediaUrl!} style={style} />
+        <NewsImagePanel imageUrl={mediaUrl!} style={effectiveStyle} />
       )}
       {hasImage && isPortraitVideo && (
-        <NewsImagePanel imageUrl={mediaUrl!} style={style} isVideo />
+        <NewsImagePanel imageUrl={mediaUrl!} style={effectiveStyle} isVideo />
       )}
     </AbsoluteFill>
   );

@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     bulletin_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     bulletin_tts_similarity_boost: float = -1.0
     bulletin_tts_style: float = -1.0
+    bulletin_tts_language: str = ""          # empty = global provider default
+
 
     # Bulletin persistent render settings
     bulletin_network_name: str = "YTRobot Haber"
@@ -46,6 +48,7 @@ class Settings(BaseSettings):
     bulletin_fps: int = 60
     bulletin_default_max_items: int = 3
     bulletin_default_language: str = ""      # empty = per-source language
+    bulletin_category_mapping: str = ""      # JSON map of category name to style string
 
     # Visuals
     visuals_provider: Literal["pexels", "pixabay", "dalle", "zimage"] = "pexels"

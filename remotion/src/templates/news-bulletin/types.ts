@@ -40,6 +40,8 @@ export interface NewsItem {
   subtitles?: SubtitleEntry[];
   /** Language of narration — used by TTS pipeline */
   language?: string;
+  /** Custom style override derived from their category */
+  styleOverride?: "breaking" | "tech" | "corporate" | "sport" | "finance" | "weather" | "science" | "entertainment" | "dark" | string;
 }
 
 export interface TickerItem {
@@ -73,6 +75,11 @@ export interface BulletinProps {
    * Defaults to false — pass true to enable.
    */
   showLiveIndicator?: boolean;
+  /**
+   * Show a 1.5s category label flash between headlines.
+   * Defaults to false — pass true to enable.
+   */
+  showCategoryFlash?: boolean;
 }
 
 export const defaultBulletinProps: BulletinProps = {

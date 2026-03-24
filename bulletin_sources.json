@@ -14,5 +14,21 @@
     "category": "Finans",
     "language": "tr",
     "enabled": true
+  },
+  {
+    "id": "src_e6a9025b",
+    "name": "CNN Magazin",
+    "url": "https://www.cnnturk.com/feed/rss/magazin/news",
+    "category": "Eğlence",
+    "language": "tr",
+    "enabled": true
+  },
+  {
+    "id": "src_ce983db0",
+    "name": "NTV Teknoloji",
+    "url": "https://www.ntv.com.tr/teknoloji.rss",
+    "category": "Teknoloji",
+    "language": "tr",
+    "enabled": true
   }
 ]

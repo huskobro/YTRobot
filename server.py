@@ -697,6 +697,25 @@ _bulletin_jobs: dict[str, dict] = {}
 _bulletin_jobs_lock = threading.Lock()
 
 
+# Auto-map Turkish/English category names → Remotion style keys
+_AUTO_STYLE_MAP: dict = {
+    "spor": "sport", "sport": "sport",
+    "finans": "finance", "finance": "finance", "ekonomi": "finance", "borsa": "finance",
+    "teknoloji": "tech", "tech": "tech", "dijital": "tech",
+    "bilim": "science", "science": "science", "sağlık": "science", "health": "science",
+    "hava": "weather", "weather": "weather", "hava durumu": "weather",
+    "eğlence": "entertainment", "entertainment": "entertainment", "magazin": "entertainment", "kültür": "entertainment",
+    "gündem": "breaking", "breaking": "breaking", "son dakika": "breaking", "acil": "breaking",
+    "dünya": "corporate", "corporate": "corporate", "politika": "corporate", "siyaset": "corporate",
+    "genel": "breaking", "general": "breaking",
+}
+
+
+def _resolve_auto_style(cat: str, fallback: str = "breaking") -> str:
+    """Return the Remotion style key that best matches a category name."""
+    return _AUTO_STYLE_MAP.get(cat.lower().strip(), fallback)
+
+
 class BulletinRenderReq(BaseModel):
     items: list  # list of DraftItem dicts (selected ones)
     network_name: str = "YTRobot Haber"
@@ -705,10 +724,13 @@ class BulletinRenderReq(BaseModel):
     format: str = "16:9"   # "16:9" or "9:16"
     ticker: list = []
     preset_name: str = ""       # used to record history after render
-    category_templates: dict = {}  # {"spor": "sport", "finans": "finance", ...}
+    category_templates: dict = {}  # legacy {"spor": "sport", ...} — still honoured
+    category_styles: dict = {}    # per-category style overrides from UI (per_category mode)
+    item_styles: dict = {}        # per-item style overrides from UI (per_item mode), keyed by item URL
     render_mode: str = "combined"   # "combined" | "per_category" | "per_item"
     render_per_category: bool = False  # deprecated — maps to render_mode="per_category"
     show_category_flash: bool = False  # show 1.5s category label flash between items
+    show_item_intro: bool = False      # show 2s branded intro at start of each item
     # Design settings
     lower_third_enabled: bool = True
     lower_third_text: str = ""
@@ -765,11 +787,19 @@ def start_bulletin_render(body: BulletinRenderReq):
                 job["eta"] = None
 
     def _build_news_items(item_list: list) -> list:
-        """Convert DraftItem dicts to Remotion NewsItem dicts."""
+        """Convert DraftItem dicts to Remotion NewsItem dicts with auto style resolution."""
         news_items = []
         for item in item_list:
-            cat = (item.get("category") or "").lower()
-            style_override = body.category_templates.get(cat) if body.category_templates else None
+            cat = (item.get("category") or "").lower().strip()
+            item_url = item.get("url", "") or item.get("link", "")
+            # Style priority: per-item override → per-category override → legacy category_templates → auto-map → global style
+            style_override = (
+                body.item_styles.get(item_url)
+                or body.item_styles.get(str(item.get("id", "")))
+                or body.category_styles.get(cat)
+                or (body.category_templates.get(cat) if body.category_templates else None)
+                or _resolve_auto_style(cat, body.style)
+            )
             news_item = {
                 "headline": item.get("title", ""),
                 "subtext": item.get("narration", item.get("summary", "")),
@@ -803,6 +833,7 @@ def start_bulletin_render(body: BulletinRenderReq):
             "tickerColor": body.ticker_color,
             "showLive": body.show_live,
             "showCategoryFlash": body.show_category_flash,
+            "showItemIntro": body.show_item_intro,
         }
 
     def _do_render():
@@ -823,8 +854,15 @@ def start_bulletin_render(body: BulletinRenderReq):
                 total_items = len(raw_items)
 
                 for i, item in enumerate(raw_items):
-                    cat = (item.get("category") or "").lower()
-                    item_style = body.category_templates.get(cat, body.style) if body.category_templates and cat else body.style
+                    cat = (item.get("category") or "").lower().strip()
+                    item_url = item.get("url", "") or item.get("link", "")
+                    item_style = (
+                        body.item_styles.get(item_url)
+                        or body.item_styles.get(str(item.get("id", "")))
+                        or body.category_styles.get(cat)
+                        or (body.category_templates.get(cat) if body.category_templates else None)
+                        or _resolve_auto_style(cat, body.style)
+                    )
                     item_label = f"item_{i:02d}"
                     item_output = BULLETIN_DIR / f"{bid}_{item_label}.mp4"
 
@@ -866,8 +904,8 @@ def start_bulletin_render(body: BulletinRenderReq):
                 category_groups: dict = defaultdict(list)
                 uncategorised = []
                 for item in raw_items:
-                    cat = (item.get("category") or "").lower()
-                    if cat and body.category_templates and cat in body.category_templates:
+                    cat = (item.get("category") or "").lower().strip()
+                    if cat:
                         category_groups[cat].append(item)
                     else:
                         uncategorised.append(item)
@@ -882,7 +920,11 @@ def start_bulletin_render(body: BulletinRenderReq):
 
                 for i, cat in enumerate(cats):
                     cat_items = category_groups[cat]
-                    cat_style = body.category_templates.get(cat, body.style) if cat != "__other__" and body.category_templates else body.style
+                    cat_style = (
+                        body.category_styles.get(cat)
+                        or (body.category_templates.get(cat) if body.category_templates else None)
+                        or (_resolve_auto_style(cat, body.style) if cat != "__other__" else body.style)
+                    )
                     cat_label = cat if cat != "__other__" else "diger"
                     cat_output = BULLETIN_DIR / f"{bid}_{cat_label}.mp4"
 

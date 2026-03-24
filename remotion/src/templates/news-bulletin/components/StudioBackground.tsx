@@ -2,24 +2,63 @@ import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 
 interface Props {
-  style?: "breaking" | "tech" | "corporate";
+  style?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
 }
 
 const PALETTES = {
   breaking: {
     bg: "#0A0A0A",
-    accent: "#CC0000",
-    grid: "rgba(180,0,0,0.06)",
+    accent: "#DC2626",
+    grid: "rgba(220,38,38,0.06)",
   },
   tech: {
     bg: "#0D1B2A",
-    accent: "#00C8FF",
-    grid: "rgba(0,200,255,0.06)",
+    accent: "#00E5FF",
+    grid: "rgba(0,229,255,0.06)",
   },
   corporate: {
     bg: "#0A1628",
-    accent: "#1A5CDB",
-    grid: "rgba(26,92,219,0.06)",
+    accent: "#2563EB",
+    grid: "rgba(37,99,235,0.06)",
+  },
+  sport: {
+    bg: "#051A10",
+    accent: "#10B981",
+    grid: "rgba(16,185,129,0.06)",
+  },
+  finance: {
+    bg: "#1A1405",
+    accent: "#F59E0B",
+    grid: "rgba(245,158,11,0.06)",
+  },
+  weather: {
+    bg: "#0C1F3D",
+    accent: "#38BDF8",
+    grid: "rgba(56,189,248,0.06)",
+  },
+  science: {
+    bg: "#0F0B1E",
+    accent: "#8B5CF6",
+    grid: "rgba(139,92,246,0.06)",
+  },
+  entertainment: {
+    bg: "#1A0515",
+    accent: "#EC4899",
+    grid: "rgba(236,72,153,0.06)",
+  },
+  dark: {
+    bg: "#000000",
+    accent: "#94A3B8",
+    grid: "rgba(148,163,184,0.06)",
   },
 };
 

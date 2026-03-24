@@ -54,7 +54,16 @@ export interface BulletinProps {
   /** Network / channel name shown in the top bar */
   networkName: string;
   /** Visual style — defaults to 'breaking' */
-  style?: "breaking" | "tech" | "corporate";
+  style?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
   /** Optional logo image URL */
   logoUrl?: string;
   /** Frames per second — default 60 */

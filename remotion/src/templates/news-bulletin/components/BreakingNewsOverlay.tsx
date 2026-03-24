@@ -9,13 +9,28 @@ import {
 
 interface Props {
   networkName: string;
-  style?: "breaking" | "tech" | "corporate";
+  style?:
+    | "breaking"
+    | "tech"
+    | "corporate"
+    | "sport"
+    | "finance"
+    | "weather"
+    | "science"
+    | "entertainment"
+    | "dark";
 }
 
 const LABELS = {
-  breaking: { badge: "SON DAKİKA", color: "#CC0000", darkColor: "#8B0000" },
-  tech: { badge: "SON DAKİKA", color: "#00C8FF", darkColor: "#0088AA" },
-  corporate: { badge: "ÖZEL HABER", color: "#1A5CDB", darkColor: "#0D3A8E" },
+  breaking: { badge: "SON DAKİKA", color: "#DC2626", darkColor: "#8B0000" },
+  tech: { badge: "TEKNOLOJİ", color: "#00E5FF", darkColor: "#0088AA" },
+  corporate: { badge: "KURUMSAL", color: "#2563EB", darkColor: "#0D3A8E" },
+  sport: { badge: "SPOR HABER", color: "#10B981", darkColor: "#065F46" },
+  finance: { badge: "EKONOMİ", color: "#F59E0B", darkColor: "#92400E" },
+  weather: { badge: "HAVA DURUMU", color: "#38BDF8", darkColor: "#075985" },
+  science: { badge: "BİLİM/TEK", color: "#8B5CF6", darkColor: "#5B21B6" },
+  entertainment: { badge: "MAGAZİN", color: "#EC4899", darkColor: "#9D174D" },
+  dark: { badge: "GÜNDEM", color: "#94A3B8", darkColor: "#334155" },
 };
 
 export const BreakingNewsOverlay: React.FC<Props> = ({

@@ -1559,6 +1559,40 @@
           </div>
         </div>
 
+        <!-- Bulletin Channel Presets -->
+        <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <h2 class="text-sm font-bold text-slate-300 mb-1" x-text="t('section_bulletin_presets')"></h2>
+          <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_presets_hint')"></p>
+          <!-- Save current as preset -->
+          <div class="flex gap-2 mb-4">
+            <input x-model="bulletinPresetName"
+                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
+                   :placeholder="t('bulletin_preset_name_ph')"
+                   @keyup.enter="saveBulletinPreset()" />
+            <button @click="saveBulletinPreset()" :disabled="!bulletinPresetName.trim()"
+                    class="shrink-0 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
+                    x-text="bulletinPresetSaved ? t('preset_saved_ok') : t('bulletin_preset_save_btn')"></button>
+          </div>
+          <!-- Preset list -->
+          <div x-show="bulletinPresets.length === 0" class="text-xs text-slate-500 italic py-2" x-text="t('bulletin_preset_empty')"></div>
+          <div class="space-y-2">
+            <template x-for="p in bulletinPresets" :key="p.name">
+              <div class="flex items-center gap-3 px-3 py-2.5 bg-slate-800/50 border border-slate-700/60 rounded-lg">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-slate-200 font-medium truncate" x-text="p.name"></div>
+                  <div class="text-xs text-slate-500 mt-0.5" x-text="(p.values?.style||'—') + ' · ' + (p.values?.network_name||'—')"></div>
+                </div>
+                <button @click="applyBulletinPreset(p)"
+                        class="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-md transition-colors"
+                        x-text="t('preset_load_btn')"></button>
+                <button @click="deleteBulletinPreset(p.name)"
+                        class="text-xs px-3 py-1.5 bg-red-900/40 hover:bg-red-800/60 text-red-400 font-medium rounded-md transition-colors"
+                        x-text="t('preset_delete_btn')"></button>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <!-- Bulletin Master Prompts -->
         <div x-show="settingsModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div class="flex items-center justify-between mb-1">
@@ -1575,6 +1609,14 @@
                 <button @click="resetPrompt('bulletin_narration')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
               </div>
               <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_bulletin_narration_hint')"></p>
+              <!-- Default prompt viewer -->
+              <details class="mb-3 group">
+                <summary class="text-xs text-red-400 hover:text-red-300 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span class="transition-transform group-open:rotate-90">▶</span>
+                  <span x-text="t('prompt_view_default')"></span>
+                </summary>
+                <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.bulletin_narration || t('bulletin_narration_default_fallback')"></pre>
+              </details>
               <textarea x-model="prompts.bulletin_narration" rows="7" spellcheck="false"
                 class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-red-500 transition-colors resize-y leading-relaxed"
                 :placeholder="t('prompt_default_placeholder')"></textarea>
@@ -1717,9 +1759,11 @@
               <template x-for="[cat, items] in Object.entries(draftData.categories)" :key="cat">
                 <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                   <button @click="toggleDraftCat(cat)"
-                          class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-800/60 transition-colors">
+                          class="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-800/60 transition-colors"
+                          :class="getCatBorder(cat)">
                     <div class="flex items-center gap-3">
-                      <span class="text-sm font-bold text-white" x-text="cat"></span>
+                      <span class="text-xs px-2.5 py-1 text-white font-bold rounded-md shadow-sm"
+                            :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
                       <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="items.filter(i=>i.selected).length + '/' + items.length"></span>
                     </div>
                     <span class="text-slate-500 text-sm" x-text="openDraftCats[cat] ? '▲' : '▼'"></span>
@@ -1773,37 +1817,125 @@
             <!-- Style cards -->
             <div class="mb-4">
               <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_style')"></label>
-              <div class="flex gap-3 flex-wrap">
+              <div class="flex gap-2 flex-wrap">
+
+                <!-- Breaking / Son Dakika — Red -->
                 <div @click="bulletinRenderCfg.style='breaking'"
                      class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='breaking' ? 'border-red-500' : 'border-transparent hover:border-red-400'"
-                     style="width:140px;height:72px;background:#0d0d0d">
+                     :class="bulletinRenderCfg.style==='breaking' ? 'border-red-500 ring-1 ring-red-500/30' : 'border-transparent hover:border-red-400'"
+                     style="width:125px;height:68px;background:#0d0d0d">
                   <div class="absolute top-0 inset-x-0 h-1.5" style="background:#dc2626"></div>
                   <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:8px;color:#dc2626;font-weight:900;letter-spacing:0.1em">SON DAKİKA</span>
-                    <span style="font-size:11px;color:white;font-weight:700">Breaking News</span>
+                    <span style="font-size:7px;color:#dc2626;font-weight:900;letter-spacing:0.1em">SON DAKİKA</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Breaking</span>
+                    <span style="font-size:7px;color:#6b7280">Dark + Kırmızı</span>
                   </div>
                 </div>
+
+                <!-- Tech — Cyan -->
                 <div @click="bulletinRenderCfg.style='tech'"
                      class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='tech' ? 'border-cyan-500' : 'border-transparent hover:border-cyan-400'"
-                     style="width:140px;height:72px;background:#0a1628">
+                     :class="bulletinRenderCfg.style==='tech' ? 'border-cyan-500 ring-1 ring-cyan-500/30' : 'border-transparent hover:border-cyan-400'"
+                     style="width:125px;height:68px;background:#0a1628">
                   <div class="absolute top-0 inset-x-0 h-1.5" style="background:#00e5ff"></div>
                   <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:8px;color:#00e5ff;font-weight:900;letter-spacing:0.1em">TECH</span>
-                    <span style="font-size:11px;color:white;font-weight:700">Tech / Modern</span>
+                    <span style="font-size:7px;color:#00e5ff;font-weight:900;letter-spacing:0.1em">TEKNOLOJİ</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Tech</span>
+                    <span style="font-size:7px;color:#6b7280">Navy + Cyan</span>
                   </div>
                 </div>
+
+                <!-- Corporate — Cobalt Blue -->
                 <div @click="bulletinRenderCfg.style='corporate'"
                      class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='corporate' ? 'border-blue-500' : 'border-transparent hover:border-blue-400'"
-                     style="width:140px;height:72px;background:#0f1f3d">
+                     :class="bulletinRenderCfg.style==='corporate' ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-transparent hover:border-blue-400'"
+                     style="width:125px;height:68px;background:#0f1f3d">
                   <div class="absolute top-0 inset-x-0 h-1.5" style="background:#2563eb"></div>
                   <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:8px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
-                    <span style="font-size:11px;color:white;font-weight:700">Corporate</span>
+                    <span style="font-size:7px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Corporate</span>
+                    <span style="font-size:7px;color:#6b7280">Navy + Mavi</span>
                   </div>
                 </div>
+
+                <!-- Sport — Emerald Green -->
+                <div @click="bulletinRenderCfg.style='sport'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='sport' ? 'border-emerald-500 ring-1 ring-emerald-500/30' : 'border-transparent hover:border-emerald-400'"
+                     style="width:125px;height:68px;background:#052612">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#10b981"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#10b981;font-weight:900;letter-spacing:0.1em">SPOR</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Sport</span>
+                    <span style="font-size:7px;color:#6b7280">Koyu + Yeşil</span>
+                  </div>
+                </div>
+
+                <!-- Finance — Amber/Gold -->
+                <div @click="bulletinRenderCfg.style='finance'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='finance' ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-transparent hover:border-amber-400'"
+                     style="width:125px;height:68px;background:#1a1400">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#f59e0b"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#f59e0b;font-weight:900;letter-spacing:0.1em">EKONOMİ</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Finance</span>
+                    <span style="font-size:7px;color:#6b7280">Siyah + Altın</span>
+                  </div>
+                </div>
+
+                <!-- Weather — Sky Blue -->
+                <div @click="bulletinRenderCfg.style='weather'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='weather' ? 'border-sky-400 ring-1 ring-sky-400/30' : 'border-transparent hover:border-sky-300'"
+                     style="width:125px;height:68px;background:linear-gradient(135deg,#0c1f3d,#1e3a5f)">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#38bdf8"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#38bdf8;font-weight:900;letter-spacing:0.1em">HAVA DURUMU</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Weather</span>
+                    <span style="font-size:7px;color:#6b7280">Gece + Açık Mavi</span>
+                  </div>
+                </div>
+
+                <!-- Science — Violet/Purple -->
+                <div @click="bulletinRenderCfg.style='science'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='science' ? 'border-violet-500 ring-1 ring-violet-500/30' : 'border-transparent hover:border-violet-400'"
+                     style="width:125px;height:68px;background:#0f0b1e">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#8b5cf6"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#8b5cf6;font-weight:900;letter-spacing:0.1em">BİLİM</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Science</span>
+                    <span style="font-size:7px;color:#6b7280">Siyah + Mor</span>
+                  </div>
+                </div>
+
+                <!-- Entertainment — Hot Pink -->
+                <div @click="bulletinRenderCfg.style='entertainment'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='entertainment' ? 'border-pink-500 ring-1 ring-pink-500/30' : 'border-transparent hover:border-pink-400'"
+                     style="width:125px;height:68px;background:#1a0020">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#ec4899"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#ec4899;font-weight:900;letter-spacing:0.1em">EĞLENCE</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Entertainment</span>
+                    <span style="font-size:7px;color:#6b7280">Koyu + Pembe</span>
+                  </div>
+                </div>
+
+                <!-- Dark / Minimal — Slate -->
+                <div @click="bulletinRenderCfg.style='dark'"
+                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
+                     :class="bulletinRenderCfg.style==='dark' ? 'border-slate-400 ring-1 ring-slate-400/30' : 'border-transparent hover:border-slate-500'"
+                     style="width:125px;height:68px;background:#000">
+                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#94a3b8"></div>
+                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
+                    <span style="font-size:7px;color:#94a3b8;font-weight:900;letter-spacing:0.1em">MİNİMAL</span>
+                    <span style="font-size:10px;color:white;font-weight:700">Dark Minimal</span>
+                    <span style="font-size:7px;color:#6b7280">Siyah + Gri</span>
+                  </div>
+                </div>
+
               </div>
             </div>
             <!-- Format + network + fps row -->
@@ -2131,6 +2263,15 @@ const LANG = {
     bulletin_tts_voice_label: 'Voice ID', bulletin_tts_voice_placeholder: 'Voice ID or leave empty to inherit',
     bulletin_fetch_voices: 'Fetch Voices',
     bulletin_tts_speed_label: 'Speed', bulletin_tts_inherit_hint: 'Using inherited speed from YTRobot settings.',
+    section_bulletin_presets: '⚙️ Channel Presets',
+    bulletin_presets_hint: 'Save and reload complete channel configurations (name, style, colors, font, ticker settings) for quick switching between different broadcast styles.',
+    bulletin_preset_name_ph: 'e.g. Breaking News Channel, Sports 9:16...',
+    bulletin_preset_save_btn: 'Save Channel Preset',
+    bulletin_preset_empty: 'No channel presets saved yet.',
+    bulletin_narration_default_fallback: '(Loading default prompt...)',
+    bulletin_style_sport: 'Sport', bulletin_style_finance: 'Finance',
+    bulletin_style_weather: 'Weather', bulletin_style_science: 'Science',
+    bulletin_style_entertainment: 'Entertainment', bulletin_style_dark: 'Dark Minimal',
     spesaudio_stability: 'Stability', spesaudio_similarity: 'Similarity Boost', spesaudio_style: 'Style',
     section_bulletin_visual: '🎨 Visual Style', bulletin_settings_network: 'Network Name', bulletin_settings_fps: 'FPS',
     section_bulletin_content: '📋 Content Defaults',
@@ -2379,6 +2520,15 @@ const LANG = {
     bulletin_tts_voice_label: 'Ses ID', bulletin_tts_voice_placeholder: 'Ses ID veya devralmak için boş bırakın',
     bulletin_fetch_voices: 'Sesleri Getir',
     bulletin_tts_speed_label: 'Hız', bulletin_tts_inherit_hint: 'YTRobot ayarlarından devralınan hız kullanılıyor.',
+    section_bulletin_presets: '⚙️ Kanal Önayarları',
+    bulletin_presets_hint: 'Farklı yayın stilleri arasında hızlı geçiş için tam kanal yapılandırmalarını (ad, stil, renkler, font, kayan yazı ayarları) kaydedin ve yeniden yükleyin.',
+    bulletin_preset_name_ph: 'örn. Son Dakika Kanalı, Spor 9:16...',
+    bulletin_preset_save_btn: 'Kanal Önayarını Kaydet',
+    bulletin_preset_empty: 'Henüz kanal önayarı kaydedilmedi.',
+    bulletin_narration_default_fallback: '(Varsayılan prompt yükleniyor...)',
+    bulletin_style_sport: 'Spor', bulletin_style_finance: 'Finans',
+    bulletin_style_weather: 'Hava Durumu', bulletin_style_science: 'Bilim',
+    bulletin_style_entertainment: 'Eğlence', bulletin_style_dark: 'Koyu Minimal',
     spesaudio_stability: 'Stabilite', spesaudio_similarity: 'Benzerlik Artışı', spesaudio_style: 'Stil',
     section_bulletin_visual: '🎨 Görsel Stil', bulletin_settings_network: 'Kanal Adı', bulletin_settings_fps: 'FPS',
     section_bulletin_content: '📋 İçerik Varsayılanları',
@@ -2414,6 +2564,10 @@ function app() {
     bulletinRendering: false, bulletinJobId: null, bulletinJobStatus: '', bulletinJobError: '',
     _bulletinPoll: null,
     _sse: null, _timer: null,
+    // Bulletin presets
+    bulletinPresets: [],
+    bulletinPresetName: '',
+    bulletinPresetSaved: false,
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
@@ -2422,7 +2576,66 @@ function app() {
     async init() {
       await this.loadSessions();
       await this.loadPresets();
+      this.loadBulletinPresets();
       this._timer = setInterval(() => this.loadSessions(), 3000);
+    },
+
+    loadBulletinPresets() {
+      try {
+        this.bulletinPresets = JSON.parse(localStorage.getItem('ytrobot-bulletin-presets') || '[]');
+      } catch(e) { this.bulletinPresets = []; }
+    },
+
+    saveBulletinPreset() {
+      const name = this.bulletinPresetName.trim();
+      if (!name) return;
+      const values = {
+        ...this.bulletinRenderCfg,
+        lower_third_enabled: this.settings.BULLETIN_LOWER_THIRD_ENABLED,
+        lower_third_text: this.settings.BULLETIN_LOWER_THIRD_TEXT,
+        lower_third_font: this.settings.BULLETIN_LOWER_THIRD_FONT,
+        lower_third_color: this.settings.BULLETIN_LOWER_THIRD_COLOR,
+        lower_third_size: this.settings.BULLETIN_LOWER_THIRD_SIZE,
+        ticker_enabled: this.settings.BULLETIN_TICKER_ENABLED,
+        ticker_speed: this.settings.BULLETIN_TICKER_SPEED,
+        ticker_bg: this.settings.BULLETIN_TICKER_BG,
+        ticker_color: this.settings.BULLETIN_TICKER_COLOR,
+        show_live: this.settings.BULLETIN_SHOW_LIVE_INDICATOR,
+        network_name: this.bulletinRenderCfg.network_name,
+        style: this.bulletinRenderCfg.style,
+        format: this.bulletinRenderCfg.format,
+        fps: this.bulletinRenderCfg.fps,
+      };
+      // Remove existing preset with same name
+      this.bulletinPresets = this.bulletinPresets.filter(p => p.name !== name);
+      this.bulletinPresets.unshift({ name, values });
+      localStorage.setItem('ytrobot-bulletin-presets', JSON.stringify(this.bulletinPresets));
+      this.bulletinPresetSaved = true;
+      setTimeout(() => this.bulletinPresetSaved = false, 2500);
+      this.bulletinPresetName = '';
+    },
+
+    applyBulletinPreset(preset) {
+      const v = preset.values || {};
+      if (v.style) this.bulletinRenderCfg.style = v.style;
+      if (v.format) this.bulletinRenderCfg.format = v.format;
+      if (v.fps) this.bulletinRenderCfg.fps = v.fps;
+      if (v.network_name) this.bulletinRenderCfg.network_name = v.network_name;
+      if (v.lower_third_enabled !== undefined) this.settings.BULLETIN_LOWER_THIRD_ENABLED = v.lower_third_enabled;
+      if (v.lower_third_text !== undefined) this.settings.BULLETIN_LOWER_THIRD_TEXT = v.lower_third_text;
+      if (v.lower_third_font) this.settings.BULLETIN_LOWER_THIRD_FONT = v.lower_third_font;
+      if (v.lower_third_color) this.settings.BULLETIN_LOWER_THIRD_COLOR = v.lower_third_color;
+      if (v.lower_third_size) this.settings.BULLETIN_LOWER_THIRD_SIZE = v.lower_third_size;
+      if (v.ticker_enabled !== undefined) this.settings.BULLETIN_TICKER_ENABLED = v.ticker_enabled;
+      if (v.ticker_speed) this.settings.BULLETIN_TICKER_SPEED = v.ticker_speed;
+      if (v.ticker_bg) this.settings.BULLETIN_TICKER_BG = v.ticker_bg;
+      if (v.ticker_color) this.settings.BULLETIN_TICKER_COLOR = v.ticker_color;
+      if (v.show_live !== undefined) this.settings.BULLETIN_SHOW_LIVE_INDICATOR = v.show_live;
+    },
+
+    deleteBulletinPreset(name) {
+      this.bulletinPresets = this.bulletinPresets.filter(p => p.name !== name);
+      localStorage.setItem('ytrobot-bulletin-presets', JSON.stringify(this.bulletinPresets));
     },
 
     async loadSessions() {
@@ -2536,6 +2749,43 @@ function app() {
     async savePrompts() {
       await fetch('/api/prompts', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompts: this.prompts }) });
       this.promptsSaved = true; setTimeout(() => this.promptsSaved = false, 3000);
+    },
+
+    getCatColor(cat) {
+      const c = cat ? cat.trim() : '';
+      const colors = {
+        'Gündem': 'bg-slate-700',
+        'Dünya': 'bg-blue-700',
+        'Siyaset': 'bg-indigo-700',
+        'Ekonomi': 'bg-amber-700',
+        'Finans': 'bg-amber-700',
+        'Spor': 'bg-emerald-700',
+        'Magazin': 'bg-pink-700',
+        'Eğlence': 'bg-pink-700',
+        'Teknoloji': 'bg-cyan-700',
+        'Tech': 'bg-cyan-700',
+        'Bilim': 'bg-violet-700',
+        'Hava Durumu': 'bg-sky-700',
+        'Kurumsal': 'bg-blue-600',
+        'Son Dakika': 'bg-red-700',
+        'Breaking': 'bg-red-700',
+        'Genel': 'bg-slate-600'
+      };
+      return colors[c] || 'bg-slate-800';
+    },
+
+    getCatBorder(cat) {
+      const c = cat ? cat.trim() : '';
+      const borders = {
+        'Ekonomi': 'border-amber-700/50',
+        'Finans': 'border-amber-700/50',
+        'Spor': 'border-emerald-700/50',
+        'Teknoloji': 'border-cyan-700/50',
+        'Tech': 'border-cyan-700/50',
+        'Bilim': 'border-violet-700/50',
+        'Son Dakika': 'border-red-700/50',
+      };
+      return borders[c] || 'border-slate-800';
     },
 
     resetPrompt(key) {

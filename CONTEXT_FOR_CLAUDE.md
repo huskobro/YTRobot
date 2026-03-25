@@ -117,7 +117,14 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
 
 ## 8. Bekleyen UI Geliştirmeleri ve Kritik Notlar
 
-    - **Durum:** Haber kaynaklarını (RSS) ekleme/yönetme arayüzü, Ayarlar -> **AI Script** sekmesi altındaki **"Bülten"** (Bulletin) modülü bölümüne entegre edilmiştir. Claude'un bu alanı daha estetik hale getirmesi ve YTRobot (Genel Video) modülü için de benzer override ayarlarını (diğer modüller gibi) tasarlayıp bu yapıya dahil etmesi beklenmektedir.
+1.  **Ayarlar Sayfası Revizyonu:** 
+    - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
+    - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
+    - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin eski ayar penceresinde olduğu gibi korunması iyileştirilmesi için öneriler verilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır. Buna ek olarak ayarlar sayfasında o modül ile ilgili kullanılan tüm ayarlar yer almalıdır. 
+2.  **YTRobot (Genel Video) Modülü ve Ayar Ayrımı:**
+    - Bu modül şu an varsayılan (global) ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
+    - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden **tamamen ayrı** yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.
+    - Ayarlar sayfasında YTRobot'a özel bir bölüm ve override seçenekleri bulunmalıdır.
 3.  **Profesyonel Yazılımcı Gözüyle İnceleme ve Öneriler:**
     - Claude'un projeyi sadece bir yardımcı olarak değil, bir **"Senior Full-Stack Developer"** gözüyle taraması ve analiz etmesi istenmektedir.
     - **UI/UX Önerileri:** Modern tasarım trendleri, kullanıcı deneyimi iyileştirmeleri ve görsel estetik (renk paletleri, animasyonlar vb.) konularında profesyonel tavsiyeler sunmalı.

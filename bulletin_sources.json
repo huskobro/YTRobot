@@ -30,5 +30,13 @@
     "category": "Teknoloji",
     "language": "tr",
     "enabled": true
+  },
+  {
+    "id": "src_74624b3e",
+    "name": "DefenseOne RSS",
+    "url": "https://www.defenseone.com/rss/all/",
+    "category": "Dünya",
+    "language": "en",
+    "enabled": true
   }
 ]

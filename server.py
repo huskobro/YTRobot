@@ -27,7 +27,10 @@ BULLETIN_SOURCES_FILE = Path("bulletin_sources.json")
 BULLETIN_HISTORY_FILE = Path("bulletin_history.json")
 BULLETIN_DIR = Path("output/bulletins")
 
-PROMPT_KEYS = ["script_system", "script_humanize", "metadata_system", "tts_enhance"]
+PROMPT_KEYS = [
+    "script_system", "script_humanize", "metadata_system", "tts_enhance",
+    "bulletin_narration", "product_review_autofill"
+]
 
 
 def _list_presets() -> list:

@@ -2075,24 +2075,30 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-4">
-                <div x-show="promptsSaved" x-transition class="px-4 py-2.5 bg-green-900/30 border border-green-700/50 rounded-lg text-xs text-green-400" x-text="t('prompts_saved')"></div>
-                <div class="flex justify-end">
-                  <button @click="savePrompts()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
+                <div x-show="promptsSaved" x-transition class="px-4 py-2 bg-green-900/30 border border-green-700/50 rounded-lg text-[10px] text-green-400" x-text="t('prompts_saved')"></div>
+                
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modül Master Promptları</span>
+                  <button @click="savePrompts()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-indigo-900/20" x-text="t('save_prompts_btn')"></button>
                 </div>
-                <!-- Script System Prompt -->
+
                 <div class="border border-slate-800 rounded-xl p-4">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_script_label')"></label>
-                    <button @click="resetPrompt('script_system')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+                    <button @click="prompts.script_system = ''" class="text-[10px] text-slate-500 hover:text-indigo-400 transition-colors" x-text="t('prompt_reset_btn')"></button>
                   </div>
-                  <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_script_hint')"></p>
-                  <details class="mb-2 group">
-                    <summary class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer select-none list-none flex items-center gap-1">
-                      <span class="transition-transform group-open:rotate-90">▶</span>
+                  <p class="text-[10px] text-slate-500 mb-2" x-text="t('prompt_script_hint')"></p>
+                  
+                  <div x-data="{ showDefault: false }" class="mt-2 text-[10px] mb-3">
+                    <button @click="showDefault = !showDefault" class="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none">
+                      <span class="inline-block transition-transform duration-200" :class="showDefault ? 'rotate-90' : ''">▶</span>
                       <span x-text="t('prompt_view_default')"></span>
-                    </summary>
-                    <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.script_system || t('prompt_loading')"></pre>
-                  </details>
+                    </button>
+                    <div x-show="showDefault" x-transition class="mt-2 p-2 bg-slate-950/80 rounded border border-slate-800 overflow-x-auto max-h-40">
+                      <pre class="whitespace-pre-wrap font-mono text-slate-400 leading-relaxed" x-text="promptDefaults.script_system || t('prompt_loading')"></pre>
+                    </div>
+                  </div>
+
                   <textarea x-model="prompts.script_system" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
                     placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
@@ -2161,90 +2167,86 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-red-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <div x-show="promptsSaved" x-transition class="px-4 py-2.5 bg-green-900/30 border border-green-700/50 rounded-lg text-xs text-green-400" x-text="t('prompts_saved')"></div>
-                <div class="flex justify-end">
-                  <button @click="savePrompts()" class="px-4 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all" x-text="t('save_prompts_btn')"></button>
+                <div x-show="promptsSaved" x-transition class="px-4 py-2 bg-green-900/30 border border-green-700/50 rounded-lg text-[10px] text-green-400" x-text="t('prompts_saved')"></div>
+                
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modül Master Promptları</span>
+                  <button @click="savePrompts()" class="px-4 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-red-900/20" x-text="t('save_prompts_btn')"></button>
                 </div>
+
+                <!-- RSS Kaynak Ekleme Formu -->
+                <div class="border border-red-900/30 rounded-xl p-4 bg-red-950/10 space-y-4">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-sm">📡</span>
+                    <span class="text-sm font-bold text-white" x-text="t('bulletin_add_source')"></span>
+                  </div>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('bulletin_src_name')"></label>
+                      <input x-model="newSrc.name" type="text" :placeholder="t('bulletin_src_name_ph')"
+                             class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('bulletin_src_url')"></label>
+                      <input x-model="newSrc.url" type="text" placeholder="https://..."
+                             class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-1">
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('bulletin_src_category')"></label>
+                      <select x-model="newSrc.category" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <template x-for="cat in uniqueCategories()" :key="cat">
+                          <option :value="cat" x-text="cat"></option>
+                        </template>
+                        <option value="Genel">Genel</option>
+                        <option value="Teknoloji">Teknoloji</option>
+                        <option value="Spor">Spor</option>
+                        <option value="Ekonomi">Ekonomi</option>
+                        <option value="Dünya">Dünya</option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-1">
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('bulletin_src_lang')"></label>
+                      <select x-model="newSrc.language" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <option value="tr">Türkçe (tr)</option>
+                        <option value="en">English (en)</option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-1 flex items-end">
+                      <button @click="addBulletinSource()" :disabled="!newSrc.name || !newSrc.url"
+                              class="w-full py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg shadow-md shadow-red-900/20 transition-all"
+                              x-text="t('bulletin_add_btn')"></button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-800/50 my-2"></div>
                 <div class="border border-slate-800 rounded-xl p-4">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-semibold text-slate-200" x-text="t('prompt_bulletin_narration_label')"></label>
-                    <button @click="resetPrompt('bulletin_narration')" class="text-xs text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset')"></button>
+                    <button @click="prompts.bulletin_narration = ''" class="text-[10px] text-slate-500 hover:text-red-400 transition-colors" x-text="t('prompt_reset_btn')"></button>
                   </div>
-                  <p class="text-xs text-slate-500 mb-2" x-text="t('prompt_bulletin_narration_hint')"></p>
-                  <details class="mb-3 group">
-                    <summary class="text-xs text-red-400 hover:text-red-300 cursor-pointer select-none list-none flex items-center gap-1">
-                      <span class="transition-transform group-open:rotate-90">▶</span>
+                  <p class="text-[10px] text-slate-500 mb-2" x-text="t('prompt_bulletin_narration_hint')"></p>
+                  
+                  <div x-data="{ showDefault: false }" class="mt-2 text-[10px] mb-3">
+                    <button @click="showDefault = !showDefault" class="flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors focus:outline-none">
+                      <span class="inline-block transition-transform duration-200" :class="showDefault ? 'rotate-90' : ''">▶</span>
                       <span x-text="t('prompt_view_default')"></span>
-                    </summary>
-                    <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.bulletin_narration || t('bulletin_narration_default_fallback')"></pre>
-                  </details>
+                    </button>
+                    <div x-show="showDefault" x-transition class="mt-2 p-2 bg-slate-950/80 rounded border border-slate-800 overflow-x-auto max-h-40">
+                      <pre class="whitespace-pre-wrap font-mono text-slate-400 leading-relaxed" x-text="promptDefaults.bulletin_narration || t('bulletin_narration_default_fallback')"></pre>
+                    </div>
+                  </div>
+
                   <textarea x-model="prompts.bulletin_narration" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-red-500 transition-colors resize-y leading-relaxed"
                     placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
-
-                <!-- RSS Sources Management (Moved here as requested) -->
-                <div class="border border-red-800/40 bg-red-950/20 rounded-xl p-4 mt-2">
-                  <h3 class="text-xs font-bold text-red-300 uppercase tracking-widest mb-4" x-text="t('settings_rss_title')"></h3>
-                  
-                  <div class="grid grid-cols-1 gap-4 mb-4">
-                    <div class="grid grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_name_label')"></label>
-                        <input x-model="newSrc.name" type="text" class="w-full bg-slate-900 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="Haber Kaynağı Adı" />
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_url_label')"></label>
-                        <input x-model="newSrc.url" type="text" class="w-full bg-slate-900 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="https://..." />
-                      </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_category_label')"></label>
-                        <input x-model="newSrc.category" type="text" class="w-full bg-slate-900 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_lang_label')"></label>
-                        <select x-model="newSrc.language" class="w-full bg-slate-900 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
-                          <option value="tr">Türkçe</option>
-                          <option value="en">English</option>
-                          <option value="de">Deutsch</option>
-                        </select>
-                      </div>
-                      <div class="col-span-2 lg:col-span-1 flex items-end">
-                        <button @click="addBulletinSource()" 
-                                class="w-full h-[34px] bg-red-700 hover:bg-red-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-md shadow-red-900/20">
-                          + <span x-text="t('settings_rss_add_btn')"></span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Mini-List of Sources -->
-                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    <template x-for="src in bulletinSources" :key="src.id">
-                      <div class="flex items-center justify-between p-2 bg-slate-900/60 border border-red-900/20 rounded-lg group">
-                        <div class="flex items-center gap-2 min-w-0">
-                          <div class="w-1.5 h-1.5 rounded-full shrink-0" :class="src.enabled ? 'bg-green-500' : 'bg-slate-600'"></div>
-                          <div class="min-w-0">
-                            <div class="text-[10px] font-bold text-white truncate" x-text="src.name"></div>
-                            <div class="text-[9px] text-slate-500 truncate" x-text="src.url"></div>
-                          </div>
-                        </div>
-                        <div class="flex items-center gap-1.5 shrink-0 ml-2">
-                          <span class="text-[8px] px-1 bg-slate-800 text-slate-500 rounded border border-slate-700" x-text="src.category"></span>
-                          <button @click="deleteBulletinSource(src.id)" class="text-slate-600 hover:text-red-400 p-0.5">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                          </button>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
               </div>
             </div>
-          </div>
             <!-- Sub-accordion: Ürün İnceleme -->
             <div x-data="{open:false}" class="border border-amber-800/50 rounded-lg bg-amber-950/20">
               <div @click="open=!open" class="flex items-center justify-between p-3 cursor-pointer rounded-lg">
@@ -2255,12 +2257,33 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-amber-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Master Prompt (Ürün URL'sinden Bilgi Çıkarma)</label>
-                  <textarea x-model="settings.PR_MASTER_PROMPT" rows="1"
-                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 resize-y font-mono"
-                    placeholder="Boş bırakılırsa varsayılan AI talimatları kullanılır... (Genişletmek için aşağıya çekin)"></textarea>
-                  <p class="text-xs text-slate-500 mt-1">AI'nın ürün URL'sinden nasıl bilgi çıkaracağını özelleştirin. Örn: "Türk alıcılar için fiyat/performans odaklı değerlendir"</p>
+                <div x-show="promptsSaved" x-transition class="px-4 py-2 bg-green-900/30 border border-green-700/50 rounded-lg text-[10px] text-green-400" x-text="t('prompts_saved')"></div>
+                
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modül Master Promptları</span>
+                  <button @click="savePrompts()" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-amber-900/20" x-text="t('save_prompts_btn')"></button>
+                </div>
+
+                <div class="border border-slate-800 rounded-xl p-4">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-semibold text-slate-200">Master Prompt (Ürün URL'sinden Bilgi Çıkarma)</label>
+                    <button @click="prompts.product_review_autofill = ''" class="text-[10px] text-slate-500 hover:text-amber-400 transition-colors" x-text="t('prompt_reset_btn')"></button>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mb-2">Yapay zekanın ürün sayfasından hangi bilgileri nasıl çıkaracağını kontrol eder.</p>
+                  
+                  <div x-data="{ showDefault: false }" class="mt-2 text-[10px] mb-3">
+                    <button @click="showDefault = !showDefault" class="flex items-center gap-1 text-amber-400 hover:text-amber-300 transition-colors focus:outline-none">
+                      <span class="inline-block transition-transform duration-200" :class="showDefault ? 'rotate-90' : ''">▶</span>
+                      <span x-text="t('prompt_view_default')"></span>
+                    </button>
+                    <div x-show="showDefault" x-transition class="mt-2 p-2 bg-slate-950/80 rounded border border-slate-800 overflow-x-auto max-h-40">
+                      <pre class="whitespace-pre-wrap font-mono text-slate-400 leading-relaxed" x-text="promptDefaults.product_review_autofill || '(Varsayılan prompt yükleniyor...)'"></pre>
+                    </div>
+                  </div>
+
+                  <textarea x-model="prompts.product_review_autofill" rows="1" spellcheck="false"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500 transition-colors resize-y leading-relaxed"
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5">AI Çıktı Dili</label>
@@ -2286,8 +2309,22 @@
           </div>
         </div>
 
+        <!-- AI — Section 3: Sosyal Medya AI (closed) -->
+        <div x-show="settingsModule==='ai'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="text-base">📱</span>
+              <span class="font-semibold text-white">Sosyal Medya AI</span>
+            </div>
+            <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <div x-show="open" class="mt-4">
+            <p class="text-xs text-slate-500 mb-3">Sosyal medya metadata AI ayarları için Sosyal Medya sekmesine gidin.</p>
+            <button @click="settingsModule='social_meta'" class="px-4 py-2 bg-violet-700 hover:bg-violet-600 text-white text-xs font-semibold rounded-lg transition-colors" x-text="t('go_to_social_meta')"></button>
+          </div>
+        </div>
 
-        <!-- ══ SYSTEM TAB ══════════════════════════════════════════════════ -->
+        <!-- ══ SYSTEM TAB ══════════════════════════════════════════════ -->
 
         <!-- System — Section 1: Çıktı Ayarları (open) -->
         <div x-show="settingsModule==='system'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
@@ -2584,14 +2621,9 @@
         <!-- ── KAYNAKLAR ──────────────────────────────────────── -->
         <div x-show="bulletinTab==='sources'">
           <!-- Source selection panel -->
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_source_select')"></h2>
-              <button @click="loadSettings(); view='settings'; settingsModule='ai'" 
-                      class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-[10px] text-slate-400 font-bold transition-all">
-                + <span x-text="t('settings_rss_add_btn')"></span>
-              </button>
-            </div>
-
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_source_select')"></h2>
+            
             <div class="mb-4">
               <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_filter_cat') || 'Kategori Filtresi'"></div>
               <div class="flex flex-wrap gap-2">
@@ -2632,7 +2664,7 @@
                   if(bulletinSourceFilterCat !== 'All' && s.category !== bulletinSourceFilterCat) return false;
                   if(bulletinSourceFilterPreset !== 'All') {
                     const p = bulletinPresets.find(pr => pr.name === bulletinSourceFilterPreset);
-                    if(!p || !p.values || !p.values.selected_sources) return true;
+                    if(!p || !p.values || !p.values.selected_sources) return true; 
                     if(!p.values.selected_sources.includes(s.id)) return false;
                   }
                   return true;
@@ -2671,7 +2703,13 @@
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
+                  <option value="4">4</option>
                   <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
                 </select>
               </div>
               <div class="flex items-center gap-2">
@@ -2741,7 +2779,8 @@
                             </div>
                           </div>
                         </div>
-                      </template>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
@@ -3422,6 +3461,9 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
   </main>
 
   <!-- Global Confirm Save Modal -->
@@ -3455,6 +3497,8 @@ const LANG = {
     steps_label: 'steps',
     status_queued: 'QUEUED', status_running: 'RUNNING', status_completed: 'COMPLETED', status_failed: 'FAILED',
     status_stopped: 'STOPPED', status_paused: 'PAUSED',
+    filter_all: 'All', filter_running: 'Running', filter_queued: 'Queued', filter_paused: 'Paused',
+    filter_completed: 'Completed', filter_failed: 'Failed', filter_stopped: 'Stopped',
     btn_stop: 'Stop', btn_pause: 'Pause', btn_resume: 'Resume',
     btn_restart: 'Restart', btn_delete: 'Delete',
     confirm_delete_msg: 'Delete this session and all its files? This cannot be undone.',
@@ -3647,7 +3691,7 @@ const LANG = {
     bulletin_add_source: 'Add RSS Source',
     bulletin_src_name: 'Name', bulletin_src_name_ph: 'e.g. BBC News',
     bulletin_src_url: 'RSS Feed URL',
-    bulletin_src_category: 'Category',
+    bulletin_src_category: 'Category', bulletin_src_category_ph: 'e.g. World, Economy, Tech',
     bulletin_src_lang: 'Language',
     bulletin_add_btn: '+ Add Source',
     bulletin_no_sources: 'No sources yet. Add an RSS feed URL above.',
@@ -3760,7 +3804,7 @@ const LANG = {
     bulletin_show_live_hint: 'Show a pulsing red dot + "LIVE" label next to the network name.',
     // Bulletin Prompts
     section_bulletin_prompts: '✏️ Bulletin Master Prompt',
-    bulletin_prompts_hint: 'Override the default Gemini system prompts. Leave empty to use the built-in default. Changes take effect on the next run.',
+    bulletin_prompts_hint: 'Customize the AI prompt for generating bulletin narrations. Leave empty to use the built-in default. Changes take effect on the next run.',
     prompt_bulletin_narration_label: '1 · Bulletin Narration Prompt',
     prompt_bulletin_narration_hint: 'Controls how the AI summarizes and narrates news items for TTS.',
     anim_desc_hype: 'Zoom up', anim_desc_explosive: 'Slide left', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Fade', anim_desc_none: 'Static',
@@ -3797,14 +3841,8 @@ const LANG = {
     settings_tab_tts: 'Voice',
     settings_tab_visuals: 'Visual & Effects',
     settings_tab_ai: 'AI & Script',
-    settings_tab_social: 'Social Meta',
+    settings_tab_social: 'Social Media',
     settings_tab_system: 'System',
-    settings_rss_title: 'News Sources (RSS)',
-    settings_rss_name_label: 'Source Name',
-    settings_rss_url_label: 'RSS/Source URL',
-    settings_rss_category_label: 'Category',
-    settings_rss_lang_label: 'Language',
-    settings_rss_add_btn: 'Add Source',
     tts_default_section: 'Default Voice',
     tts_module_overrides: 'Module Overrides',
     tts_voice_library: 'Voice Library',
@@ -3836,6 +3874,8 @@ const LANG = {
     steps_label: 'adım',
     status_queued: 'KUYRUKTA', status_running: 'ÇALIŞIYOR', status_completed: 'TAMAMLANDI', status_failed: 'BAŞARISIZ',
     status_stopped: 'DURDURULDU', status_paused: 'DURAKLATILDI',
+    filter_all: 'Tümü', filter_running: 'Çalışan', filter_queued: 'Kuyrukta', filter_paused: 'Duraklatılan',
+    filter_completed: 'Tamamlanan', filter_failed: 'Başarısız', filter_stopped: 'Durdurulan',
     btn_stop: 'Durdur', btn_pause: 'Duraklat', btn_resume: 'Devam Et',
     btn_restart: 'Yeniden Başlat', btn_delete: 'Sil',
     confirm_delete_msg: 'Bu oturum ve tüm dosyaları silinsin mi? Bu işlem geri alınamaz.',
@@ -4028,7 +4068,7 @@ const LANG = {
     bulletin_add_source: 'RSS Kaynağı Ekle',
     bulletin_src_name: 'Ad', bulletin_src_name_ph: 'örn. BBC Türkçe',
     bulletin_src_url: 'RSS Besleme URL',
-    bulletin_src_category: 'Kategori',
+    bulletin_src_category: 'Kategori', bulletin_src_category_ph: 'örn. Dünya, Ekonomi, Teknoloji',
     bulletin_src_lang: 'Dil',
     bulletin_add_btn: '+ Kaynak Ekle',
     bulletin_no_sources: 'Henüz kaynak yok. Yukarıya bir RSS besleme URL ekleyin.',
@@ -4180,12 +4220,6 @@ const LANG = {
     settings_tab_ai: 'AI & Script',
     settings_tab_social: 'Sosyal Medya',
     settings_tab_system: 'Sistem',
-    settings_rss_title: 'Haber Kaynakları (RSS)',
-    settings_rss_name_label: 'Kaynak Adı',
-    settings_rss_url_label: 'RSS/Kaynak URL',
-    settings_rss_category_label: 'Kategori',
-    settings_rss_lang_label: 'Dil',
-    settings_rss_add_btn: 'Kaynak Ekle',
     tts_default_section: 'Global Seslendirme',
     tts_module_overrides: 'Modül Overrideları',
     tts_voice_library: 'Ses Kütüphanesi',
@@ -5088,7 +5122,11 @@ function app() {
         const r = await fetch('/api/product-review/autofill', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ url: this.prAutoUrl.trim(), lang: this.lang, master_prompt: this.prAutoPrompt }),
+          body: JSON.stringify({ 
+            url: this.prAutoUrl.trim(), 
+            lang: this.lang, 
+            master_prompt: this.prompts.product_review_autofill || '' 
+          }),
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));

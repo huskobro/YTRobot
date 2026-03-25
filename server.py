@@ -732,6 +732,8 @@ class BulletinRenderReq(BaseModel):
     category_styles: dict = {}        # per-category style overrides from UI (per_category mode)
     item_styles: dict = {}            # per-item style overrides from UI, keyed by item URL/id
     text_delivery_mode: str = "per_scene"  # "per_scene" | "single_chunk" — narration split mode
+    show_source: bool = True              # show source site name on items
+    show_date: bool = True                # show published date on items
     # Design settings
     lower_third_enabled: bool = True
     lower_third_text: str = ""
@@ -810,6 +812,14 @@ def start_bulletin_render(body: BulletinRenderReq):
             }
             if style_override:
                 news_item["styleOverride"] = style_override
+            # Source URL → extract site name for display
+            src_url = item.get("url") or item.get("source_url") or ""
+            if src_url:
+                news_item["sourceUrl"] = src_url
+            # Published date
+            pub_date = item.get("published") or item.get("published_date") or ""
+            if pub_date:
+                news_item["publishedDate"] = pub_date
             news_items.append(news_item)
         return news_items
 
@@ -835,6 +845,8 @@ def start_bulletin_render(body: BulletinRenderReq):
             "showCategoryFlash": body.show_category_flash,
             "showItemIntro": body.show_item_intro,
             "textDeliveryMode": body.text_delivery_mode,
+            "showSource": body.show_source,
+            "showDate": body.show_date,
         }
 
     def _make_ticker(item_list: list) -> list:

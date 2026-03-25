@@ -26,6 +26,28 @@ function isVideo(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 }
 
+/** Extract site name from URL: "https://www.mynet.com/foo/bar" → "mynet" */
+function extractSiteName(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host.split(".")[0];
+  } catch {
+    return "";
+  }
+}
+
+/** Format date for display */
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr.substring(0, 10);
+    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch {
+    return dateStr.substring(0, 10);
+  }
+}
+
 interface Props {
   item: NewsItem;
   style?:
@@ -39,6 +61,8 @@ interface Props {
     | "entertainment"
     | "dark";
   index?: number;
+  showSource?: boolean;
+  showDate?: boolean;
 }
 
 const ACCENT = {
@@ -105,7 +129,7 @@ function renderSubtitles(
   return <span style={{ color: "#FFFFFF" }}>{active.text}</span>;
 }
 
-export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index = 0 }) => {
+export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index = 0, showSource = false, showDate = false }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // Per-item styleOverride takes priority over bulletin-level style
@@ -204,7 +228,7 @@ export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index 
           <p
             style={{
               color: "rgba(220,220,220,0.9)",
-              fontSize: hasImage ? 30 : 36,
+              fontSize: hasImage ? 34 : 40,
               fontFamily: '"Montserrat", Arial, sans-serif',
               fontWeight: 400,
               marginTop: 16,
@@ -233,6 +257,47 @@ export const HeadlineCard: React.FC<Props> = ({ item, style = "breaking", index 
             }}
           >
             {renderSubtitles(frame, item.subtitles, accent)}
+          </div>
+        )}
+
+        {/* Source & Date footer */}
+        {(showSource || showDate) && (item.sourceUrl || item.publishedDate) && (
+          <div style={{
+            marginTop: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            opacity: subOpacity,
+            transform: `translateY(${subY}px)`,
+          }}>
+            {showSource && item.sourceUrl && extractSiteName(item.sourceUrl) && (
+              <span style={{
+                fontSize: 24,
+                fontFamily: '"Montserrat", Arial, sans-serif',
+                fontWeight: 700,
+                color: accent,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+              }}>
+                {extractSiteName(item.sourceUrl)}
+              </span>
+            )}
+            {showSource && item.sourceUrl && extractSiteName(item.sourceUrl) && showDate && item.publishedDate && (
+              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 20 }}>|</span>
+            )}
+            {showDate && item.publishedDate && (
+              <span style={{
+                fontSize: 22,
+                fontFamily: '"Montserrat", Arial, sans-serif',
+                fontWeight: 400,
+                color: "rgba(200,200,200,0.7)",
+                letterSpacing: "0.04em",
+                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+              }}>
+                {formatDate(item.publishedDate)}
+              </span>
+            )}
           </div>
         )}
       </div>

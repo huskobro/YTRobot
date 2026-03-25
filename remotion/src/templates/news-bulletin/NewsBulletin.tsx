@@ -47,6 +47,8 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   showLiveIndicator = false,
   showCategoryFlash = false,
   showItemIntro = false,
+  showSource = false,
+  showDate = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -195,10 +197,10 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
             )}
             <Sequence from={contentFrom} durationInFrames={item.duration}>
               {idx === 0 ? (
-                <HeadlineCard item={item} style={itemStyle} index={idx} />
+                <HeadlineCard item={item} style={itemStyle} index={idx} showSource={showSource} showDate={showDate} />
               ) : (
                 <>
-                  <HeadlineCard item={item} style={itemStyle} index={idx} />
+                  <HeadlineCard item={item} style={itemStyle} index={idx} showSource={showSource} showDate={showDate} />
                   <LowerThird item={item} style={itemStyle} hasImage={Boolean(item.mediaUrl || item.imageUrl)} />
                 </>
               )}

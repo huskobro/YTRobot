@@ -112,6 +112,30 @@ const MediaElement: React.FC<MediaProps> = ({ url, style, scale = 1 }) => {
   return inner;
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extract site name from URL: "https://www.mynet.com/foo/bar" → "mynet" */
+function extractSiteName(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host.split(".")[0];
+  } catch {
+    return "";
+  }
+}
+
+/** Format date for display: "2026-03-25T14:30:00" → "25 Mar 2026" */
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr.substring(0, 10);
+    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch {
+    return dateStr.substring(0, 10);
+  }
+}
+
 // ── Text block (shared across layouts) ───────────────────────────────────────
 
 interface TextBlockProps {
@@ -125,9 +149,13 @@ interface TextBlockProps {
   expanded?: boolean;
   /** If true, stretch subtext/karaoke to fill available container height */
   fillHeight?: boolean;
+  /** Show source site name */
+  showSource?: boolean;
+  /** Show published date */
+  showDate?: boolean;
 }
 
-const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, durationInFrames, index, expanded = false, fillHeight = false }) => {
+const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, durationInFrames, index, expanded = false, fillHeight = false, showSource = false, showDate = false }) => {
   const fromLeft = index % 2 === 0;
   const progress = spring({ frame, fps, config: { damping: 16, stiffness: 160 } });
   const slideX = interpolate(progress, [0, 1], [fromLeft ? -80 : 80, 0]);
@@ -146,9 +174,14 @@ const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, duratio
   const hasSubtitles = item.subtitles && item.subtitles.length > 0;
 
   // Font sizes: fillHeight uses larger text to fill available space
-  const subtextFontSize = fillHeight ? 44 : expanded ? 42 : 36;
-  const karaokesFontSize = fillHeight ? 40 : expanded ? 42 : 36;
+  const subtextFontSize = fillHeight ? 48 : expanded ? 46 : 40;
+  const karaokesFontSize = fillHeight ? 44 : expanded ? 44 : 38;
   const lineHeight = fillHeight ? 1.7 : 1.6;
+
+  // Source & date info
+  const siteName = showSource && item.sourceUrl ? extractSiteName(item.sourceUrl) : "";
+  const dateStr = showDate && item.publishedDate ? formatDate(item.publishedDate) : "";
+  const hasFooter = siteName || dateStr;
 
   return (
     <div style={{ transform: `translateX(${slideX}px)`, opacity, display: "flex", flexDirection: "column", height: fillHeight ? "100%" : undefined }}>
@@ -211,14 +244,57 @@ const TextBlock: React.FC<TextBlockProps> = ({ item, accent, frame, fps, duratio
           {item.subtext}
         </p>
       )}
+
+      {/* Source & Date footer */}
+      {hasFooter && (
+        <div style={{
+          marginTop: "auto",
+          paddingTop: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          opacity: subOpacity,
+          transform: `translateY(${subY}px)`,
+          flexShrink: 0,
+        }}>
+          {siteName && (
+            <span style={{
+              fontSize: 28,
+              fontFamily: '"Montserrat", Arial, sans-serif',
+              fontWeight: 700,
+              color: accent,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+            }}>
+              {siteName}
+            </span>
+          )}
+          {siteName && dateStr && (
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 24 }}>|</span>
+          )}
+          {dateStr && (
+            <span style={{
+              fontSize: 26,
+              fontFamily: '"Montserrat", Arial, sans-serif',
+              fontWeight: 400,
+              color: "rgba(200,200,200,0.7)",
+              letterSpacing: "0.04em",
+              textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+            }}>
+              {dateStr}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 // ── Layout A: 16:9 media — upper panel ───────────────────────────────────────
 
-const Layout169: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number }> = (
-  { item, accent, frame, fps, durationInFrames, index }
+const Layout169: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number; showSource?: boolean; showDate?: boolean }> = (
+  { item, accent, frame, fps, durationInFrames, index, showSource, showDate }
 ) => {
   const mediaUrl = getMediaUrl(item)!;
   const imgScale = interpolate(frame, [0, 300], [1.0, 1.06], { extrapolateRight: "clamp" });
@@ -248,7 +324,7 @@ const Layout169: React.FC<{ item: NewsItem; accent: string; frame: number; fps: 
         justifyContent: "flex-start",
         overflowY: "hidden",
       }}>
-        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} fillHeight />
+        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} fillHeight showSource={showSource} showDate={showDate} />
       </div>
     </AbsoluteFill>
   );
@@ -256,8 +332,8 @@ const Layout169: React.FC<{ item: NewsItem; accent: string; frame: number; fps: 
 
 // ── Layout B: 9:16 video — full-bleed background ──────────────────────────────
 
-const Layout916: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number }> = (
-  { item, accent, frame, fps, durationInFrames, index }
+const Layout916: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number; showSource?: boolean; showDate?: boolean }> = (
+  { item, accent, frame, fps, durationInFrames, index, showSource, showDate }
 ) => {
   const mediaUrl = getMediaUrl(item)!;
   const mediaOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: "clamp" });
@@ -302,7 +378,7 @@ const Layout916: React.FC<{ item: NewsItem; accent: string; frame: number; fps: 
         flexDirection: "column",
         justifyContent: "flex-start",
       }}>
-        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />
+        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />
       </div>
     </AbsoluteFill>
   );
@@ -313,8 +389,8 @@ const Layout916: React.FC<{ item: NewsItem; accent: string; frame: number; fps: 
 // Only ~18% of the screen height is used for text — a thin frosted bar at the
 // bottom. The remaining 82% is clean, unobstructed media.
 
-const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number }> = (
-  { item, accent, frame, fps, durationInFrames, index }
+const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number; showSource?: boolean; showDate?: boolean }> = (
+  { item, accent, frame, fps, durationInFrames, index, showSource, showDate }
 ) => {
   const mediaUrl = getMediaUrl(item)!;
   const mediaOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: "clamp" });
@@ -444,6 +520,31 @@ const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: num
             {item.subtext}
           </p>
         ) : null}
+
+        {/* Source & Date */}
+        {(showSource || showDate) && (item.sourceUrl || item.publishedDate) && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 8,
+            opacity: headOpacity,
+          }}>
+            {showSource && item.sourceUrl && (
+              <span style={{ fontSize: 22, fontFamily: '"Montserrat", Arial, sans-serif', fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.06em", textShadow: "0 2px 6px rgba(0,0,0,0.8)" }}>
+                {extractSiteName(item.sourceUrl)}
+              </span>
+            )}
+            {showSource && item.sourceUrl && showDate && item.publishedDate && (
+              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18 }}>|</span>
+            )}
+            {showDate && item.publishedDate && (
+              <span style={{ fontSize: 20, fontFamily: '"Montserrat", Arial, sans-serif', fontWeight: 400, color: "rgba(200,200,200,0.7)", textShadow: "0 2px 6px rgba(0,0,0,0.8)" }}>
+                {formatDate(item.publishedDate)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </AbsoluteFill>
   );
@@ -451,8 +552,8 @@ const Layout916VideoFocus: React.FC<{ item: NewsItem; accent: string; frame: num
 
 // ── Layout C: 1:1 square image — centred panel ───────────────────────────────
 
-const Layout11: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number }> = (
-  { item, accent, frame, fps, durationInFrames, index }
+const Layout11: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number; showSource?: boolean; showDate?: boolean }> = (
+  { item, accent, frame, fps, durationInFrames, index, showSource, showDate }
 ) => {
   const mediaUrl = getMediaUrl(item)!;
   const imgScale = interpolate(frame, [0, 300], [1.0, 1.05], { extrapolateRight: "clamp" });
@@ -492,7 +593,7 @@ const Layout11: React.FC<{ item: NewsItem; accent: string; frame: number; fps: n
         flexDirection: "column",
         justifyContent: "flex-start",
       }}>
-        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />
+        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />
       </div>
     </AbsoluteFill>
   );
@@ -500,8 +601,8 @@ const Layout11: React.FC<{ item: NewsItem; accent: string; frame: number; fps: n
 
 // ── Layout D: No media — text fills frame with decorative elements ────────────
 
-const LayoutNoMedia: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number }> = (
-  { item, accent, frame, fps, durationInFrames, index }
+const LayoutNoMedia: React.FC<{ item: NewsItem; accent: string; frame: number; fps: number; durationInFrames: number; index: number; showSource?: boolean; showDate?: boolean }> = (
+  { item, accent, frame, fps, durationInFrames, index, showSource, showDate }
 ) => {
   // Decorative animated diagonal lines (broadcast style)
   const lineOpacity = interpolate(frame, [0, 30], [0, 0.06], { extrapolateRight: "clamp" });
@@ -544,7 +645,7 @@ const LayoutNoMedia: React.FC<{ item: NewsItem; accent: string; frame: number; f
         flexDirection: "column",
         justifyContent: "center",
       }}>
-        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} expanded />
+        <TextBlock item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} expanded showSource={showSource} showDate={showDate} />
       </div>
 
       {/* Bottom decorative line above ticker */}
@@ -574,9 +675,11 @@ interface CardProps {
     | "entertainment"
     | "dark";
   index?: number;
+  showSource?: boolean;
+  showDate?: boolean;
 }
 
-const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "breaking", index = 0 }) => {
+const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "breaking", index = 0, showSource = false, showDate = false }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // Per-item styleOverride takes priority over bulletin-level style
@@ -595,18 +698,18 @@ const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "brea
 
   let layout: React.ReactNode;
   if (!mediaUrl) {
-    layout = <LayoutNoMedia item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />;
+    layout = <LayoutNoMedia item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />;
   } else if (aspect === "9:16-focus") {
     // Video/image fills frame, tiny text bar at bottom — viewer watches the media
-    layout = <Layout916VideoFocus item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />;
+    layout = <Layout916VideoFocus item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />;
   } else if (aspect === "9:16") {
     // Full-bleed background, text in lower half
-    layout = <Layout916 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />;
+    layout = <Layout916 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />;
   } else if (aspect === "1:1") {
-    layout = <Layout11 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />;
+    layout = <Layout11 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />;
   } else {
     // "16:9" default
-    layout = <Layout169 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} />;
+    layout = <Layout169 item={item} accent={accent} frame={frame} fps={fps} durationInFrames={durationInFrames} index={index} showSource={showSource} showDate={showDate} />;
   }
 
   return (
@@ -728,6 +831,8 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   showLiveIndicator = false,
   showCategoryFlash = false,
   showItemIntro = false,
+  showSource = false,
+  showDate = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -822,7 +927,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
               </Sequence>
             )}
             <Sequence from={contentFrom} durationInFrames={item.duration}>
-              <VerticalHeadlineCard item={item} bulletinStyle={itemStyle} index={idx} />
+              <VerticalHeadlineCard item={item} bulletinStyle={itemStyle} index={idx} showSource={showSource} showDate={showDate} />
             </Sequence>
           </React.Fragment>
         );

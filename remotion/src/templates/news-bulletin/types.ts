@@ -42,6 +42,10 @@ export interface NewsItem {
   language?: string;
   /** Custom style override derived from their category */
   styleOverride?: "breaking" | "tech" | "corporate" | "sport" | "finance" | "weather" | "science" | "entertainment" | "dark" | string;
+  /** Original source URL — used to extract site name for display */
+  sourceUrl?: string;
+  /** Published date string (ISO or display format) */
+  publishedDate?: string;
 }
 
 export interface TickerItem {
@@ -85,6 +89,10 @@ export interface BulletinProps {
    * Defaults to false — pass true to enable.
    */
   showItemIntro?: boolean;
+  /** Show source site name on each news item */
+  showSource?: boolean;
+  /** Show published date on each news item */
+  showDate?: boolean;
 }
 
 export const defaultBulletinProps: BulletinProps = {

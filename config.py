@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     speshaudio_similarity_boost: float = 0.5
     speshaudio_style: float = 0.75
 
+    # YT Video-specific TTS (optional; falls back to global TTS if empty/sentinel)
+    yt_tts_provider: str = ""          # empty = use tts_provider
+    yt_tts_voice_id: str = ""          # empty = global voice
+    yt_tts_speed: float = 0.0          # 0.0 = use tts_speed
+    yt_tts_language: str = ""          # empty = global language
+    yt_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
+    yt_tts_similarity_boost: float = -1.0
+    yt_tts_style: float = -1.0
+    yt_visuals_provider: str = ""      # empty = use visuals_provider
+
     # Bulletin-specific TTS (optional; falls back to global TTS if empty/sentinel)
     bulletin_tts_provider: str = ""          # empty = use tts_provider
     bulletin_tts_voice_id: str = ""          # empty = provider default voice

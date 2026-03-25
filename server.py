@@ -261,6 +261,7 @@ def start_run(req: RunReq):
         "error": None,
         "metadata": None,
         "preset_name": req.preset_name or "",
+        "module": "yt_video",
     }
     _write_session(sid, session)
     threading.Thread(target=_run, args=(sid, req.topic, req.script_file, preset_env), daemon=True).start()
@@ -455,6 +456,7 @@ def get_prompt_defaults():
         "metadata_system": METADATA_SYSTEM_PROMPT,
         "tts_enhance": _TTS_ENHANCE_PROMPT,
         "bulletin_narration": _NARRATION_SYSTEM,
+        "product_review_autofill": _PR_AUTOFILL_SYSTEM_PROMPT,
     }
 
 
@@ -1125,6 +1127,46 @@ async def stream_logs(sid: str):
 
 PRODUCT_REVIEW_DIR = Path("output/product_reviews")
 
+# Built-in system prompt used for autofill — exposed via /api/prompts/defaults
+# so the UI can show it alongside the user-editable master prompt field.
+_PR_AUTOFILL_SYSTEM_PROMPT = """\
+You are a product data extractor. Given a product page URL and its text content, \
+extract structured product information and return ONLY valid JSON matching the schema below. \
+All text fields should be in the requested language.
+
+Schema:
+{
+  "name": "Product display name",
+  "price": 0,
+  "originalPrice": 0,
+  "currency": "TL",
+  "rating": 4.5,
+  "reviewCount": 0,
+  "imageUrl": "https://...",
+  "galleryUrls": ["https://...", "https://..."],
+  "category": "",
+  "platform": "",
+  "pros": ["advantage 1", "advantage 2", "advantage 3"],
+  "cons": ["disadvantage 1", "disadvantage 2"],
+  "score": 7.5,
+  "verdict": "Compelling one-sentence final verdict.",
+  "ctaText": "Linke tıkla!",
+  "topComments": ["user comment 1", "user comment 2", "user comment 3"]
+}
+
+Rules:
+- pros: 3-5 key advantages, each max 12 words — focus on what buyers love most
+- cons: 2-4 disadvantages, each max 12 words — be honest, this builds trust
+- score: overall value-for-money score 1-10 based on rating, review count, price/quality ratio
+- verdict: compelling 1-2 sentence final verdict — include the product name
+- currency: detect from page (TL, $, €, £ — default TL)
+- imageUrl: extract the main product image URL from the page if available (must be absolute https URL)
+- galleryUrls: up to 3 additional product image URLs if available (absolute https URLs)
+- topComments: 3-5 representative user review snippets (short, 5-15 words each)
+- platform: detect marketplace (trendyol, amazon, hepsiburada, n11, etc.)
+- Return ONLY the JSON object, no explanation, no markdown fences.\
+"""
+
 _product_review_jobs: dict = {}
 _product_review_jobs_lock = threading.Lock()
 
@@ -1201,11 +1243,10 @@ def start_product_review_render(body: ProductReviewRenderReq):
 
             proc = subprocess.Popen(cmd, cwd=str(remotion_dir), stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True, bufsize=1)
-            if on_progress:
-                try:
-                    _on_progress(-1, "_proc", str(proc.pid))
-                except Exception:
-                    pass
+            try:
+                _on_progress(-1, "_proc", str(proc.pid))
+            except Exception:
+                pass
 
             _last_pct = 10
             for line in proc.stdout:
@@ -1280,8 +1321,10 @@ class ProductReviewAutofillReq(BaseModel):
 
 @app.post("/api/product-review/autofill")
 def product_review_autofill(body: ProductReviewAutofillReq):
-    """Use Gemini to scrape product URL and return structured prForm data."""
+    """Use kie.ai (Gemini 2.5 Flash) to scrape product URL and return structured prForm data."""
     import urllib.request as _req
+    import re as _re
+    import json as _json
 
     try:
         from config import settings as cfg
@@ -1302,7 +1345,6 @@ def product_review_autofill(body: ProductReviewAutofillReq):
         page_html = f"(Page could not be fetched: {e})"
 
     # Trim HTML to keep only visible text (strip tags)
-    import re as _re
     text_content = _re.sub(r"<[^>]+>", " ", page_html)
     text_content = _re.sub(r"\s+", " ", text_content).strip()[:8000]
 
@@ -1311,94 +1353,239 @@ def product_review_autofill(body: ProductReviewAutofillReq):
         f"\nCustom instructions: {body.master_prompt}\n" if body.master_prompt.strip() else ""
     )
 
-    system_prompt = f"""You are a product data extractor. Given a product page URL and its text content, extract structured product information and return ONLY valid JSON matching the schema below. All text fields should be in {language_note}.
-
-Schema:
-{{
-  "name": "Product name",
-  "price": 0,
-  "originalPrice": 0,
-  "currency": "TL",
-  "rating": 4.5,
-  "reviewCount": 0,
-  "imageUrl": "",
-  "category": "",
-  "platform": "",
-  "pros": ["pro1", "pro2", "pro3"],
-  "cons": ["con1", "con2"],
-  "score": 7.5,
-  "verdict": "One sentence verdict.",
-  "ctaText": "Linke tıkla!"
-}}
-
-Rules:
-- pros: 3-5 key advantages in {language_note}, each max 10 words
-- cons: 2-4 disadvantages in {language_note}, each max 10 words
-- score: overall score 1-10 based on rating and reviews
-- verdict: compelling one-sentence product verdict in {language_note}
-- currency: detect from page (TL, $, €, £)
-- Return ONLY the JSON object, no explanation, no markdown.{custom_prompt_block}"""
+    # Build system prompt from the built-in template, injecting language + custom instructions
+    system_prompt = (
+        _PR_AUTOFILL_SYSTEM_PROMPT
+        .replace("the requested language", language_note)
+        + f"\nOutput language: {language_note}."
+        + custom_prompt_block
+    )
 
     user_msg = f"URL: {body.url}\n\nPage content:\n{text_content}"
 
-    # Try Gemini first, fallback to OpenAI
-    gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
-    openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
-
     result_json = None
 
-    if gemini_key:
+    # 1. Try kie.ai (Gemini 2.5 Flash via OpenAI-compat API) — primary
+    kieai_key = os.environ.get("KIEAI_API_KEY") or getattr(cfg, "kieai_api_key", "")
+    if kieai_key:
         try:
-            import urllib.request as _ureq
-            import json as _json
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
-            payload = {
-                "contents": [{"parts": [{"text": system_prompt + "\n\n" + user_msg}]}],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.3},
-            }
-            req2 = _ureq.Request(gemini_url, data=_json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
-            with _ureq.urlopen(req2, timeout=30) as resp2:
-                gemini_resp = _json.loads(resp2.read())
-            text_out = gemini_resp["candidates"][0]["content"]["parts"][0]["text"]
-            result_json = _json.loads(text_out)
-        except Exception as e:
-            result_json = None
-
-    if result_json is None and openai_key:
-        try:
-            import urllib.request as _ureq
-            import json as _json
-            oai_payload = {
-                "model": "gpt-4o-mini",
-                "messages": [
+            from openai import OpenAI as _OpenAI
+            client = _OpenAI(api_key=kieai_key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
+            resp = client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
                 ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.3,
-            }
-            req3 = _ureq.Request(
-                "https://api.openai.com/v1/chat/completions",
-                data=_json.dumps(oai_payload).encode(),
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {openai_key}"},
-                method="POST",
+                temperature=0.3,
             )
-            with _ureq.urlopen(req3, timeout=30) as resp3:
-                oai_resp = _json.loads(resp3.read())
-            result_json = _json.loads(oai_resp["choices"][0]["message"]["content"])
-        except Exception:
+            raw_text = resp.choices[0].message.content.strip()
+            # Strip markdown fences if model wrapped the output
+            raw_text = _re.sub(r"^```(?:json)?\s*", "", raw_text)
+            raw_text = _re.sub(r"\s*```$", "", raw_text)
+            result_json = _json.loads(raw_text)
+        except Exception as e:
+            print(f"  [product-review/autofill] kie.ai failed: {e}")
             result_json = None
 
+    # 2. Fallback: Gemini direct API
     if result_json is None:
-        raise HTTPException(500, "AI provider unavailable — set GEMINI_API_KEY or OPENAI_API_KEY")
+        gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
+        if gemini_key:
+            try:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": system_prompt + "\n\n" + user_msg}]}],
+                    "generationConfig": {"responseMimeType": "application/json", "temperature": 0.3},
+                }
+                req2 = _req.Request(gemini_url, data=_json.dumps(payload).encode(),
+                                    headers={"Content-Type": "application/json"}, method="POST")
+                with _req.urlopen(req2, timeout=30) as resp2:
+                    gemini_resp = _json.loads(resp2.read())
+                text_out = gemini_resp["candidates"][0]["content"]["parts"][0]["text"]
+                result_json = _json.loads(text_out)
+            except Exception as e:
+                print(f"  [product-review/autofill] Gemini direct failed: {e}")
+                result_json = None
 
-    # Ensure required fields
+    # 3. Fallback: OpenAI
+    if result_json is None:
+        openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+        if openai_key:
+            try:
+                oai_payload = {
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.3,
+                }
+                req3 = _req.Request(
+                    "https://api.openai.com/v1/chat/completions",
+                    data=_json.dumps(oai_payload).encode(),
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {openai_key}"},
+                    method="POST",
+                )
+                with _req.urlopen(req3, timeout=30) as resp3:
+                    oai_resp = _json.loads(resp3.read())
+                result_json = _json.loads(oai_resp["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"  [product-review/autofill] OpenAI fallback failed: {e}")
+                result_json = None
+
+    if result_json is None:
+        raise HTTPException(500, "AI provider unavailable — set KIEAI_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY in Settings")
+
+    # Ensure all required fields are present
+    result_json.setdefault("name", "")
+    result_json.setdefault("price", 0)
+    result_json.setdefault("originalPrice", 0)
+    result_json.setdefault("currency", "TL")
+    result_json.setdefault("rating", 0)
+    result_json.setdefault("reviewCount", 0)
+    result_json.setdefault("imageUrl", "")
+    result_json.setdefault("galleryUrls", [])
+    result_json.setdefault("category", "")
+    result_json.setdefault("platform", "")
     result_json.setdefault("pros", [])
     result_json.setdefault("cons", [])
-    result_json.setdefault("topComments", [])
     result_json.setdefault("score", 7)
+    result_json.setdefault("verdict", "")
     result_json.setdefault("ctaText", "Linke tıkla!" if body.lang == "tr" else "Check it out!")
+    result_json.setdefault("topComments", [])
     return result_json
+
+
+class ProductReviewTTSReq(BaseModel):
+    product: dict
+    lang: str = "tr"
+
+
+@app.post("/api/product-review/tts")
+def product_review_tts(body: ProductReviewTTSReq):
+    """Generate TTS narration for a product review and return an audio URL served via /api/product-review/audio/{filename}."""
+    import time as _time
+
+    try:
+        from config import settings as cfg
+    except Exception:
+        raise HTTPException(500, "Config not available")
+
+    p = body.product
+    lang_note = "Türkçe" if body.lang == "tr" else "English"
+
+    # Build narration text from product fields
+    name = p.get("name", "Bu ürün")
+    price = p.get("price", 0)
+    original_price = p.get("originalPrice", 0)
+    currency = p.get("currency", "TL")
+    rating = p.get("rating", 0)
+    review_count = p.get("reviewCount", 0)
+    score = p.get("score", 7)
+    verdict = p.get("verdict", "")
+    pros = p.get("pros", [])
+    cons = p.get("cons", [])
+    cta = p.get("ctaText", "Linke tıkla!")
+
+    if body.lang == "tr":
+        discount_line = ""
+        if original_price and original_price > price:
+            discount_pct = round((original_price - price) / original_price * 100)
+            discount_line = f" Normalde {original_price} {currency} olan bu ürün şu an {price} {currency}'ye satılıyor, yüzde {discount_pct} indirimle."
+        else:
+            discount_line = f" Fiyatı {price} {currency}."
+
+        pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
+        cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
+
+        narration = (
+            f"Merhaba! Bugün {name} inceliyoruz.{discount_line} "
+            f"{review_count} yorum ve {rating} üzerinden {rating} yıldız aldı. "
+            f"Artıları: {pros_text} "
+            f"Eksileri: {cons_text} "
+            f"Genel puanımız: 10 üzerinden {score}. "
+            f"{verdict} "
+            f"{cta}"
+        )
+    else:
+        discount_line = ""
+        if original_price and original_price > price:
+            discount_pct = round((original_price - price) / original_price * 100)
+            discount_line = f" Originally {original_price} {currency}, now {price} {currency} — {discount_pct}% off."
+        else:
+            discount_line = f" Priced at {price} {currency}."
+
+        pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
+        cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
+
+        narration = (
+            f"Hey! Today we're reviewing the {name}.{discount_line} "
+            f"It has {review_count} reviews and a {rating} star rating. "
+            f"Pros: {pros_text} "
+            f"Cons: {cons_text} "
+            f"Our overall score: {score} out of 10. "
+            f"{verdict} "
+            f"{cta}"
+        )
+
+    # Generate audio using the configured TTS provider (PR-specific or global)
+    PRODUCT_REVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    audio_filename = f"pr_tts_{int(_time.time()*1000)}.mp3"
+    audio_path = PRODUCT_REVIEW_DIR / audio_filename
+
+    try:
+        from pipeline.tts import _load_provider as _tts_load
+        from providers.tts.base import clean_for_tts
+
+        # PR-specific overrides read from .env (saved by UI settings)
+        pr_tts_provider   = os.environ.get("PR_TTS_PROVIDER")   or getattr(cfg, "pr_tts_provider", "")
+        pr_tts_voice_id   = os.environ.get("PR_TTS_VOICE_ID")   or getattr(cfg, "pr_tts_voice_id", "")
+        pr_tts_speed      = float(os.environ.get("PR_TTS_SPEED", 0) or getattr(cfg, "pr_tts_speed", 0))
+        pr_tts_language   = os.environ.get("PR_TTS_LANGUAGE")   or getattr(cfg, "pr_tts_language", "")
+        pr_tts_stability  = float(os.environ.get("PR_TTS_STABILITY", -1) or -1)
+        pr_tts_similarity = float(os.environ.get("PR_TTS_SIMILARITY", -1) or -1)
+        pr_tts_style      = float(os.environ.get("PR_TTS_STYLE", -1) or -1)
+        pr_openai_voice   = os.environ.get("PR_OPENAI_TTS_VOICE") or getattr(cfg, "pr_openai_tts_voice", "")
+
+        # Temporarily patch settings so the provider picks up PR-specific values
+        _orig = {}
+        def _patch(key, val):
+            if val:
+                _orig[key] = getattr(cfg, key, None)
+                object.__setattr__(cfg, key, val)
+
+        if pr_tts_voice_id:  _patch("speshaudio_voice_id", pr_tts_voice_id); _patch("elevenlabs_voice_id", pr_tts_voice_id)
+        if pr_tts_speed > 0: _patch("tts_speed", pr_tts_speed)
+        if pr_tts_language:  _patch("speshaudio_language", pr_tts_language)
+        if pr_tts_stability  >= 0: _patch("speshaudio_stability",  pr_tts_stability)
+        if pr_tts_similarity >= 0: _patch("speshaudio_similarity_boost", pr_tts_similarity)
+        if pr_tts_style      >= 0: _patch("speshaudio_style", pr_tts_style)
+        if pr_openai_voice:  _patch("openai_tts_voice", pr_openai_voice)
+
+        try:
+            provider = _tts_load(pr_tts_provider if pr_tts_provider else None)
+            cleaned = clean_for_tts(narration, remove_apostrophes=cfg.tts_remove_apostrophes)
+            provider.synthesize(cleaned, audio_path)
+        finally:
+            # Restore original settings values
+            for k, v in _orig.items():
+                object.__setattr__(cfg, k, v)
+    except Exception as e:
+        raise HTTPException(500, f"TTS synthesis failed: {e}")
+
+    return {"audioUrl": f"/api/product-review/audio/{audio_filename}", "narration": narration}
+
+
+@app.get("/api/product-review/audio/{filename}")
+def product_review_audio(filename: str):
+    """Serve a generated TTS audio file."""
+    path = PRODUCT_REVIEW_DIR / filename
+    if not path.exists() or not path.name.endswith(".mp3"):
+        raise HTTPException(404, "Audio file not found")
+    from fastapi.responses import FileResponse
+    return FileResponse(str(path), media_type="audio/mpeg", filename=filename)
 
 
 @app.get("/api/product-review/download/{rid}")
@@ -1412,6 +1599,230 @@ def product_review_download(rid: str):
         raise HTTPException(404, "File not found")
     from fastapi.responses import FileResponse
     return FileResponse(str(out), media_type="video/mp4", filename=out.name)
+
+
+
+# ── Social Media Metadata ──────────────────────────────────────────────────────
+
+class SocialMetaReq(BaseModel):
+    module: str = "yt_video"      # yt_video | bulletin | product_review
+    context: dict = {}             # free-form: title, script, product_name, etc.
+    fields: list = ["title", "description", "tags"]
+    master_prompt: str = ""
+    lang: str = "tr"
+
+
+@app.post("/api/social-meta/generate")
+def generate_social_meta(body: SocialMetaReq):
+    import re as _re
+    import json as _json
+    import urllib.request as _req
+
+    cfg = Settings()
+    fields_str = ", ".join(body.fields)
+    context_str = "\n".join(f"{k}: {v}" for k, v in body.context.items() if v)
+    lang_note = "Turkish" if body.lang == "tr" else "English"
+
+    base_prompt = (
+        f"You are a social media content expert. Given the video context below, "
+        f"generate social media metadata in {lang_note}.\n"
+        f"Return ONLY a valid JSON object with these fields: {fields_str}.\n"
+        f"Rules:\n"
+        f"- title: catchy, max 100 chars\n"
+        f"- description: 2-3 paragraphs with relevant info and call-to-action\n"
+        f"- tags: array of 15-20 relevant hashtags/keywords (without #)\n"
+        f"- source: original source name if applicable\n"
+        f"- link: URL if applicable\n"
+        f"Return ONLY the JSON, no markdown fences."
+    )
+
+    custom_block = f"\n\nAdditional instructions:\n{body.master_prompt.strip()}" if body.master_prompt.strip() else ""
+    system_prompt = base_prompt + custom_block
+    user_msg = f"Video context:\n{context_str}"
+
+    result_json = None
+
+    # 1. kie.ai primary
+    kieai_key = os.environ.get("KIEAI_API_KEY") or getattr(cfg, "kieai_api_key", "")
+    if kieai_key:
+        try:
+            from openai import OpenAI as _OpenAI
+            client = _OpenAI(api_key=kieai_key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
+            resp = client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_msg}],
+                temperature=0.4,
+            )
+            raw = resp.choices[0].message.content.strip()
+            raw = _re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = _re.sub(r"\s*```$", "", raw)
+            result_json = _json.loads(raw)
+        except Exception as e:
+            print(f"  [social-meta] kie.ai failed: {e}")
+
+    # 2. Gemini direct fallback
+    if result_json is None:
+        gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
+        if gemini_key:
+            try:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": system_prompt + "\n\n" + user_msg}]}],
+                    "generationConfig": {"responseMimeType": "application/json", "temperature": 0.4},
+                }
+                req2 = _req.Request(gemini_url, data=_json.dumps(payload).encode(),
+                                    headers={"Content-Type": "application/json"}, method="POST")
+                with _req.urlopen(req2, timeout=30) as resp2:
+                    gemini_resp = _json.loads(resp2.read())
+                text_out = gemini_resp["candidates"][0]["content"]["parts"][0]["text"]
+                result_json = _json.loads(text_out)
+            except Exception as e:
+                print(f"  [social-meta] Gemini direct failed: {e}")
+
+    # 3. OpenAI fallback
+    if result_json is None:
+        openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+        if openai_key:
+            try:
+                oai_payload = {
+                    "model": "gpt-4o-mini",
+                    "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_msg}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.4,
+                }
+                req3 = _req.Request(
+                    "https://api.openai.com/v1/chat/completions",
+                    data=_json.dumps(oai_payload).encode(),
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {openai_key}"},
+                    method="POST",
+                )
+                with _req.urlopen(req3, timeout=30) as resp3:
+                    oai_resp = _json.loads(resp3.read())
+                result_json = _json.loads(oai_resp["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"  [social-meta] OpenAI fallback failed: {e}")
+
+    if result_json is None:
+        raise HTTPException(500, "AI provider unavailable — set KIEAI_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY")
+
+    # Ensure all requested fields exist
+    for f in body.fields:
+        if f not in result_json:
+            result_json[f] = "" if f != "tags" else []
+
+    return result_json
+
+
+
+# ── API Key Test Endpoints ────────────────────────────────────────────────────
+
+@app.post("/api/test-key/{provider}")
+def test_api_key(provider: str):
+    """Test if a given API key is valid by making a minimal real request."""
+    import json as _json
+    import urllib.request as _req
+    cfg = Settings()
+
+    def ok(msg=""): return {"status": "ok", "message": msg or "✓ Bağlantı başarılı"}
+    def fail(msg): return {"status": "error", "message": msg}
+
+    try:
+        if provider == "kieai":
+            key = os.environ.get("KIEAI_API_KEY") or getattr(cfg, "kieai_api_key", "")
+            if not key: return fail("Key girilmedi")
+            from openai import OpenAI as _OAI
+            c = _OAI(api_key=key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
+            r = c.chat.completions.create(model="gemini-2.5-flash",
+                messages=[{"role":"user","content":"ping"}], max_tokens=5)
+            return ok("kie.ai Gemini 2.5 Flash")
+
+        elif provider == "gemini":
+            key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
+            if not key: return fail("Key girilmedi")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}"
+            payload = {"contents":[{"parts":[{"text":"ping"}]}],"generationConfig":{"maxOutputTokens":5}}
+            req = _req.Request(url, data=_json.dumps(payload).encode(), headers={"Content-Type":"application/json"}, method="POST")
+            with _req.urlopen(req, timeout=15): pass
+            return ok("Gemini Direct API")
+
+        elif provider == "openai":
+            key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+            if not key: return fail("Key girilmedi")
+            payload = {"model":"gpt-4o-mini","messages":[{"role":"user","content":"ping"}],"max_tokens":5}
+            req = _req.Request("https://api.openai.com/v1/chat/completions",
+                data=_json.dumps(payload).encode(),
+                headers={"Content-Type":"application/json","Authorization":f"Bearer {key}"}, method="POST")
+            with _req.urlopen(req, timeout=15): pass
+            return ok("OpenAI GPT-4o-mini")
+
+        elif provider == "anthropic":
+            key = os.environ.get("ANTHROPIC_API_KEY") or getattr(cfg, "anthropic_api_key", "")
+            if not key: return fail("Key girilmedi")
+            payload = {"model":"claude-3-haiku-20240307","max_tokens":5,"messages":[{"role":"user","content":"ping"}]}
+            req = _req.Request("https://api.anthropic.com/v1/messages",
+                data=_json.dumps(payload).encode(),
+                headers={"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"}, method="POST")
+            with _req.urlopen(req, timeout=15): pass
+            return ok("Anthropic Claude")
+
+        elif provider == "elevenlabs":
+            key = os.environ.get("ELEVENLABS_API_KEY") or getattr(cfg, "elevenlabs_api_key", "")
+            if not key: return fail("Key girilmedi")
+            req = _req.Request("https://api.elevenlabs.io/v1/user",
+                headers={"xi-api-key": key}, method="GET")
+            with _req.urlopen(req, timeout=15) as resp:
+                data = _json.loads(resp.read())
+            tier = data.get("subscription", {}).get("tier", "unknown")
+            return ok(f"ElevenLabs — plan: {tier}")
+
+        elif provider == "speshaudio":
+            key = os.environ.get("SPESHAUDIO_API_KEY") or getattr(cfg, "speshaudio_api_key", "")
+            if not key: return fail("Key girilmedi")
+            req = _req.Request("https://speshaudio.com/api/v1/voices",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="GET")
+            with _req.urlopen(req, timeout=15) as resp:
+                _json.loads(resp.read())
+            return ok("SpesAudio")
+
+        elif provider == "pexels":
+            key = os.environ.get("PEXELS_API_KEY") or getattr(cfg, "pexels_api_key", "")
+            if not key: return fail("Key girilmedi")
+            req = _req.Request("https://api.pexels.com/v1/search?query=test&per_page=1",
+                headers={"Authorization": key}, method="GET")
+            with _req.urlopen(req, timeout=15): pass
+            return ok("Pexels")
+
+        elif provider == "pixabay":
+            key = os.environ.get("PIXABAY_API_KEY") or getattr(cfg, "pixabay_api_key", "")
+            if not key: return fail("Key girilmedi")
+            url = f"https://pixabay.com/api/?key={key}&q=test&per_page=3"
+            req = _req.Request(url, method="GET")
+            with _req.urlopen(req, timeout=15): pass
+            return ok("Pixabay")
+
+        else:
+            return fail(f"Bilinmeyen provider: {provider}")
+
+    except Exception as e:
+        import urllib.error as _uerr
+        if isinstance(e, _uerr.HTTPError):
+            code = e.code
+            try:
+                body = e.read().decode("utf-8", errors="ignore")[:200]
+            except Exception:
+                body = ""
+            if code == 401: return fail("Geçersiz API key (401)")
+            if code == 403: return fail("Erişim reddedildi (403)")
+            if code == 429: return fail("Rate limit — key geçerli ama kota doldu (429)")
+            return fail(f"HTTP {code}: {body[:100]}")
+        err = str(e)
+        if "401" in err or "Unauthorized" in err or "invalid" in err.lower():
+            return fail("Geçersiz API key")
+        if "403" in err or "Forbidden" in err:
+            return fail("Erişim reddedildi (key izin sorunu)")
+        if "429" in err:
+            return fail("Rate limit — key geçerli ama kota doldu")
+        return fail(f"Hata: {err[:120]}")
 
 
 @app.get("/")

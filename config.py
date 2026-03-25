@@ -75,6 +75,28 @@ class Settings(BaseSettings):
     remotion_karaoke_enabled: bool = True         # word-by-word highlight (requires word_timing.json)
     remotion_subtitle_animation: str = "hype"    # hype | explosive | vibrant | minimal | none
 
+    # Product Review module settings
+    pr_tts_provider: str = ""          # empty = use tts_provider
+    pr_tts_voice_id: str = ""          # empty = provider default voice
+    pr_tts_speed: float = 0.0          # 0.0 = use tts_speed
+    pr_tts_language: str = ""          # empty = global provider default
+    pr_master_prompt: str = ""         # default AI extraction instructions
+    pr_ai_language: str = ""           # empty = use UI lang setting
+    pr_style: str = "modern"
+    pr_format: str = "16:9"
+    pr_fps: int = 60
+    pr_channel_name: str = "YTRobot İnceleme"
+    pr_currency: str = "TL"
+    pr_cta_text: str = "Linke tıkla!"
+
+    # Social Media Metadata Tool
+    social_meta_enabled_yt_video: bool = False
+    social_meta_enabled_bulletin: bool = False
+    social_meta_enabled_pr: bool = False
+    social_meta_fields: str = "title,description,tags"   # comma-separated: title,description,tags,source,link
+    social_meta_master_prompt: str = ""
+    social_meta_language: str = ""                        # empty = use module/global lang
+
     # Subtitles
     subtitle_provider: Literal["ffmpeg", "pycaps"] = "ffmpeg"
     pycaps_style: str = "hype"

@@ -61,7 +61,9 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 resp = requests.post(SPESH_URL, headers=headers, json=payload, timeout=TIMEOUT)
-                resp.raise_for_status()
+                if not resp.ok:
+                    body = resp.text[:500]
+                    raise RuntimeError(f"Spesh Audio API {resp.status_code}: {body}")
                 break
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 if attempt < MAX_RETRIES:

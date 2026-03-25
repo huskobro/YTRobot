@@ -10,8 +10,8 @@ Bu dosya, Claude AI'nın (veya diğer asistanların) bu proje üzerinde çalış
 
 ### Ana Modüller:
 1.  **Haber Bülteni (News Bulletin):** RSS/Kaynaklardan haber çekip, 16:9 veya 9:16 formatında profesyonel yayın grafiklerine sahip haber videoları üretir.
-2.  **Genel Video (YT Video):** Bir konu veya hazır script'ten yola çıkarak stok video, seslendirme ve altyazı içeren videolar üretir.
-3.  **Ürün İnceleme (Product Review):** Belirli ürünler için yapay zeka ile senaryo yazıp inceme videoları hazırlar.
+2.  **YTRobot (Genel Video):** Bir konu veya hazır script'ten yola çıkarak stok video, seslendirme ve altyazı içeren videolar üretir. Bu modülün, varsayılan ayarları kullansa bile sistemde ayrı bir modül olarak tanımlanması ve kendine ait ayarlarının/override butonlarının olması gerekmektedir.
+3.  **Ürün İnceleme (Product Review):** Belirli ürünler için yapay zeka ile senaryo yazıp inceleme videoları hazırlar.
 
 ---
 
@@ -112,6 +112,18 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
 - `clips/`: Her sahne için görsel dosyalar.
 - `metadata.json`: Başlık, açıklama ve etiketler.
 - `final_output.mp4`: Nihai video.
+
+---
+
+## 8. Bekleyen UI Geliştirmeleri ve Kritik Notlar
+
+1.  **Ayarlar Sayfası Revizyonu:** 
+    - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
+    - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
+    - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin iyileştirilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır.
+2.  **YTRobot (Genel Video) Modülü:**
+    - Bu modül şu an varsayılan ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
+    - Ayarlar sayfasında YTRobot'a özel override seçeneklerinin (kendine has ses, hız veya görsel sağlayıcı ayarları) bulunması gerekmektedir.
 
 ---
 **Not:** Bu dosya proje her değiştiğinde güncellenmeli veya taranarak hafızaya alınmalıdır.

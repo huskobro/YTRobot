@@ -117,10 +117,7 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
 
 ## 8. Bekleyen UI Geliştirmeleri ve Kritik Notlar
 
-1.  **Ayarlar Sayfası Revizyonu:** 
-    - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
-    - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
-    - **Durum:** Bu sekme eklendi; RSS kaynak ekleme/silme formu ve YTRobot modül bilgileri bu sekme altında yer almaktadır. Claude'un bu tasarımı geliştirmesi ve eksik kalan modül bazlı override ayarlarını (ses, hız vb.) buraya entegre etmesi beklenmektedir.
+    - **Durum:** Haber kaynaklarını (RSS) ekleme/yönetme arayüzü, Ayarlar -> **AI Script** sekmesi altındaki **"Bülten"** (Bulletin) modülü bölümüne entegre edilmiştir. Claude'un bu alanı daha estetik hale getirmesi ve YTRobot (Genel Video) modülü için de benzer override ayarlarını (diğer modüller gibi) tasarlayıp bu yapıya dahil etmesi beklenmektedir.
 3.  **Profesyonel Yazılımcı Gözüyle İnceleme ve Öneriler:**
     - Claude'un projeyi sadece bir yardımcı olarak değil, bir **"Senior Full-Stack Developer"** gözüyle taraması ve analiz etmesi istenmektedir.
     - **UI/UX Önerileri:** Modern tasarım trendleri, kullanıcı deneyimi iyileştirmeleri ve görsel estetik (renk paletleri, animasyonlar vb.) konularında profesyonel tavsiyeler sunmalı.

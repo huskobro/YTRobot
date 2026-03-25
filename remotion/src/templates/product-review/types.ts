@@ -62,6 +62,23 @@ export interface SceneDurations {
   verdict?: number;
 }
 
+/** Timing data for a single pro/con item (driven by audio narration) */
+export interface ItemTiming {
+  /** Frame at which this item's narration starts (relative to scene start) */
+  startFrame: number;
+  /** Frame at which this item's narration ends (relative to scene start) */
+  endFrame: number;
+}
+
+/** Per-scene narration timing — when provided, scenes and items are audio-synced */
+export interface NarrationTiming {
+  hook?: { startFrame: number; endFrame: number };
+  stats?: { startFrame: number; endFrame: number };
+  pros?: { startFrame: number; endFrame: number; items?: ItemTiming[] };
+  cons?: { startFrame: number; endFrame: number; items?: ItemTiming[] };
+  verdict?: { startFrame: number; endFrame: number };
+}
+
 export interface ProductReviewProps {
   /** The product being reviewed */
   product: ProductItem;
@@ -73,6 +90,8 @@ export interface ProductReviewProps {
   channelName?: string;
   /** Override default scene durations (in frames) */
   sceneDurations?: SceneDurations;
+  /** Audio-driven timing — when present, overrides sceneDurations */
+  narrationTiming?: NarrationTiming;
 }
 
 // ── Style Palettes ──────────────────────────────────────────────────────────

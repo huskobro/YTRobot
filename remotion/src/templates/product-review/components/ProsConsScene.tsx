@@ -6,16 +6,18 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { ProductReviewStyle, STYLE_PALETTES } from "../types";
+import { ProductReviewStyle, STYLE_PALETTES, ItemTiming } from "../types";
 
 interface Props {
   items: string[];
   type: "pros" | "cons";
   style: ProductReviewStyle;
   vertical?: boolean;
+  /** Per-item narration timing — when provided, items appear when their audio starts */
+  itemTimings?: ItemTiming[];
 }
 
-export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical }) => {
+export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical, itemTimings }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const palette = STYLE_PALETTES[style];
@@ -91,8 +93,14 @@ export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical })
         }}
       >
         {items.map((item, i) => {
-          // Staggered entrance
-          const delay = 20 + i * 18;
+          // If audio timing is provided, use narration start frame for each item
+          // Otherwise fall back to staggered static timing
+          const timing = itemTimings?.[i];
+          const delay = timing ? timing.startFrame : 20 + i * 18;
+          const isNarrating = timing
+            ? frame >= timing.startFrame && frame <= timing.endFrame
+            : false;
+
           const itemEnter = spring({
             frame: Math.max(0, frame - delay),
             fps,
@@ -101,8 +109,12 @@ export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical })
           const slideX = interpolate(itemEnter, [0, 1], [isPros ? -60 : 60, 0]);
           const itemOpacity = interpolate(itemEnter, [0, 0.3], [0, 1], { extrapolateRight: "clamp" });
 
-          // Subtle hover glow on current item
-          const isActive = frame >= delay + 10;
+          // Active glow: narrating item gets stronger highlight
+          const isActive = timing ? isNarrating : frame >= delay + 10;
+          // Pulse scale for currently narrating item
+          const pulseScale = isNarrating
+            ? interpolate(Math.sin((frame / 25) * Math.PI * 2), [-1, 1], [0.98, 1.02])
+            : 1;
 
           return (
             <div
@@ -114,11 +126,14 @@ export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical })
                 padding: vertical ? "16px 20px" : "20px 28px",
                 borderRadius: 16,
                 backgroundColor: bgColor,
-                border: `1px solid ${iconColor}${isActive ? "30" : "15"}`,
-                transform: `translateX(${slideX}px)`,
+                border: `1px solid ${iconColor}${isActive ? "40" : "15"}`,
+                transform: `translateX(${slideX}px) scale(${pulseScale})`,
                 opacity: itemOpacity,
-                boxShadow: isActive ? `0 4px 20px ${iconColor}15` : "none",
-                transition: "box-shadow 0.3s",
+                boxShadow: isNarrating
+                  ? `0 4px 24px ${iconColor}30, inset 0 0 0 1px ${iconColor}25`
+                  : isActive
+                    ? `0 4px 20px ${iconColor}15`
+                    : "none",
               }}
             >
               {/* Icon */}
@@ -127,7 +142,7 @@ export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical })
                   width: 36,
                   height: 36,
                   borderRadius: "50%",
-                  backgroundColor: `${iconColor}15`,
+                  backgroundColor: `${iconColor}${isNarrating ? "30" : "15"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -141,9 +156,9 @@ export const ProsConsScene: React.FC<Props> = ({ items, type, style, vertical })
               <span
                 style={{
                   fontSize: vertical ? 24 : 28,
-                  fontWeight: 600,
+                  fontWeight: isNarrating ? 700 : 600,
                   fontFamily: '"Montserrat", Arial, sans-serif',
-                  color: palette.text,
+                  color: isNarrating ? palette.accent : palette.text,
                   lineHeight: 1.3,
                 }}
               >

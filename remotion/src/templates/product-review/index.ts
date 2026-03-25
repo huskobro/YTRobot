@@ -5,6 +5,8 @@ export {
   type ProductReviewProps,
   type ProductReviewStyle,
   type SceneDurations,
+  type NarrationTiming,
+  type ItemTiming,
   type SubtitleEntry,
   type SubtitleWord,
   defaultProductReviewProps,

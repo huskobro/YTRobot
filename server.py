@@ -1176,31 +1176,75 @@ def start_product_review_render(body: ProductReviewRenderReq):
 
     def _do_render():
         try:
+            import re as _re
+
             comp_id = "ProductReview9x16" if body.format == "9:16" else "ProductReview"
-            width = 1080 if body.format == "9:16" else 1920
-            height = 1920 if body.format == "9:16" else 1080
 
             props = {
                 "product": body.product,
                 "style": body.style,
                 "fps": body.fps,
                 "channelName": body.channel_name,
-                "composition": comp_id,
             }
 
             _on_progress(10, "render", "Remotion render başlıyor...")
 
-            from pipeline.news_bulletin import _run_remotion_render
-            _run_remotion_render(
-                props=props,
-                composition_id=comp_id,
-                output_path=str(output_path),
-                fps=body.fps,
-                width=width,
-                height=height,
-                on_progress=lambda p, s, l: _on_progress(10 + int(p * 0.85), s, l),
-                stop_event=_stop_event,
-            )
+            remotion_dir = Path(__file__).parent / "remotion"
+            from config import settings
+            raw_out = output_path.parent / (output_path.stem + "_raw" + output_path.suffix)
+            cmd = [
+                "npx", "remotion", "render", comp_id,
+                str(raw_out.resolve()),
+                f"--props={json.dumps(props)}",
+                f"--concurrency={settings.remotion_concurrency}",
+            ]
+
+            proc = subprocess.Popen(cmd, cwd=str(remotion_dir), stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, bufsize=1)
+            if on_progress:
+                try:
+                    _on_progress(-1, "_proc", str(proc.pid))
+                except Exception:
+                    pass
+
+            _last_pct = 10
+            for line in proc.stdout:
+                print(line, end="")
+                m = _re.search(r"(\d+)\s*%", line)
+                if m:
+                    frame_pct = int(m.group(1))
+                    overall = 10 + int(frame_pct * 0.78)
+                    if overall > _last_pct:
+                        _last_pct = overall
+                        _on_progress(overall, "remotion", f"Video render: {frame_pct}%")
+                if _stop_event and _stop_event.is_set():
+                    proc.terminate()
+                    proc.wait()
+                    raise InterruptedError("Render durduruldu.")
+            proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"Remotion render failed (exit code {proc.returncode})")
+
+            # Post-process: fix color metadata for QuickTime compatibility
+            _on_progress(90, "ffmpeg", "Renk dönüşümü yapılıyor...")
+            fix_cmd = [
+                "ffmpeg", "-i", str(raw_out.resolve()),
+                "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+                "-vf", "colorspace=bt709:iall=bt470bg:fast=1,format=yuv420p",
+                "-color_range", "tv",
+                "-colorspace", "bt709",
+                "-color_trc", "bt709",
+                "-color_primaries", "bt709",
+                "-c:a", "copy",
+                str(output_path.resolve()),
+                "-y",
+            ]
+            fix_result = subprocess.run(fix_cmd, capture_output=True, text=True)
+            raw_out.unlink(missing_ok=True)
+            if fix_result.returncode != 0:
+                print(f"  [warn] color fix failed: {fix_result.stderr[-200:]}")
+                if raw_out.exists():
+                    raw_out.rename(output_path)
 
             with _product_review_jobs_lock:
                 _product_review_jobs[rid]["status"] = "completed"
@@ -1209,6 +1253,7 @@ def start_product_review_render(body: ProductReviewRenderReq):
                 _product_review_jobs[rid]["step_label"] = "Tamamlandı"
 
         except Exception as exc:
+            import traceback; traceback.print_exc()
             with _product_review_jobs_lock:
                 _product_review_jobs[rid]["status"] = "failed"
                 _product_review_jobs[rid]["error"] = str(exc)

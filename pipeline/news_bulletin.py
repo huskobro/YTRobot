@@ -83,6 +83,8 @@ class BulletinItem:
     subtext: str = ""
     image_url: str = ""
     language: str = ""
+    source_url: str = ""
+    published_date: str = ""
     duration_frames: int = 0      # filled after TTS
     audio_path: Optional[Path] = None
     subtitles: list = field(default_factory=list)  # list of SubtitleEntry dicts
@@ -380,6 +382,8 @@ def run_bulletin(
                 subtext=raw.get("subtext", ""),
                 image_url=raw.get("imageUrl", ""),
                 language=raw.get("language", default_language),
+                source_url=raw.get("sourceUrl", ""),
+                published_date=raw.get("publishedDate", ""),
             )
             # Carry category + styleOverride from server-side props if present
             bi.__dict__["category"] = (raw.get("category") or "").lower()
@@ -482,6 +486,10 @@ def run_bulletin(
                 }
                 if item.image_url:
                     entry["imageUrl"] = item.image_url
+                if item.source_url:
+                    entry["sourceUrl"] = item.source_url
+                if item.published_date:
+                    entry["publishedDate"] = item.published_date
                 style_override = item.__dict__.get("styleOverride")
                 if style_override:
                     entry["styleOverride"] = style_override
@@ -498,6 +506,12 @@ def run_bulletin(
                 "lowerThird": lower_third,
                 "tickerSettings": ticker_settings,
                 "showLive": show_live,
+                # Category flash & item intro transitions
+                "showCategoryFlash": bulletin_config.get("showCategoryFlash", False),
+                "showItemIntro": bulletin_config.get("showItemIntro", False),
+                # Source & date display
+                "showSource": bulletin_config.get("showSource", False),
+                "showDate": bulletin_config.get("showDate", False),
             }
 
             _check_stop()

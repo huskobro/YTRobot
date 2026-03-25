@@ -64,6 +64,11 @@
               :class="view==='bulletin'?'bg-red-700 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📺</span> <span x-text="t('nav_bulletin')"></span>
       </button>
+      <button @click="view='product-review'"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='product-review'?'bg-amber-600 text-white shadow-md shadow-amber-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>🛒</span> <span x-text="t('nav_product_review')"></span>
+      </button>
     </nav>
 
     <!-- Stats -->
@@ -2497,6 +2502,228 @@
       </div>
     </div>
 
+    <!-- ══ ÜRÜN İNCELEME ══════════════════════════════════════════════════ -->
+    <div x-show="view==='product-review'" class="p-6">
+      <div class="max-w-4xl mx-auto">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-white" x-text="t('pr_title')"></h1>
+          <p class="text-slate-500 text-sm mt-0.5" x-text="t('pr_subtitle')"></p>
+        </div>
+
+        <!-- Two-column layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Left: Product Info Form -->
+          <div class="space-y-4">
+            <!-- Basic Info -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <h2 class="text-sm font-bold text-amber-400 mb-4" x-text="t('pr_basic_info')"></h2>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_product_name')"></label>
+                  <input type="text" x-model="prForm.name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="Sony WH-1000XM5">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_price')"></label>
+                    <input type="number" x-model.number="prForm.price" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="1299">
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_original_price')"></label>
+                    <input type="number" x-model.number="prForm.originalPrice" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="1899">
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_currency')"></label>
+                    <select x-model="prForm.currency" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                      <option value="TL">TL</option>
+                      <option value="$">$</option>
+                      <option value="€">€</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_rating')"></label>
+                    <input type="number" x-model.number="prForm.rating" min="0" max="5" step="0.1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="4.2">
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_review_count')"></label>
+                    <input type="number" x-model.number="prForm.reviewCount" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="2847">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_category')"></label>
+                    <input type="text" x-model="prForm.category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="Kulaklık">
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_platform')"></label>
+                    <input type="text" x-model="prForm.platform" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="trendyol">
+                  </div>
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_image_url')"></label>
+                  <input type="url" x-model="prForm.imageUrl" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="https://...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Pros -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-green-400" x-text="t('pr_pros')"></h2>
+                <button @click="prForm.pros.push('')" class="text-xs text-green-400 hover:text-green-300 font-bold" x-text="t('pr_add_item')"></button>
+              </div>
+              <div class="space-y-2">
+                <template x-for="(pro, i) in prForm.pros" :key="i">
+                  <div class="flex gap-2">
+                    <span class="text-green-500 mt-2 text-sm">✓</span>
+                    <input type="text" x-model="prForm.pros[i]" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500" placeholder="Avantaj...">
+                    <button @click="prForm.pros.splice(i, 1)" class="text-red-500 hover:text-red-400 text-xs px-2">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Cons -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-red-400" x-text="t('pr_cons')"></h2>
+                <button @click="prForm.cons.push('')" class="text-xs text-red-400 hover:text-red-300 font-bold" x-text="t('pr_add_item')"></button>
+              </div>
+              <div class="space-y-2">
+                <template x-for="(con, i) in prForm.cons" :key="i">
+                  <div class="flex gap-2">
+                    <span class="text-red-500 mt-2 text-sm">✗</span>
+                    <input type="text" x-model="prForm.cons[i]" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500" placeholder="Dezavantaj...">
+                    <button @click="prForm.cons.splice(i, 1)" class="text-red-500 hover:text-red-400 text-xs px-2">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Score, Verdict, Comments, Render -->
+          <div class="space-y-4">
+            <!-- Score & Verdict -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <h2 class="text-sm font-bold text-amber-400 mb-4" x-text="t('pr_details')"></h2>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_score')"></label>
+                  <input type="range" x-model.number="prForm.score" min="1" max="10" step="0.5" class="w-full accent-amber-500">
+                  <div class="text-center text-2xl font-bold text-amber-400 mt-1" x-text="prForm.score + '/10'"></div>
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_verdict')"></label>
+                  <textarea x-model="prForm.verdict" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="Bu ürün hakkında son değerlendirme..."></textarea>
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_cta')"></label>
+                  <input type="text" x-model="prForm.ctaText" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="Linke tıkla!">
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Comments -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-blue-400" x-text="t('pr_comments')"></h2>
+                <button @click="prForm.topComments.push('')" class="text-xs text-blue-400 hover:text-blue-300 font-bold" x-text="t('pr_add_item')"></button>
+              </div>
+              <div class="space-y-2">
+                <template x-for="(c, i) in prForm.topComments" :key="i">
+                  <div class="flex gap-2">
+                    <span class="text-blue-400 mt-2 text-sm">💬</span>
+                    <input type="text" x-model="prForm.topComments[i]" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="Kullanıcı yorumu...">
+                    <button @click="prForm.topComments.splice(i, 1)" class="text-red-500 hover:text-red-400 text-xs px-2">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Render Config -->
+            <div class="bg-slate-900 border border-amber-700/40 rounded-xl p-5">
+              <h2 class="text-sm font-bold text-amber-400 mb-4">Render</h2>
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_style')"></label>
+                    <select x-model="prRenderCfg.style" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                      <option value="modern">Modern</option>
+                      <option value="dark">Dark</option>
+                      <option value="energetic">Energetic</option>
+                      <option value="minimal">Minimal</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_format')"></label>
+                    <select x-model="prRenderCfg.format" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                      <option value="16:9">16:9 (Yatay)</option>
+                      <option value="9:16">9:16 (Dikey)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_channel')"></label>
+                    <input type="text" x-model="prRenderCfg.channelName" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="YTRobot İnceleme">
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-300 mb-1 block">FPS</label>
+                    <select x-model="prRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                      <option value="30">30</option>
+                      <option value="60">60</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Render Button -->
+              <button @click="startProductReviewRender()" :disabled="prRendering || !prForm.name"
+                class="w-full mt-5 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all"
+                :class="prRendering ? 'bg-amber-800 cursor-wait' : 'bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-900/30'">
+                <span x-show="prRendering" class="animate-spin-slow">↻</span>
+                <span x-text="prRendering ? t('pr_rendering') : t('pr_start_render')"></span>
+              </button>
+
+              <!-- Progress -->
+              <template x-if="prJobId">
+                <div class="mt-4 space-y-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                          :class="prJobStatus==='completed'?'bg-green-900/60 text-green-400':prJobStatus==='failed'?'bg-red-900/60 text-red-400':'bg-blue-900/60 text-blue-400'"
+                          x-text="prJobStatus"></span>
+                    <span class="text-xs text-slate-400" x-text="prStepLabel"></span>
+                  </div>
+                  <div x-show="prJobStatus==='running'||prJobStatus==='completed'" class="space-y-1">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                      <span x-text="prProgress + '%'"></span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-500"
+                           :class="prJobStatus==='completed'?'bg-green-500':'bg-amber-500'"
+                           :style="`width:${prProgress}%`"></div>
+                    </div>
+                  </div>
+                  <!-- Download -->
+                  <a x-show="prJobStatus==='completed'"
+                     :href="'/api/product-review/download/' + prJobId" target="_blank"
+                     class="inline-flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-bold rounded-lg transition-all">
+                    <span>⬇</span> <span x-text="t('pr_download')"></span>
+                  </a>
+                  <!-- Error -->
+                  <div x-show="prJobError" class="text-xs text-red-400 bg-red-900/20 border border-red-800/40 rounded-lg p-3" x-text="prJobError"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Global Confirm Save Modal -->
@@ -2686,7 +2913,17 @@ const LANG = {
     prompt_view_default: '▸ View built-in default',
     prompt_loading: 'Loading...',
     prompt_default_placeholder: 'Leave empty to use the built-in default prompt...',
-    nav_bulletin: 'Bulletin',
+    nav_bulletin: 'Bulletin', nav_product_review: 'Product Review',
+    pr_title: 'Product Review', pr_subtitle: 'Create product review / affiliate videos',
+    pr_product_name: 'Product Name', pr_price: 'Price', pr_original_price: 'Original Price',
+    pr_currency: 'Currency', pr_rating: 'Rating', pr_review_count: 'Review Count',
+    pr_image_url: 'Product Image URL', pr_category: 'Category', pr_platform: 'Platform',
+    pr_pros: 'Advantages', pr_cons: 'Disadvantages', pr_score: 'Score (1-10)',
+    pr_verdict: 'Verdict', pr_cta: 'CTA Text', pr_comments: 'Top User Comments',
+    pr_add_item: '+ Add', pr_remove: 'Remove', pr_start_render: 'Start Render',
+    pr_rendering: 'Rendering...', pr_style: 'Visual Style', pr_format: 'Format',
+    pr_channel: 'Channel Name', pr_basic_info: 'Basic Info', pr_details: 'Details',
+    pr_download: 'Download Video',
     bulletin_title: 'News Bulletin', bulletin_subtitle: 'RSS → AI narration → video broadcast',
     bulletin_tab_sources: '📡 Sources', bulletin_tab_draft: '📝 Draft', bulletin_tab_render: '🎬 Render',
     bulletin_add_source: 'Add RSS Source',
@@ -2961,7 +3198,17 @@ const LANG = {
     prompt_view_default: '▸ Yerleşik varsayılanı görüntüle',
     prompt_loading: 'Yükleniyor...',
     prompt_default_placeholder: 'Yerleşik varsayılan promptu kullanmak için boş bırakın...',
-    nav_bulletin: 'Bülten',
+    nav_bulletin: 'Bülten', nav_product_review: 'Ürün İnceleme',
+    pr_title: 'Ürün İnceleme', pr_subtitle: 'Ürün inceleme / affiliate videoları oluşturun',
+    pr_product_name: 'Ürün Adı', pr_price: 'Fiyat', pr_original_price: 'Eski Fiyat',
+    pr_currency: 'Para Birimi', pr_rating: 'Puan', pr_review_count: 'Yorum Sayısı',
+    pr_image_url: 'Ürün Görseli URL', pr_category: 'Kategori', pr_platform: 'Platform',
+    pr_pros: 'Avantajlar', pr_cons: 'Dezavantajlar', pr_score: 'Puan (1-10)',
+    pr_verdict: 'Sonuç', pr_cta: 'CTA Metni', pr_comments: 'En İyi Kullanıcı Yorumları',
+    pr_add_item: '+ Ekle', pr_remove: 'Kaldır', pr_start_render: 'Render Başlat',
+    pr_rendering: 'Render ediliyor...', pr_style: 'Görsel Stil', pr_format: 'Format',
+    pr_channel: 'Kanal Adı', pr_basic_info: 'Temel Bilgiler', pr_details: 'Detaylar',
+    pr_download: 'Videoyu İndir',
     bulletin_title: 'Haber Bülteni', bulletin_subtitle: 'RSS → Yapay zeka anlatımı → video yayını',
     bulletin_tab_sources: '📡 Kaynaklar', bulletin_tab_draft: '📝 Taslak', bulletin_tab_render: '🎬 Render',
     bulletin_add_source: 'RSS Kaynağı Ekle',
@@ -3106,6 +3353,17 @@ function app() {
     bulletinItemStyles: {},
     bulletinCategoryOutputs: {},
     _bulletinPoll: null,
+    // Product Review state
+    prForm: {
+      name: '', price: 0, originalPrice: 0, currency: 'TL',
+      rating: 4.0, reviewCount: 0, imageUrl: '', category: '', platform: '',
+      pros: ['', '', ''], cons: ['', ''],
+      score: 7, verdict: '', ctaText: 'Linke tıkla!',
+      topComments: ['', '', ''],
+    },
+    prRenderCfg: { style: 'modern', format: '16:9', channelName: 'YTRobot İnceleme', fps: '60' },
+    prRendering: false, prJobId: null, prJobStatus: '', prJobError: '',
+    prProgress: 0, prStepLabel: '', _prPoll: null,
     _sse: null, _timer: null,
     // Bulletin presets
     bulletinPresets: [],
@@ -3791,6 +4049,66 @@ function app() {
       if (!this.bulletinJobId) return;
       await fetch(`/api/bulletin/render/${this.bulletinJobId}/resume`, { method: 'POST' });
       this.bulletinPaused = false;
+    },
+
+    // ── Product Review ────────────────────────────────────────────────
+    async startProductReviewRender() {
+      if (!this.prForm.name) return;
+      this.prRendering = true;
+      this.prJobId = null;
+      this.prJobStatus = '';
+      this.prJobError = '';
+      this.prProgress = 0;
+      this.prStepLabel = '';
+      try {
+        const product = {
+          name: this.prForm.name,
+          price: this.prForm.price || 0,
+          originalPrice: this.prForm.originalPrice || undefined,
+          currency: this.prForm.currency || 'TL',
+          rating: this.prForm.rating || 4.0,
+          reviewCount: this.prForm.reviewCount || 0,
+          imageUrl: this.prForm.imageUrl || undefined,
+          category: this.prForm.category || undefined,
+          platform: this.prForm.platform || undefined,
+          pros: this.prForm.pros.filter(p => p.trim()),
+          cons: this.prForm.cons.filter(c => c.trim()),
+          score: this.prForm.score || 7,
+          verdict: this.prForm.verdict || '',
+          ctaText: this.prForm.ctaText || undefined,
+          topComments: this.prForm.topComments.filter(c => c.trim()),
+        };
+        const r = await fetch('/api/product-review/render', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            product,
+            style: this.prRenderCfg.style,
+            format: this.prRenderCfg.format,
+            fps: parseInt(this.prRenderCfg.fps),
+            channel_name: this.prRenderCfg.channelName,
+          }),
+        });
+        if (!r.ok) { this.prRendering = false; return; }
+        const { id } = await r.json();
+        this.prJobId = id;
+        this.prJobStatus = 'running';
+        this._prPoll = setInterval(async () => {
+          try {
+            const sr = await fetch(`/api/product-review/status/${id}`);
+            const job = await sr.json();
+            this.prJobStatus = job.status;
+            this.prJobError = job.error || '';
+            this.prProgress = job.progress || 0;
+            this.prStepLabel = job.step_label || '';
+            if (job.status === 'completed' || job.status === 'failed') {
+              clearInterval(this._prPoll);
+              this.prRendering = false;
+              if (job.status === 'completed') this.prProgress = 100;
+            }
+          } catch(e) {}
+        }, 2000);
+      } catch(e) { this.prRendering = false; }
     },
   };
 }

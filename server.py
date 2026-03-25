@@ -697,20 +697,22 @@ _bulletin_jobs: dict[str, dict] = {}
 _bulletin_jobs_lock = threading.Lock()
 
 
+# Auto-map Turkish/English category names → Remotion style keys
 _AUTO_STYLE_MAP: dict = {
     "spor": "sport", "sport": "sport",
     "finans": "finance", "finance": "finance", "ekonomi": "finance", "borsa": "finance",
     "teknoloji": "tech", "tech": "tech", "dijital": "tech",
     "bilim": "science", "science": "science", "sağlık": "science", "health": "science",
     "hava": "weather", "weather": "weather", "hava durumu": "weather",
-    "eğlence": "entertainment", "entertainment": "entertainment", "magazin": "entertainment",
-    "gündem": "breaking", "breaking": "breaking", "son dakika": "breaking",
+    "eğlence": "entertainment", "entertainment": "entertainment", "magazin": "entertainment", "kültür": "entertainment",
+    "gündem": "breaking", "breaking": "breaking", "son dakika": "breaking", "acil": "breaking",
     "dünya": "corporate", "corporate": "corporate", "politika": "corporate", "siyaset": "corporate",
     "genel": "breaking", "general": "breaking",
 }
 
 
 def _resolve_auto_style(cat: str, fallback: str = "breaking") -> str:
+    """Return the Remotion style key that best matches a category name."""
     return _AUTO_STYLE_MAP.get((cat or "").lower().strip(), fallback)
 
 

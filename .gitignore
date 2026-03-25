@@ -7,3 +7,11 @@ __pycache__/
 .venv/
 remotion/node_modules/
 bulletin_history.json
+logs/
+.claude/
+node_modules/
+downloads/
+temp/
+tests/
+results/
+recordings/

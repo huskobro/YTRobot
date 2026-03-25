@@ -1,253 +1,117 @@
-# YTRobot Projesi — Claude.ai Bağlam Özeti
+# YTRobot Projesi — Claude.ai Kapsamlı Bağlam Dosyası
+
+Bu dosya, Claude AI'nın (veya diğer asistanların) bu proje üzerinde çalışırken ihtiyaç duyabileceği tüm mimari, teknolojik ve işlevsel detayları içerir. **En güncel hal (25 Mart 2026) taranarak oluşturulmuştur.**
 
 ---
 
-## Proje Nedir?
+## 1. Proje Genel Tanımı
 
-**YTRobot**, Python tabanlı bir YouTube video üretim pipeline'ıdır. Verilen bir konu veya script'ten başlayarak otomatik olarak şu adımları gerçekleştirir:
+**YTRobot**, profesyonel kalitede YouTube videolarını (Haber Bülteni, Shorts, Ürün İnceleme) tamamen otomatik veya yarı-otomatik olarak üreten Python tabanlı bir "Automated Video Production" platformudur.
 
-```
-Script → TTS (seslendirme) → Görseller → Altyazılar → Video Kompozisyonu → Final MP4
-```
-
-Proje dizini: `/Users/huseyincoskun/Downloads/Antigravity Proje/YTRobot`
-
----
-
-## Teknoloji Stack
-
-| Alan | Teknoloji |
-|------|-----------|
-| Backend API | FastAPI + Uvicorn (`server.py`) |
-| Video render | Remotion (React/TypeScript) |
-| TTS | `speshaudio` (JSON API → audio URL) |
-| Görseller | `zimage` provider |
-| Altyazı | `pycaps` (animated) veya `ffmpeg` (soft embed) |
-| Kompozisyon | MoviePy veya Remotion |
-| Frontend UI | Alpine.js + Tailwind (tek dosya: `ui/index.html`) |
-| Python env | `.venv` içinde, Python 3.14 |
+### Ana Modüller:
+1.  **Haber Bülteni (News Bulletin):** RSS/Kaynaklardan haber çekip, 16:9 veya 9:16 formatında profesyonel yayın grafiklerine sahip haber videoları üretir.
+2.  **Genel Video (YT Video):** Bir konu veya hazır script'ten yola çıkarak stok video, seslendirme ve altyazı içeren videolar üretir.
+3.  **Ürün İnceleme (Product Review):** Belirli ürünler için yapay zeka ile senaryo yazıp inceme videoları hazırlar.
 
 ---
 
-## Dizin Yapısı
+## 2. Teknoloji Stack
 
-```
-YTRobot/
-├── server.py                  # FastAPI ana sunucu
-├── config.py                  # Ayarlar ve API key'ler
-├── main.py                    # CLI entry point
-├── pipeline/
-│   ├── script.py              # Script üretimi (LLM veya manuel)
-│   ├── tts.py                 # TTS pipeline
-│   ├── visuals.py             # Görsel pipeline
-│   ├── subtitles.py           # Altyazı senkronizasyonu
-│   ├── composer.py            # Video birleştirme
-│   ├── news_fetcher.py        # RSS/OG haber çekme
-│   └── news_bulletin.py       # Haber bülteni render pipeline
-├── providers/
-│   ├── tts/                   # TTS provider'ları
-│   └── visuals/               # Görsel provider'ları
-├── remotion/
-│   └── src/templates/
-│       └── news-bulletin/     # Ana Haber Bülteni Remotion şablonu
-│           ├── NewsBulletin.tsx        # 16:9 kompozisyon
-│           ├── NewsBulletin9x16.tsx    # 9:16 (Shorts/Reels)
-│           ├── types.ts               # BulletinProps, NewsItem vb.
-│           └── components/
-│               ├── HeadlineCard.tsx
-│               ├── LowerThird.tsx
-│               ├── NewsTicker.tsx
-│               ├── StudioBackground.tsx
-│               ├── BreakingNewsOverlay.tsx
-│               ├── CategoryFlash16x9.tsx
-│               └── NewsImagePanel.tsx
-├── ui/index.html              # Alpine.js frontend (tek dosya)
-├── bulletin_sources.json      # RSS kaynak listesi
-├── bulletin_history.json      # Dedup için kullanılmış URL'ler
-└── presets/                   # Kaydedilmiş bülten preset'leri
-```
+| Katman | Teknoloji / Kütüphane | Detay |
+| :--- | :--- | :--- |
+| **Backend API** | FastAPI + Uvicorn | `server.py` (Asenkron, thread-based job yönetimi) |
+| **Core Logic** | Python 3.14 | `pipeline/` klasörü altındaki modüller |
+| **Video Rendering** | **Remotion** (Birincil) | React + TypeScript (`remotion/` klasörü) |
+| **Video Rendering** | MoviePy (İkincil) | FFmpeg tabanlı Python kütüphanesi |
+| **Frontend UI** | Alpine.js + Tailwind | `ui/index.html` (Single-file SPA approach) |
+| **LLM / AI** | Kie.ai (Gemini 2.5 Flash) | Temel script ve metadata üretimi için kullanılır |
+| **LLM / AI** | OpenAI / Anthropic | Yedek veya gelişmiş analizler için kullanılır |
+| **TTS (Seslendirme)** | SpeshAudio, OpenAI, ElevenLabs | `speshaudio` Türkçe için öncelikli tercihtir |
+| **Görseller** | ZImage, Pexels, Pixabay | Stok videolar ve AI tabanlı görseller |
+| **Altyazı** | Pycaps | CSS tabanlı modern/hareketli altyazılar |
 
 ---
 
-## Haber Bülteni Modülü (Ana Geliştirme Alanı)
-
-En aktif geliştirilen alan. Otomatik olarak RSS kaynaklarından haber çekip profesyonel yayın kalitesinde video üretir.
-
-### Render Modları (`render_mode`)
-
-- `combined` — Tüm haberler tek MP4
-- `per_category` — Her kategori ayrı MP4 (spor.mp4, finans.mp4 vb.)
-- `per_item` — Her haber ayrı MP4 (item_00.mp4, item_01.mp4 vb.)
-
-### Görsel Stiller (`style`)
-
-`breaking` | `tech` | `corporate` | `sport` | `finance` | `weather` | `science` | `entertainment` | `dark`
-
-### Kategori → Şablon Eşleştirme
-
-```json
-{"spor": "sport", "finans": "finance", "teknoloji": "tech"}
-```
-
-### Kategori Geçiş Animasyonu (`show_category_flash`)
-
-Her haber öncesinde 1.5 saniyelik fullscreen kategori flash ekranı.
-- 9:16: Dikey, yukarıdan kayan badge
-- 16:9: Yatay, soldan kayan ok-şekilli badge
-
-### Kanal Preset Sistemi
-
-Preset'ler `presets/` klasöründe JSON olarak saklanır. Her preset: network adı, stil, kategori-şablon eşleşmesi, ticker, lower third ayarlarını içerir.
-
-### Deduplication (History)
-
-`bulletin_history.json` dosyasında preset başına kullanılmış URL'ler tutulur. Draft çekerken aynı preset'te daha önce kullanılan haberler otomatik atlanır.
-
----
-
-## API Endpoint'leri
-
-```
-POST /api/bulletin/draft                    # Kaynaklardan haber çek
-POST /api/bulletin/render                   # Video render başlat
-GET  /api/bulletin/render/{bid}             # Render durumu sorgula
-POST /api/bulletin/render/{bid}/stop        # Durdur
-POST /api/bulletin/render/{bid}/pause       # Duraklat
-POST /api/bulletin/render/{bid}/resume      # Devam et
-GET  /api/bulletin/history                  # Kullanılmış URL'ler
-DELETE /api/bulletin/history/{preset}       # History temizle
-GET  /api/bulletin/sources                  # Kaynak listesi
-POST /api/bulletin/sources                  # Kaynak ekle/güncelle
-```
-
----
-
-## BulletinRenderReq Alanları (server.py)
-
-```python
-items: list                    # Seçilen haber item'ları
-network_name: str              # Kanal adı
-style: str = "breaking"        # Global görsel stil
-fps: int = 60
-format: str = "16:9"           # "16:9" veya "9:16"
-ticker: list = []
-preset_name: str = ""          # History dedup için
-category_templates: dict = {}  # {kategori: stil}
-render_mode: str = "combined"  # "combined"|"per_category"|"per_item"
-render_per_category: bool      # Deprecated — render_mode kullan
-show_category_flash: bool      # Geçiş animasyonu
-lower_third_enabled: bool
-lower_third_text: str
-ticker_enabled: bool
-ticker_speed: int
-show_live: bool
-```
-
----
-
-## Remotion Şablon Detayları
-
-### NewsItem Tipi (`types.ts`)
-
-```typescript
-interface NewsItem {
-  headline: string;
-  subtext?: string;
-  duration: number;          // frame sayısı
-  imageUrl?: string;
-  mediaUrl?: string;         // image veya video URL
-  mediaAspect?: "16:9" | "9:16" | "9:16-focus" | "1:1";
-  audioUrl?: string;
-  subtitles?: SubtitleEntry[];
-  language?: string;
-  styleOverride?: string;    // per-item stil override
-}
-```
-
-### BulletinProps (`types.ts`)
-
-```typescript
-interface BulletinProps {
-  items: NewsItem[];
-  ticker: TickerItem[];
-  networkName: string;
-  style?: "breaking" | "tech" | "corporate" | "sport" | "finance" | "weather" | "science" | "entertainment" | "dark";
-  logoUrl?: string;
-  fps?: number;
-  showLiveIndicator?: boolean;
-  showCategoryFlash?: boolean;
-}
-```
-
-### Sequence Zamanlaması (60fps)
-
-```
-Frame 0–60:   Background + network bar fade in
-Frame 20–80:  BreakingNewsOverlay (Son Dakika flash)
-Frame 90+:    Haberler sıralı
-  └─ showCategoryFlash=true ise: her haber için +90 frame flash prefix
-Ticker:       Frame 30'dan itibaren sürekli
-```
-
-### Layout Tipleri (9:16)
-
-- **Layout169**: Üst panel görsel + alt panel metin (fillHeight=true ile tam dolu)
-- **LayoutFullscreen**: Tam ekran görsel, altyazı overlay
-- **LayoutVertical**: 9:16 dikey video arka plan
-
----
-
-## Altyazı Sistemi
-
-- **Segment-anchored alignment**: Whisper segment sınırlarını metin fraksiyonlarına eşler
-- **Karaoke modu**: Kelime bazlı highlight, accent rengi kategori stilinden alınır
-- **SubtitleEntry format**: `{text, startFrame, endFrame, words?: [{word, startFrame, endFrame}]}`
-- Altyazı ve subtext **birbirini dışlar** — ikisi aynı anda gösterilmez
-
----
-
-## Frontend (Alpine.js)
-
-`ui/index.html` tek dosyadır, tüm state Alpine.js `app()` fonksiyonundadır.
-
-### Önemli State Alanları
-
-```javascript
-bulletinRenderMode: 'combined'      // render modu
-bulletinShowCategoryFlash: false    // geçiş animasyonu
-bulletinActivePreset: ''            // aktif preset adı
-categoryTemplates: {}               // {kategori: stil}
-bulletinHistory: {}                 // kullanılmış URL'ler
-bulletinSelectedSources: []         // seçili kaynak id'leri
-bulletinSelectAllSources: true
-```
-
-### Tablar
-
-1. **Draft** — Haber çek, seçim yap, render başlat
-2. **Sources** — RSS kaynakları yönet, kategori→şablon eşleştir
-3. **Presets** — Kaydedilmiş konfigürasyonlar
-4. **Settings** — Global ayarlar (lower third, ticker, live indicator vb.)
-
----
-
-## Son Yapılan Değişiklikler
-
-1. **Render modu seçici**: Tekli toggle → 3-seçenekli radio group
-2. **CategoryFlash9x16**: 9:16 için dikey kategori flash bileşeni
-3. **CategoryFlash16x9**: 16:9 için yatay ok-badge flash bileşeni
-4. **TextBlock fillHeight**: Layout169'da metin alanı tam yüksekliği doldurur
-5. **Per-item render**: Her haberi ayrı ayrı kendi stiliyle render etme
-6. **History deduplication**: Preset başına kullanılmış haberler atlanır
-7. **Kaynak seçimi**: Draft'ta hangi RSS kaynaklarının kullanılacağı seçilebilir
-8. **Render ilerleme**: %, adım etiketi, ETA, durdur/duraklat/devam kontrolleri
-
----
-
-## Sunucuyu Başlatma
+## 3. Mimari ve Dizin Yapısı
 
 ```bash
-cd "/Users/huseyincoskun/Downloads/Antigravity Proje/YTRobot"
-.venv/bin/python server.py
-# → http://localhost:8000
+YTRobot/
+├── server.py                  # FastAPI sunucusu ve API endpointleri
+├── config.py                  # Pydantic tabanlı ayar yönetimi (.env kullanılır)
+├── main.py                    # CLI entry point ve pipeline orkestrasyonu
+├── ytrobot.sh                 # Tek komutla sunucuları başlatma/durdurma scripti
+├── pipeline/                  # İş akışı mantığı
+│   ├── script.py              # Senaryo yazımı (LLM/Dikte)
+│   ├── tts.py                 # Seslendirme yönetimi
+│   ├── visuals.py             # Stok video/görsel eşleştirme
+│   ├── subtitles.py           # Altyazı senkronu (Whisper entegrasyonu)
+│   ├── composer.py            # Backendlere (Remotion/MoviePy) iş gönderme
+│   ├── news_fetcher.py        # Haber çekme ve draft temizleme
+│   └── news_bulletin.py       # Haber bültenine özel hazırlık pipeline'ı
+├── providers/                 # Dış servis entegrasyonları
+├── remotion/                  # React Tabanlı Video Motoru
+│   ├── src/templates/         # Video şablonları (News, Product Review vb.)
+│   └── src/index.ts           # Remotion giriş noktası
+├── ui/                        # Web Arayüzü
+│   └── index.html             # Alpine.js tabanlı dashboard
+├── output/                    # Üretilen her video için session klasörleri
+├── presets/                   # Kanal ayarları (JSON formatında)
+├── bulletin_sources.json      # RSS/Haber kaynakları listesi
+└── bulletin_history.json      # Kullanılmış haberleri takibi (Deduplication)
 ```
+
+---
+
+## 4. Kritik İş Akışları (Workflows)
+
+### A. Haber Bülteni (News Bulletin) Akışı
+1.  **Draft:** `news_fetcher.py` ile RSS kaynaklarından haberler çekilir. `bulletin_history.json` kullanılarak daha önce üretilmiş haberler elenir.
+2.  **Seçim:** Kullanıcı UI üzerinden haberleri seçer ve sıralar.
+3.  **Haber Grubu Hazırlığı:** Seçilen her haber için LLM ile seslendirme metni yazılır, görseller bulunur.
+4.  **Render:** 
+    - `combined`: Tüm haberler tek video.
+    - `per_category`: Haberleri kategorilerine göre bölerek birden fazla video üretir.
+    - `per_item`: Her haber için ayrı tekil video üretir.
+5.  **Görsel Şablonlar:** Kategori ismine göre (`spor` -> `sport`, `finans` -> `finance` vb.) Remotion stili otomatik seçilir.
+
+### B. Video Re-do (Yeniden Yap)
+`redo.py` scripti, mevcut bir session üzerinde sadece belirli aşamaları (örneğin sadece altyazıyı veya sadece görselleri) değiştirip tekrar render almayı sağlar.
+
+### C. Altyazı Sistemi (Subtitles)
+- **Pycaps:** Modern, "hype" stili, kelime kelime yanan altyazılar üretir.
+- **Whisper Entegrasyonu:** Ses dosyaları Whisper ile taranarak mükemmel zamanlama elde edilir.
+- **Karaoke:** Remotion şablonlarında kelime bazlı vurgulama (Karaoke) desteği vardır.
+
+---
+
+## 5. Yapılandırma ve Ortam Değişkenleri (.env)
+
+Proje çalışması için şu anahtarların `.env` dosyasında bulunması gerekir:
+- `KIEAI_API_KEY`: Gemini 2.5 Flash için temel AI anahtarı.
+- `OPENAI_API_KEY`: Alternatif LLM ve TTS için.
+- `SPESHAUDIO_API_KEY`: Türkçe seslendirme için en önemli anahtar.
+- `PEXELS_API_KEY` / `PIXABAY_API_KEY`: Stok videolar için.
+- `COMPOSER_PROVIDER`: `remotion` olarak set edilmelidir (yüksek kalite için).
+
+---
+
+## 6. Geliştiriciler (Claude) İçin İpuçları
+
+1.  **Remotion Değişiklikleri:** `remotion/src` altındaki `.tsx` dosyaları değiştirildiğinde `npm run studio` açık olduğu sürece anlık izlenebilir. Render testi için `server.py` üzerinden tetikleme yapılır.
+2.  **Log Takibi:** API hataları `logs/api.log`, Remotion hataları `logs/remotion.log` içindedir.
+3.  **Portlar:** Dashboard `8080`, Remotion Studio `3000` portunda çalışır.
+4.  **Hata Giderme:** Eğer video render'da görsel donması oluyorsa `pipeline/visuals.py` tarafında videonun süresi ile sesin süresinin eşleşip eşleşmediği (Loop/Trim) kontrol edilmelidir.
+5.  **Yeni Haber Kaynağı:** `bulletin_sources.json` dosyasına eklenen yeni bir RSS, draft sayfasında hemen görünür hale gelir.
+
+---
+
+## 7. Dosya İsimlendirme Kuralları (Output)
+`output/` klasörü altında tarih formatında (`YYYYMMDD_HHMMSS`) veya `bul_` / `pr_` ön ekiyle sessionlar oluşturulur. Her session içinde:
+- `script.json`: AI tarafından yazılan bölümler.
+- `audio/`: Her sahne için ses dosyaları.
+- `clips/`: Her sahne için görsel dosyalar.
+- `metadata.json`: Başlık, açıklama ve etiketler.
+- `final_output.mp4`: Nihai video.
+
+---
+**Not:** Bu dosya proje her değiştiğinde güncellenmeli veya taranarak hafızaya alınmalıdır.

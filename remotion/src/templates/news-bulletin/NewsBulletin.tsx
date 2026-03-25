@@ -14,6 +14,7 @@ import { HeadlineCard } from "./components/HeadlineCard";
 import { LowerThird } from "./components/LowerThird";
 import { NewsTicker } from "./components/NewsTicker";
 import { CategoryFlash16x9 } from "./components/CategoryFlash16x9";
+import { NewsItemIntro } from "./components/NewsItemIntro";
 import { CATEGORY_FLASH_DUR, CATEGORY_LABELS } from "./NewsBulletin9x16";
 
 // ── Sequence layout (at 60 fps) ─────────────────────────────────────────────
@@ -36,6 +37,8 @@ const ACCENT = {
   dark: "#94A3B8",
 };
 
+const ITEM_INTRO_DUR = 120; // 2s at 60fps
+
 export const NewsBulletin: React.FC<BulletinProps> = ({
   items,
   ticker,
@@ -43,6 +46,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   style = "breaking",
   showLiveIndicator = false,
   showCategoryFlash = false,
+  showItemIntro = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -68,12 +72,14 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   const HEADLINES_START = 90;
 
   const FLASH_DUR = showCategoryFlash ? CATEGORY_FLASH_DUR : 0;
+  const INTRO_DUR = showItemIntro ? ITEM_INTRO_DUR : 0;
   let cumulativeOffset = HEADLINES_START;
   const sequenced = items.map((item, idx) => {
     const flashFrom = cumulativeOffset;
-    const contentFrom = cumulativeOffset + FLASH_DUR;
-    cumulativeOffset += FLASH_DUR + item.duration;
-    return { item, flashFrom, contentFrom, idx };
+    const introFrom = cumulativeOffset + FLASH_DUR;
+    const contentFrom = cumulativeOffset + FLASH_DUR + INTRO_DUR;
+    cumulativeOffset += FLASH_DUR + INTRO_DUR + item.duration;
+    return { item, flashFrom, introFrom, contentFrom, idx };
   });
 
   return (
@@ -159,29 +165,38 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
         <BreakingNewsOverlay networkName={networkName} style={style} />
       </Sequence>
 
-      {/* Layer 4: Sequential headlines (with optional category flash prefix) */}
-      {sequenced.map(({ item, flashFrom, contentFrom, idx }) => (
-        <React.Fragment key={idx}>
-          {showCategoryFlash && (
-            <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
-              <CategoryFlash16x9
-                label={CATEGORY_LABELS[(item.styleOverride || style) as string] ?? String(item.styleOverride || style).toUpperCase()}
-                accent={ACCENT[(item.styleOverride || style) as keyof typeof ACCENT] ?? ACCENT[style]}
-              />
-            </Sequence>
-          )}
-          <Sequence from={contentFrom} durationInFrames={item.duration}>
-            {idx === 0 ? (
-              <HeadlineCard item={item} style={style} index={idx} />
-            ) : (
-              <>
-                <HeadlineCard item={item} style={style} index={idx} />
-                <LowerThird item={item} style={style} />
-              </>
+      {/* Layer 4: Sequential headlines (with optional category flash + item intro prefix) */}
+      {sequenced.map(({ item, flashFrom, introFrom, contentFrom, idx }) => {
+        const itemStyle = (item.styleOverride && ACCENT[item.styleOverride as keyof typeof ACCENT])
+          ? (item.styleOverride as keyof typeof ACCENT)
+          : style;
+        const itemAccent = ACCENT[itemStyle];
+        const itemLabel = CATEGORY_LABELS[itemStyle] ?? String(itemStyle).toUpperCase();
+        return (
+          <React.Fragment key={idx}>
+            {showCategoryFlash && (
+              <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
+                <CategoryFlash16x9 label={itemLabel} accent={itemAccent} />
+              </Sequence>
             )}
-          </Sequence>
-        </React.Fragment>
-      ))}
+            {showItemIntro && (
+              <Sequence from={introFrom} durationInFrames={ITEM_INTRO_DUR}>
+                <NewsItemIntro label={itemLabel} accent={itemAccent} networkName={networkName} />
+              </Sequence>
+            )}
+            <Sequence from={contentFrom} durationInFrames={item.duration}>
+              {idx === 0 ? (
+                <HeadlineCard item={item} style={itemStyle} index={idx} />
+              ) : (
+                <>
+                  <HeadlineCard item={item} style={itemStyle} index={idx} />
+                  <LowerThird item={item} style={itemStyle} hasImage={Boolean(item.mediaUrl || item.imageUrl)} />
+                </>
+              )}
+            </Sequence>
+          </React.Fragment>
+        );
+      })}
 
       {/* Layer 5: Ticker — visible from frame 30 onwards */}
       <Sequence from={30}>

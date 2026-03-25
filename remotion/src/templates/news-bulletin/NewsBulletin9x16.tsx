@@ -639,19 +639,25 @@ const CategoryFlash9x16: React.FC<{ label: string; accent: string }> = ({ label,
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const progress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
-  const slideY = interpolate(progress, [0, 1], [-100, 0]);
-  const exitOpacity = interpolate(frame, [70, 90], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const flashOpacity = interpolate(frame, [0, 6, 14, 22, 28], [0, 0.5, 0.05, 0.4, 0], { extrapolateRight: "clamp" });
+  const TOTAL = 90; // 1.5s at 60fps
+  const EXIT_START = 68;
+
+  // Enter: spring slide from top
+  const enterProgress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
+  const enterY = interpolate(enterProgress, [0, 1], [-160, 0]);
+
+  // Exit: spring slide out to bottom
+  const exitProgress = spring({ frame: Math.max(0, frame - EXIT_START), fps, config: { damping: 14, stiffness: 200 } });
+  const exitY = interpolate(exitProgress, [0, 1], [0, 300]);
+
+  const badgeY = frame < EXIT_START ? enterY : exitY;
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      {/* Accent colour flash overlay */}
-      <div style={{ position: "absolute", inset: 0, backgroundColor: accent, opacity: flashOpacity, zIndex: 1 }} />
-      {/* Category label badge */}
+      {/* Category label badge — slides in from top, exits down */}
       <div style={{
         position: "absolute", top: "42%", left: 0, right: 0,
-        transform: `translateY(${slideY}px)`, opacity: exitOpacity, zIndex: 2,
+        transform: `translateY(${badgeY}px)`,
         display: "flex", flexDirection: "column", alignItems: "center",
       }}>
         <div style={{ backgroundColor: accent, paddingTop: 20, paddingBottom: 20, paddingLeft: 72, paddingRight: 72, boxShadow: `0 0 60px ${accent}88` }}>
@@ -682,15 +688,14 @@ const BreakingFlash9x16: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const accent = ACCENT[bulletinStyle];
+  const categoryLabel = CATEGORY_LABELS[bulletinStyle] ?? "SON DAKİKA";
 
   const progress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
   const slideY = interpolate(progress, [0, 1], [-120, 0]);
   const opacity = interpolate(progress, [0, 0.5], [0, 1], { extrapolateRight: "clamp" });
-  const flashOpacity = interpolate(frame, [0, 8, 16, 24, 30], [0, 0.6, 0.1, 0.5, 0], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundColor: accent, opacity: flashOpacity, zIndex: 1 }} />
       <div style={{
         position: "absolute", top: "40%", left: 0, right: 0,
         transform: `translateY(${slideY}px)`, opacity, zIndex: 2,
@@ -698,7 +703,7 @@ const BreakingFlash9x16: React.FC<{
       }}>
         <div style={{ backgroundColor: accent, paddingTop: 24, paddingBottom: 24, paddingLeft: 80, paddingRight: 80, boxShadow: `0 0 60px ${accent}88` }}>
           <span style={{ color: "#FFFFFF", fontSize: 100, fontFamily: '"Bebas Neue","Oswald",Impact,sans-serif', letterSpacing: "0.12em", fontWeight: 900 }}>
-            SON DAKİKA
+            {categoryLabel}
           </span>
         </div>
         <div style={{ marginTop: 12 }}>
@@ -748,17 +753,26 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
     return { item, flashFrom, introFrom, contentFrom, idx };
   });
 
+  // ── Determine which item is currently active (for dynamic bar/ticker/bg style) ─
+  const activeItem = [...sequenced].reverse().find(s => frame >= s.flashFrom) ?? sequenced[0];
+  const activeStyle = activeItem
+    ? ((activeItem.item.styleOverride && ACCENT[activeItem.item.styleOverride as keyof typeof ACCENT])
+        ? (activeItem.item.styleOverride as keyof typeof ACCENT)
+        : style)
+    : style;
+  const activeAccent = ACCENT[activeStyle];
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <StudioBackground style={style} />
+      <StudioBackground style={activeStyle} />
 
-      {/* Network top bar */}
+      {/* Network top bar — accent follows active item style */}
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: NETWORK_BAR_H,
-        background: `linear-gradient(to right, ${accent} 0%, rgba(10,10,10,0.95) 70%, rgba(10,10,10,0.85) 100%)`,
+        background: `linear-gradient(to right, ${activeAccent} 0%, rgba(10,10,10,0.95) 70%, rgba(10,10,10,0.85) 100%)`,
         display: "flex", alignItems: "center", paddingLeft: 40, paddingRight: 40,
         transform: `translateY(${barY}px)`, opacity: barOpacity,
-        zIndex: 10, borderBottom: `2px solid ${accent}`, boxShadow: `0 4px 32px ${accent}44`,
+        zIndex: 10, borderBottom: `2px solid ${activeAccent}`, boxShadow: `0 4px 32px ${activeAccent}44`,
       }}>
         <span style={{
           color: "#FFFFFF", fontSize: 48,
@@ -814,9 +828,9 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
         );
       })}
 
-      {/* Ticker */}
+      {/* Ticker — follows active item style */}
       <Sequence from={30}>
-        <NewsTicker items={ticker} style={style} />
+        <NewsTicker items={ticker} style={activeStyle} />
       </Sequence>
     </AbsoluteFill>
   );

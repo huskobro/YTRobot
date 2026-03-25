@@ -82,12 +82,21 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
     return { item, flashFrom, introFrom, contentFrom, idx };
   });
 
+  // ── Determine which item is currently active (for dynamic bar/ticker style) ─
+  const activeItem = [...sequenced].reverse().find(s => frame >= s.flashFrom) ?? sequenced[0];
+  const activeStyle = activeItem
+    ? ((activeItem.item.styleOverride && ACCENT[activeItem.item.styleOverride as keyof typeof ACCENT])
+        ? (activeItem.item.styleOverride as keyof typeof ACCENT)
+        : style)
+    : style;
+  const activeAccent = ACCENT[activeStyle];
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Layer 1: Animated background */}
-      <StudioBackground style={style} />
+      {/* Layer 1: Animated background — follows active item style */}
+      <StudioBackground style={activeStyle} />
 
-      {/* Layer 2: Network top bar */}
+      {/* Layer 2: Network top bar — accent follows active item style */}
       <div
         style={{
           position: "absolute",
@@ -95,7 +104,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
           left: 0,
           right: 0,
           height: NETWORK_BAR_HEIGHT,
-          background: `linear-gradient(to right, ${accent} 0%, rgba(10,10,10,0.95) 60%, rgba(10,10,10,0.85) 100%)`,
+          background: `linear-gradient(to right, ${activeAccent} 0%, rgba(10,10,10,0.95) 60%, rgba(10,10,10,0.85) 100%)`,
           display: "flex",
           alignItems: "center",
           paddingLeft: 40,
@@ -103,8 +112,8 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
           transform: `translateY(${barY}px)`,
           opacity: barOpacity,
           zIndex: 10,
-          borderBottom: `2px solid ${accent}`,
-          boxShadow: `0 4px 32px ${accent}44`,
+          borderBottom: `2px solid ${activeAccent}`,
+          boxShadow: `0 4px 32px ${activeAccent}44`,
         }}
       >
         <span
@@ -198,9 +207,9 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
         );
       })}
 
-      {/* Layer 5: Ticker — visible from frame 30 onwards */}
+      {/* Layer 5: Ticker — visible from frame 30 onwards; follows active item style */}
       <Sequence from={30}>
-        <NewsTicker items={ticker} style={style} />
+        <NewsTicker items={ticker} style={activeStyle} />
       </Sequence>
     </AbsoluteFill>
   );

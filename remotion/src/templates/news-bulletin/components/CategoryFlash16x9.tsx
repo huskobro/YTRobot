@@ -28,13 +28,8 @@ export const CategoryFlash16x9: React.FC<Props> = ({ label, accent }) => {
 
   const badgeX = frame < EXIT_START ? enterX : exitX;
 
-  // Brief colour flash overlay
-  const flashOpacity = interpolate(frame, [0, 6, 12, 20, 26], [0, 0.5, 0.05, 0.4, 0], { extrapolateRight: "clamp" });
-
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      {/* Accent colour flash overlay */}
-      <div style={{ position: "absolute", inset: 0, backgroundColor: accent, opacity: flashOpacity }} />
 
       {/* Category badge — horizontal arrow, slides from left then out right */}
       <div style={{

@@ -1272,6 +1272,135 @@ def product_review_status(rid: str):
     return {k: v for k, v in job.items() if not k.startswith("_")}
 
 
+class ProductReviewAutofillReq(BaseModel):
+    url: str
+    lang: str = "tr"
+    master_prompt: str = ""
+
+
+@app.post("/api/product-review/autofill")
+def product_review_autofill(body: ProductReviewAutofillReq):
+    """Use Gemini to scrape product URL and return structured prForm data."""
+    import urllib.request as _req
+
+    try:
+        from config import settings as cfg
+    except Exception:
+        raise HTTPException(500, "Config not available")
+
+    # Fetch the page HTML (best-effort)
+    page_html = ""
+    try:
+        req = _req.Request(
+            body.url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; YTRobotBot/1.0)"},
+        )
+        with _req.urlopen(req, timeout=15) as resp:
+            raw = resp.read(120_000)  # first 120 KB
+            page_html = raw.decode("utf-8", errors="replace")
+    except Exception as e:
+        page_html = f"(Page could not be fetched: {e})"
+
+    # Trim HTML to keep only visible text (strip tags)
+    import re as _re
+    text_content = _re.sub(r"<[^>]+>", " ", page_html)
+    text_content = _re.sub(r"\s+", " ", text_content).strip()[:8000]
+
+    language_note = "Türkçe" if body.lang == "tr" else "English"
+    custom_prompt_block = (
+        f"\nCustom instructions: {body.master_prompt}\n" if body.master_prompt.strip() else ""
+    )
+
+    system_prompt = f"""You are a product data extractor. Given a product page URL and its text content, extract structured product information and return ONLY valid JSON matching the schema below. All text fields should be in {language_note}.
+
+Schema:
+{{
+  "name": "Product name",
+  "price": 0,
+  "originalPrice": 0,
+  "currency": "TL",
+  "rating": 4.5,
+  "reviewCount": 0,
+  "imageUrl": "",
+  "category": "",
+  "platform": "",
+  "pros": ["pro1", "pro2", "pro3"],
+  "cons": ["con1", "con2"],
+  "score": 7.5,
+  "verdict": "One sentence verdict.",
+  "ctaText": "Linke tıkla!"
+}}
+
+Rules:
+- pros: 3-5 key advantages in {language_note}, each max 10 words
+- cons: 2-4 disadvantages in {language_note}, each max 10 words
+- score: overall score 1-10 based on rating and reviews
+- verdict: compelling one-sentence product verdict in {language_note}
+- currency: detect from page (TL, $, €, £)
+- Return ONLY the JSON object, no explanation, no markdown.{custom_prompt_block}"""
+
+    user_msg = f"URL: {body.url}\n\nPage content:\n{text_content}"
+
+    # Try Gemini first, fallback to OpenAI
+    gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
+    openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+
+    result_json = None
+
+    if gemini_key:
+        try:
+            import urllib.request as _ureq
+            import json as _json
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+            payload = {
+                "contents": [{"parts": [{"text": system_prompt + "\n\n" + user_msg}]}],
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.3},
+            }
+            req2 = _ureq.Request(gemini_url, data=_json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+            with _ureq.urlopen(req2, timeout=30) as resp2:
+                gemini_resp = _json.loads(resp2.read())
+            text_out = gemini_resp["candidates"][0]["content"]["parts"][0]["text"]
+            result_json = _json.loads(text_out)
+        except Exception as e:
+            result_json = None
+
+    if result_json is None and openai_key:
+        try:
+            import urllib.request as _ureq
+            import json as _json
+            oai_payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.3,
+            }
+            req3 = _ureq.Request(
+                "https://api.openai.com/v1/chat/completions",
+                data=_json.dumps(oai_payload).encode(),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {openai_key}"},
+                method="POST",
+            )
+            with _ureq.urlopen(req3, timeout=30) as resp3:
+                oai_resp = _json.loads(resp3.read())
+            result_json = _json.loads(oai_resp["choices"][0]["message"]["content"])
+        except Exception:
+            result_json = None
+
+    if result_json is None:
+        raise HTTPException(500, "AI provider unavailable — set GEMINI_API_KEY or OPENAI_API_KEY")
+
+    # Ensure required fields
+    result_json.setdefault("pros", [])
+    result_json.setdefault("cons", [])
+    result_json.setdefault("topComments", [])
+    result_json.setdefault("score", 7)
+    result_json.setdefault("ctaText", "Linke tıkla!" if body.lang == "tr" else "Check it out!")
+    return result_json
+
+
 @app.get("/api/product-review/download/{rid}")
 def product_review_download(rid: str):
     with _product_review_jobs_lock:

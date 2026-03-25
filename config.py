@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # kie.ai — Gemini 2.5 Flash (primary for script/metadata generation)
     kieai_api_key: str = ""
 
+    # Gemini direct API (for product review autofill, etc.)
+    gemini_api_key: str = ""
+
     # Script generation
     target_audience: str = ""  # e.g. "beginner YouTubers under 1k subscribers who want to grow"
     script_humanize_with_llm: bool = False  # Gemini pass to rewrite script for natural human speech

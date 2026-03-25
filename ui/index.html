@@ -544,6 +544,10 @@
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('kieai_key')"></label>
               <input x-model="settings.KIEAI_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" />
             </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gemini API Key <span class="text-slate-500 font-normal">(Product Review Auto-fill)</span></label>
+              <input x-model="settings.GEMINI_API_KEY" type="password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition-colors" placeholder="AIza..." />
+            </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('openai_key')"></label>
@@ -2504,9 +2508,58 @@
     <!-- ══ ÜRÜN İNCELEME ══════════════════════════════════════════════════ -->
     <div x-show="view==='product-review'" class="p-6">
       <div class="max-w-4xl mx-auto">
-        <div class="mb-6">
-          <h1 class="text-2xl font-bold text-white" x-text="t('pr_title')"></h1>
-          <p class="text-slate-500 text-sm mt-0.5" x-text="t('pr_subtitle')"></p>
+        <div class="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-white" x-text="t('pr_title')"></h1>
+            <p class="text-slate-500 text-sm mt-0.5" x-text="t('pr_subtitle')"></p>
+          </div>
+          <!-- Auto / Manuel Toggle -->
+          <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl p-1 shrink-0 mt-1">
+            <button @click="prMode='auto'"
+              class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              :class="prMode==='auto' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-white'">
+              ✨ Auto
+            </button>
+            <button @click="prMode='manual'"
+              class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              :class="prMode==='manual' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-white'">
+              ✏️ <span x-text="t('pr_mode_manual')"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- AUTO MODE: URL input panel -->
+        <div x-show="prMode==='auto'" x-transition class="mb-5">
+          <div class="bg-slate-900 border border-amber-700/50 rounded-xl p-5">
+            <h2 class="text-sm font-bold text-amber-400 mb-3" x-text="t('pr_auto_title')"></h2>
+            <p class="text-xs text-slate-400 mb-4" x-text="t('pr_auto_hint')"></p>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_product_url')"></label>
+                <input type="url" x-model="prAutoUrl"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+                  :placeholder="t('pr_url_placeholder')">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_auto_prompt_label')"></label>
+                <textarea x-model="prAutoPrompt" rows="2"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+                  :placeholder="t('pr_auto_prompt_ph')"></textarea>
+              </div>
+              <div class="flex items-center gap-3">
+                <button @click="prAutoFill()"
+                  :disabled="prAutoLoading || !prAutoUrl.trim()"
+                  class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all"
+                  :class="prAutoLoading || !prAutoUrl.trim() ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/30'">
+                  <span x-show="prAutoLoading" class="animate-spin-slow">↻</span>
+                  <span x-text="prAutoLoading ? t('pr_auto_loading') : t('pr_auto_fill_btn')"></span>
+                </button>
+                <span x-show="prAutoError" class="text-xs text-red-400" x-text="prAutoError"></span>
+                <span x-show="prAutoSuccess && !prAutoLoading" class="text-xs text-green-400" x-text="t('pr_auto_success')"></span>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mt-2 ml-1" x-text="t('pr_auto_filled_note')"></p>
         </div>
 
         <!-- Two-column layout -->
@@ -2914,6 +2967,18 @@ const LANG = {
     prompt_default_placeholder: 'Leave empty to use the built-in default prompt...',
     nav_bulletin: 'Bulletin', nav_product_review: 'Product Review',
     pr_title: 'Product Review', pr_subtitle: 'Create product review / affiliate videos',
+    pr_mode_manual: 'Manual',
+    pr_auto_title: '✨ Auto — Fill from URL with AI',
+    pr_auto_hint: 'Paste the product page URL and Gemini will automatically extract product info, pros/cons, score and verdict.',
+    pr_product_url: 'Product Page URL',
+    pr_url_placeholder: 'https://www.trendyol.com/...',
+    pr_auto_prompt_label: 'Custom Instructions (optional)',
+    pr_auto_prompt_ph: 'e.g. Focus on gaming features, write in formal tone...',
+    pr_auto_fill_btn: '✨ Fill with AI',
+    pr_auto_loading: 'Analyzing...',
+    pr_auto_success: '✓ Form filled! Review and edit below.',
+    pr_auto_filled_note: 'AI filled the form below. You can edit any field before rendering.',
+    pr_auto_error_no_key: 'No AI key found. Set GEMINI_API_KEY or OPENAI_API_KEY in Settings.',
     pr_product_name: 'Product Name', pr_price: 'Price', pr_original_price: 'Original Price',
     pr_currency: 'Currency', pr_rating: 'Rating', pr_review_count: 'Review Count',
     pr_image_url: 'Product Image URL', pr_category: 'Category', pr_platform: 'Platform',
@@ -3199,6 +3264,18 @@ const LANG = {
     prompt_default_placeholder: 'Yerleşik varsayılan promptu kullanmak için boş bırakın...',
     nav_bulletin: 'Bülten', nav_product_review: 'Ürün İnceleme',
     pr_title: 'Ürün İnceleme', pr_subtitle: 'Ürün inceleme / affiliate videoları oluşturun',
+    pr_mode_manual: 'Manuel',
+    pr_auto_title: '✨ Otomatik — URL\'den Yapay Zeka ile Doldur',
+    pr_auto_hint: 'Ürün sayfasının URL\'sini yapıştırın; Gemini ürün bilgilerini, avantaj/dezavantajları, puanı ve sonucu otomatik dolduracak.',
+    pr_product_url: 'Ürün Sayfası URL',
+    pr_url_placeholder: 'https://www.trendyol.com/...',
+    pr_auto_prompt_label: 'Özel Talimatlar (isteğe bağlı)',
+    pr_auto_prompt_ph: 'örn. Oyun özelliklerine odaklan, resmi bir üslup kullan...',
+    pr_auto_fill_btn: '✨ Yapay Zeka ile Doldur',
+    pr_auto_loading: 'Analiz ediliyor...',
+    pr_auto_success: '✓ Form dolduruldu! Aşağıdan inceleyip düzenleyebilirsiniz.',
+    pr_auto_filled_note: 'Yapay zeka aşağıdaki formu doldurdu. Render\'dan önce istediğiniz alanı düzenleyebilirsiniz.',
+    pr_auto_error_no_key: 'Yapay zeka anahtarı bulunamadı. Ayarlar\'dan GEMINI_API_KEY veya OPENAI_API_KEY girin.',
     pr_product_name: 'Ürün Adı', pr_price: 'Fiyat', pr_original_price: 'Eski Fiyat',
     pr_currency: 'Para Birimi', pr_rating: 'Puan', pr_review_count: 'Yorum Sayısı',
     pr_image_url: 'Ürün Görseli URL', pr_category: 'Kategori', pr_platform: 'Platform',
@@ -3353,6 +3430,8 @@ function app() {
     bulletinCategoryOutputs: {},
     _bulletinPoll: null,
     // Product Review state
+    prMode: 'auto',
+    prAutoUrl: '', prAutoPrompt: '', prAutoLoading: false, prAutoError: '', prAutoSuccess: false,
     prForm: {
       name: '', price: 0, originalPrice: 0, currency: 'TL',
       rating: 4.0, reviewCount: 0, imageUrl: '', category: '', platform: '',
@@ -4051,6 +4130,36 @@ function app() {
     },
 
     // ── Product Review ────────────────────────────────────────────────
+    async prAutoFill() {
+      if (!this.prAutoUrl.trim()) return;
+      this.prAutoLoading = true;
+      this.prAutoError = '';
+      this.prAutoSuccess = false;
+      try {
+        const r = await fetch('/api/product-review/autofill', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ url: this.prAutoUrl.trim(), lang: this.lang, master_prompt: this.prAutoPrompt }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          this.prAutoError = err.detail || 'Hata oluştu';
+        } else {
+          const data = await r.json();
+          // Merge into prForm
+          const fields = ['name','price','originalPrice','currency','rating','reviewCount','imageUrl','category','platform','score','verdict','ctaText'];
+          for (const f of fields) { if (data[f] !== undefined) this.prForm[f] = data[f]; }
+          if (Array.isArray(data.pros) && data.pros.length) this.prForm.pros = data.pros;
+          if (Array.isArray(data.cons) && data.cons.length) this.prForm.cons = data.cons;
+          if (Array.isArray(data.topComments) && data.topComments.length) this.prForm.topComments = data.topComments;
+          this.prAutoSuccess = true;
+          // Switch to manual view to show filled form
+          this.prMode = 'manual';
+        }
+      } catch(e) { this.prAutoError = String(e); }
+      this.prAutoLoading = false;
+    },
+
     async startProductReviewRender() {
       if (!this.prForm.name) return;
       this.prRendering = true;

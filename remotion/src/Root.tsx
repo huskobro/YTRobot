@@ -4,6 +4,13 @@ import { Composition } from "remotion";
 import { YTRobotComposition } from "./Composition";
 import { CompositionProps } from "./types";
 import { NewsBulletin, NewsBulletin9x16, defaultBulletinProps, BulletinProps } from "./templates/news-bulletin";
+import {
+  ProductReview,
+  ProductReview9x16,
+  defaultProductReviewProps,
+  calculateDurations,
+  type ProductReviewProps,
+} from "./templates/product-review";
 
 const defaultProps: CompositionProps = {
   scenes: [],
@@ -86,6 +93,44 @@ export const RemotionRoot: React.FC = () => {
           width: 1080,
           height: 1920,
         })}
+      />
+      <AnyComposition
+        id="ProductReview"
+        component={ProductReview}
+        durationInFrames={1890}
+        fps={60}
+        width={1920}
+        height={1080}
+        defaultProps={defaultProductReviewProps}
+        calculateMetadata={({ props }: { props: ProductReviewProps }) => {
+          const dur = calculateDurations(props.product, props.sceneDurations, props.fps ?? 60);
+          const total = dur.hook + dur.stats + dur.pros + dur.cons + dur.verdict;
+          return {
+            durationInFrames: Math.max(total, 60),
+            fps: props.fps ?? 60,
+            width: 1920,
+            height: 1080,
+          };
+        }}
+      />
+      <AnyComposition
+        id="ProductReview9x16"
+        component={ProductReview9x16}
+        durationInFrames={1890}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={defaultProductReviewProps}
+        calculateMetadata={({ props }: { props: ProductReviewProps }) => {
+          const dur = calculateDurations(props.product, props.sceneDurations, props.fps ?? 60);
+          const total = dur.hook + dur.stats + dur.pros + dur.cons + dur.verdict;
+          return {
+            durationInFrames: Math.max(total, 60),
+            fps: props.fps ?? 60,
+            width: 1080,
+            height: 1920,
+          };
+        }}
       />
     </>
   );

@@ -489,6 +489,12 @@
             <span>📺</span>
             <span x-text="t('settings_module_bulletin')"></span>
           </button>
+          <button @click="settingsModule='product_review'"
+                  class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                  :class="settingsModule==='product_review' ? 'bg-amber-600 text-white shadow-md shadow-amber-900/40' : 'text-slate-400 hover:text-white'">
+            <span>🛒</span>
+            <span x-text="t('settings_module_product_review')"></span>
+          </button>
         </div>
 
         <!-- Presets -->
@@ -1878,6 +1884,97 @@
           </div>
         </div>
 
+        <!-- ══ PRODUCT REVIEW SETTINGS (settingsModule==='product_review') ══════════ -->
+        <div x-show="settingsModule==='product_review'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div class="flex items-center justify-between cursor-pointer" @click="open=!open">
+            <h2 class="text-sm font-bold text-slate-300">🛒 Ürün İnceleme Genel</h2>
+            <span class="text-slate-500 text-xs" x-text="open?'▲':'▼'"></span>
+          </div>
+          <div x-show="open" x-transition class="mt-4 space-y-4">
+            <!-- Style -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">Görsel Stil</div>
+                <p class="text-xs text-slate-500">Video için görsel tema</p>
+              </div>
+              <select x-model="settings.PR_STYLE"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                <option value="modern">Modern</option>
+                <option value="dark">Dark</option>
+                <option value="energetic">Energetic</option>
+                <option value="minimal">Minimal</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <!-- Format -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">Video Formatı</div>
+                <p class="text-xs text-slate-500">16:9 (YouTube) veya 9:16 (Shorts/Reels/TikTok)</p>
+              </div>
+              <select x-model="settings.PR_FORMAT"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                <option value="16:9">16:9 (Yatay)</option>
+                <option value="9:16">9:16 (Dikey)</option>
+              </select>
+            </div>
+            <!-- FPS -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">FPS</div>
+                <p class="text-xs text-slate-500">Kare hızı</p>
+              </div>
+              <select x-model="settings.PR_FPS"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                <option value="30">30 fps</option>
+                <option value="60">60 fps</option>
+              </select>
+            </div>
+            <!-- Channel Name -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">Kanal Adı</div>
+                <p class="text-xs text-slate-500">Videolarda gösterilecek kanal adı</p>
+              </div>
+              <input type="text" x-model="settings.PR_CHANNEL_NAME"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-48 focus:outline-none focus:border-amber-500"
+                placeholder="YTRobot İnceleme">
+            </div>
+            <!-- Currency -->
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">Para Birimi</div>
+                <p class="text-xs text-slate-500">Varsayılan para birimi</p>
+              </div>
+              <select x-model="settings.PR_CURRENCY"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                <option value="TL">TL</option>
+                <option value="$">$</option>
+                <option value="€">€</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Review: CTA Settings -->
+        <div x-show="settingsModule==='product_review'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div class="flex items-center justify-between cursor-pointer" @click="open=!open">
+            <h2 class="text-sm font-bold text-slate-300">🔗 CTA (Call to Action)</h2>
+            <span class="text-slate-500 text-xs" x-text="open?'▲':'▼'"></span>
+          </div>
+          <div x-show="open" x-transition class="mt-4 space-y-4">
+            <div class="flex items-center justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5">Varsayılan CTA Metni</div>
+                <p class="text-xs text-slate-500">Videonun sonunda gösterilecek aksiyon çağrısı</p>
+              </div>
+              <input type="text" x-model="settings.PR_CTA_TEXT"
+                class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-48 focus:outline-none focus:border-amber-500"
+                placeholder="Linke tıkla!">
+            </div>
+          </div>
+        </div>
+
         <button @click="handleSaveSettings()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/30 transition-all"
                 x-text="t('save_settings')"></button>
       </div>
@@ -2667,7 +2764,7 @@ const LANG = {
     prompt_bulletin_narration_label: '1 · Bulletin Narration Prompt',
     prompt_bulletin_narration_hint: 'Controls how the AI summarizes and narrates news items for TTS.',
     anim_desc_hype: 'Zoom up', anim_desc_explosive: 'Slide left', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Fade', anim_desc_none: 'Static',
-    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bulletin',
+    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bulletin', settings_module_product_review: 'Product Review',
     section_bulletin_tts: '🔊 Bulletin TTS', bulletin_tts_fallback_note: 'Override TTS settings for the Bulletin pipeline. Leave Provider empty to inherit the main TTS settings.',
     bulletin_tts_provider_label: 'TTS Provider', bulletin_tts_inherit: '— Inherit from YTRobot —',
     bulletin_tts_voice_label: 'Voice ID', bulletin_tts_default: '— Default Voice —',
@@ -2942,7 +3039,7 @@ const LANG = {
     prompt_bulletin_narration_label: '1 · Bülten Anlatım Promptu',
     prompt_bulletin_narration_hint: 'Yapay zekanın haber öğelerini TTS için nasıl özetleyip anlattığını kontrol eder.',
     anim_desc_hype: 'Zoom yukarı', anim_desc_explosive: 'Sola kaydır', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Solma', anim_desc_none: 'Statik',
-    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bülten',
+    settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bülten', settings_module_product_review: 'Ürün İnceleme',
     section_bulletin_tts: '🔊 Bülten TTS', bulletin_tts_fallback_note: 'Bülten pipeline\'ı için TTS ayarlarını geçersiz kılın. Sağlayıcıyı boş bırakırsanız ana TTS ayarları devralınır.',
     bulletin_tts_provider_label: 'TTS Sağlayıcı', bulletin_tts_inherit: '— YTRobot\'tan Devral —',
     bulletin_tts_voice_label: 'Ses ID', bulletin_tts_default: '— Varsayılan Ses —',
@@ -3221,6 +3318,13 @@ function app() {
       if (this.settings.BULLETIN_CATEGORY_MAPPING) {
         try { this.categoryTemplates = JSON.parse(this.settings.BULLETIN_CATEGORY_MAPPING); } catch(e) { this.categoryTemplates = {}; }
       }
+      // Product Review defaults
+      if (!this.settings.PR_STYLE) this.settings.PR_STYLE = 'modern';
+      if (!this.settings.PR_FORMAT) this.settings.PR_FORMAT = '16:9';
+      if (!this.settings.PR_FPS) this.settings.PR_FPS = '60';
+      if (!this.settings.PR_CHANNEL_NAME) this.settings.PR_CHANNEL_NAME = 'YTRobot İnceleme';
+      if (!this.settings.PR_CURRENCY) this.settings.PR_CURRENCY = 'TL';
+      if (!this.settings.PR_CTA_TEXT) this.settings.PR_CTA_TEXT = 'Linke tıkla!';
       await Promise.all([this.loadPrompts(), this.loadPresets(), this.loadBulletinSources()]);
     },
 

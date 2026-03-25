@@ -1121,6 +1121,125 @@ async def stream_logs(sid: str):
     )
 
 
+# ── Product Review / Affiliate Video ─────────────────────────────────────────
+
+PRODUCT_REVIEW_DIR = Path("output/product_reviews")
+
+_product_review_jobs: dict = {}
+_product_review_jobs_lock = threading.Lock()
+
+
+class ProductReviewRenderReq(BaseModel):
+    product: dict
+    style: str = "modern"
+    fps: int = 60
+    format: str = "16:9"
+    channel_name: str = "YTRobot"
+
+
+@app.post("/api/product-review/render")
+def start_product_review_render(body: ProductReviewRenderReq):
+    import secrets as _secrets
+    import time as _time
+
+    rid = "pr_" + _secrets.token_hex(6)
+    PRODUCT_REVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = PRODUCT_REVIEW_DIR / f"{rid}.mp4"
+
+    _stop_event = threading.Event()
+    with _product_review_jobs_lock:
+        _product_review_jobs[rid] = {
+            "id": rid, "status": "running", "output": None, "error": None,
+            "progress": 0, "step": "init", "step_label": "Başlatılıyor...",
+            "started_at": _time.time(), "eta": None,
+            "_stop": _stop_event, "_pid": None,
+        }
+
+    def _on_progress(progress: int, step: str, step_label: str):
+        import time as _t
+        with _product_review_jobs_lock:
+            job = _product_review_jobs.get(rid)
+            if not job:
+                return
+            if progress == -1 and step == "_proc":
+                try:
+                    job["_pid"] = int(step_label)
+                except Exception:
+                    pass
+                return
+            job["progress"] = progress
+            job["step"] = step
+            job["step_label"] = step_label
+            elapsed = _t.time() - job["started_at"]
+            if progress > 2:
+                job["eta"] = round(elapsed / progress * (100 - progress))
+
+    def _do_render():
+        try:
+            comp_id = "ProductReview9x16" if body.format == "9:16" else "ProductReview"
+            width = 1080 if body.format == "9:16" else 1920
+            height = 1920 if body.format == "9:16" else 1080
+
+            props = {
+                "product": body.product,
+                "style": body.style,
+                "fps": body.fps,
+                "channelName": body.channel_name,
+                "composition": comp_id,
+            }
+
+            _on_progress(10, "render", "Remotion render başlıyor...")
+
+            from pipeline.news_bulletin import _run_remotion_render
+            _run_remotion_render(
+                props=props,
+                composition_id=comp_id,
+                output_path=str(output_path),
+                fps=body.fps,
+                width=width,
+                height=height,
+                on_progress=lambda p, s, l: _on_progress(10 + int(p * 0.85), s, l),
+                stop_event=_stop_event,
+            )
+
+            with _product_review_jobs_lock:
+                _product_review_jobs[rid]["status"] = "completed"
+                _product_review_jobs[rid]["output"] = str(output_path)
+                _product_review_jobs[rid]["progress"] = 100
+                _product_review_jobs[rid]["step_label"] = "Tamamlandı"
+
+        except Exception as exc:
+            with _product_review_jobs_lock:
+                _product_review_jobs[rid]["status"] = "failed"
+                _product_review_jobs[rid]["error"] = str(exc)
+                _product_review_jobs[rid]["step_label"] = f"Hata: {exc}"
+
+    threading.Thread(target=_do_render, daemon=True).start()
+    return {"id": rid, "status": "running"}
+
+
+@app.get("/api/product-review/status/{rid}")
+def product_review_status(rid: str):
+    with _product_review_jobs_lock:
+        job = _product_review_jobs.get(rid)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return {k: v for k, v in job.items() if not k.startswith("_")}
+
+
+@app.get("/api/product-review/download/{rid}")
+def product_review_download(rid: str):
+    with _product_review_jobs_lock:
+        job = _product_review_jobs.get(rid)
+    if not job or not job.get("output"):
+        raise HTTPException(404, "Output not found")
+    out = Path(job["output"])
+    if not out.exists():
+        raise HTTPException(404, "File not found")
+    from fastapi.responses import FileResponse
+    return FileResponse(str(out), media_type="video/mp4", filename=out.name)
+
+
 @app.get("/")
 def serve_ui():
     html_path = Path(__file__).parent / "ui" / "index.html"

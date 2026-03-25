@@ -42,7 +42,26 @@ class Settings(BaseSettings):
     yt_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     yt_tts_similarity_boost: float = -1.0
     yt_tts_style: float = -1.0
+    yt_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
+    yt_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
+    yt_tts_trim_silence: bool | None = None         # None = use tts_trim_silence
+
+    # YT Video-specific Script Settings
+    yt_script_humanize_with_llm: bool | None = None  # None = use script_humanize_with_llm
+
+    # YT Video-specific Visuals & Composition (optional; falls back to global if empty/sentinel)
     yt_visuals_provider: str = ""      # empty = use visuals_provider
+    yt_remotion_subtitle_font: str = ""        # empty = use remotion_subtitle_font
+    yt_remotion_subtitle_size: int = 0         # 0 = use remotion_subtitle_size
+    yt_remotion_subtitle_color: str = ""       # empty = use remotion_subtitle_color
+    yt_remotion_subtitle_bg: str = ""          # empty = use remotion_subtitle_bg
+    yt_remotion_subtitle_stroke: int = -1      # -1 = use remotion_subtitle_stroke
+    yt_remotion_video_effect: str = ""         # empty = use remotion_video_effect
+    yt_remotion_subtitle_animation: str = ""   # empty = use remotion_subtitle_animation
+    yt_remotion_ken_burns_zoom: float = -1.0   # -1 = use remotion_ken_burns_zoom
+    yt_remotion_ken_burns_direction: str = ""  # empty = use remotion_ken_burns_direction
+    yt_remotion_karaoke_enabled: bool | None = None   # None = use remotion_karaoke_enabled
+    yt_remotion_karaoke_color: str = ""        # empty = use remotion_karaoke_color
 
     # Bulletin-specific TTS (optional; falls back to global TTS if empty/sentinel)
     bulletin_tts_provider: str = ""          # empty = use tts_provider
@@ -52,7 +71,12 @@ class Settings(BaseSettings):
     bulletin_tts_similarity_boost: float = -1.0
     bulletin_tts_style: float = -1.0
     bulletin_tts_language: str = ""          # empty = global provider default
+    bulletin_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
+    bulletin_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
+    bulletin_tts_trim_silence: bool | None = None         # None = use tts_trim_silence
 
+    # Bulletin-specific Script Settings
+    bulletin_script_humanize_with_llm: bool | None = None  # None = use script_humanize_with_llm
 
     # Bulletin persistent render settings
     bulletin_network_name: str = "YTRobot Haber"
@@ -90,6 +114,14 @@ class Settings(BaseSettings):
     pr_tts_voice_id: str = ""          # empty = provider default voice
     pr_tts_speed: float = 0.0          # 0.0 = use tts_speed
     pr_tts_language: str = ""          # empty = global provider default
+    pr_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
+    pr_tts_similarity_boost: float = -1.0
+    pr_tts_style: float = -1.0
+    pr_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
+    pr_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
+    pr_tts_trim_silence: bool | None = None         # None = use tts_trim_silence
+    pr_script_humanize_with_llm: bool | None = None  # None = use script_humanize_with_llm
+    pr_auto_generate_tts: bool = True          # Auto-generate TTS on render if audio missing
     pr_master_prompt: str = ""         # default AI extraction instructions
     pr_ai_language: str = ""           # empty = use UI lang setting
     pr_style: str = "modern"

@@ -668,11 +668,20 @@
       <div class="max-w-3xl mx-auto">
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h1 class="text-2xl font-bold text-white" x-text="t('settings_title')"></h1>
+            <div class="flex items-center gap-3">
+              <h1 class="text-2xl font-bold text-white" x-text="t('settings_title')"></h1>
+              <span x-show="settingsChanged" class="text-xs px-2 py-1 bg-amber-900/40 text-amber-300 rounded-full animate-pulse">Kaydedilmemiş değişiklikler</span>
+            </div>
             <p class="text-slate-500 text-sm mt-0.5" x-text="t('settings_subtitle')"></p>
           </div>
-          <button @click="handleSaveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all font-sans"
-                  x-text="t('save_settings')"></button>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="autoSaveEnabled" class="w-4 h-4 accent-indigo-500 cursor-pointer rounded" />
+              <span>Otomatik Kayıt</span>
+            </label>
+            <button @click="handleSaveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all font-sans"
+                    x-text="t('save_settings')"></button>
+          </div>
         </div>
 
         <div x-show="settingsSaved" x-transition class="mb-4 px-4 py-3 bg-green-900/30 border border-green-700/50 rounded-xl text-sm text-green-400 flex items-center gap-2"
@@ -704,7 +713,7 @@
 
         <!-- ══ TTS TAB ══════════════════════════════════════════════════ -->
 
-        <!-- TTS — Section 1: Varsayılan Seslendirme (open) -->
+        <!-- TTS — Section 1: Global Seslendirme (open) -->
         <div x-show="settingsModule==='tts'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
             <div class="flex items-center gap-2">
@@ -717,7 +726,7 @@
             <!-- Provider -->
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('provider_label')"></label>
-              <select x-model="settings.TTS_PROVIDER" @change="voicesList=[]" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+              <select x-model="settings.TTS_PROVIDER" @change="voicesList=[];triggerAutoSave()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
                 <option value="speshaudio">Spesh Audio</option>
                 <option value="elevenlabs">ElevenLabs</option>
                 <option value="openai">OpenAI TTS</option>
@@ -865,15 +874,29 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <p class="text-xs text-indigo-300/60 mb-2" x-text="t('bulletin_override_label')"></p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-indigo-300/60" x-text="t('bulletin_override_label')"></p>
+                  <button @click="
+                    settings.YT_TTS_PROVIDER = '';
+                    settings.YT_TTS_VOICE_ID = '';
+                    settings.YT_TTS_SPEED = 0;
+                    settings.YT_TTS_LANGUAGE = '';
+                    settings.YT_TTS_STABILITY = -1;
+                    settings.YT_TTS_SIMILARITY_BOOST = -1;
+                    settings.YT_TTS_STYLE = -1;
+                  " class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">
+                    Reset
+                  </button>
+                </div>
                 <div>
                   <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">TTS Sağlayıcı</label>
                   <select x-model="settings.YT_TTS_PROVIDER" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="">(Varsayılandan devral)</option>
+                    <option value="">(↑ Global ayardan devral)</option>
                     <option value="speshaudio">SpesAudio</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="openai">OpenAI TTS</option>
                   </select>
+                  <span x-show="settings.YT_TTS_PROVIDER && settings.YT_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Voice ID</label>
@@ -883,8 +906,8 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center mb-1">
-                    <label class="text-xs font-semibold text-indigo-300/80">Hız (0 = varsayılan)</label>
-                    <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_SPEED||0)===0?'(varsayılan)':parseFloat(settings.YT_TTS_SPEED).toFixed(2)+'×'"></span>
+                    <label class="text-xs font-semibold text-indigo-300/80">Hız (0 = global)</label>
+                    <span class="text-xs font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_SPEED||0)===0?'(global)':parseFloat(settings.YT_TTS_SPEED).toFixed(2)+'×'"></span>
                   </div>
                   <input type="range" x-model="settings.YT_TTS_SPEED" min="0" max="2.0" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
                   <div class="flex justify-between text-xs text-slate-600 mt-0.5"><span>0 (global)</span><span>1.0</span><span>2.0</span></div>
@@ -910,6 +933,29 @@
                     <input type="range" x-model="settings.YT_TTS_STYLE" min="-1" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
                   </div>
                 </div>
+                <!-- Advanced TTS & Script Options -->
+                <div class="pt-3 border-t border-indigo-800/30 space-y-2">
+                  <div class="text-xs font-semibold text-indigo-400/60 uppercase tracking-wider">Gelişmiş TTS & Script Ayarları</div>
+                  <div class="flex gap-2 flex-wrap">
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/40 rounded-lg bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.YT_TTS_ENHANCE_WITH_LLM" class="w-3.5 h-3.5 accent-indigo-500 cursor-pointer rounded" />
+                      <span class="text-xs text-indigo-300/90">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/40 rounded-lg bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.YT_SCRIPT_HUMANIZE_WITH_LLM" class="w-3.5 h-3.5 accent-indigo-500 cursor-pointer rounded" />
+                      <span class="text-xs text-indigo-300/90">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/40 rounded-lg bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.YT_TTS_TRIM_SILENCE" class="w-3.5 h-3.5 accent-indigo-500 cursor-pointer rounded" />
+                      <span class="text-xs text-indigo-300/90">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/40 rounded-lg bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.YT_TTS_REMOVE_APOSTROPHES" class="w-3.5 h-3.5 accent-indigo-500 cursor-pointer rounded" />
+                      <span class="text-xs text-indigo-300/90">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                  <p class="text-xs text-indigo-400/40">Vurgu/duraklama, doğal konuşma, sessizlik kırpma ve apostrof temizleme</p>
+                </div>
               </div>
             </div>
             <!-- Sub-accordion: Bülten -->
@@ -922,7 +968,20 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-red-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <p class="text-xs text-slate-500" x-text="t('bulletin_override_label')"></p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-slate-500" x-text="t('bulletin_override_label')"></p>
+                  <button @click="
+                    settings.BULLETIN_TTS_PROVIDER = '';
+                    settings.BULLETIN_TTS_VOICE_ID = '';
+                    settings.BULLETIN_TTS_SPEED = 0;
+                    settings.BULLETIN_TTS_LANGUAGE = '';
+                    settings.BULLETIN_TTS_STABILITY = -1;
+                    settings.BULLETIN_TTS_SIMILARITY_BOOST = -1;
+                    settings.BULLETIN_TTS_STYLE = -1;
+                  " class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">
+                    Reset
+                  </button>
+                </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_provider_label')"></label>
                   <select x-model="settings.BULLETIN_TTS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
@@ -931,6 +990,7 @@
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="openai">OpenAI TTS</option>
                   </select>
+                  <span x-show="settings.BULLETIN_TTS_PROVIDER && settings.BULLETIN_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-900/40 text-red-300 rounded-full">✓ Override Aktif</span>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
@@ -991,6 +1051,29 @@
                     </div>
                   </div>
                 </div>
+                <!-- Advanced TTS & Script Options for Bulletin -->
+                <div class="pt-3 border-t border-red-800/30 space-y-2">
+                  <div class="text-xs font-semibold text-red-400/60 uppercase tracking-wider">Gelişmiş TTS & Script Ayarları</div>
+                  <div class="flex gap-2 flex-wrap">
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/40 rounded-lg bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_ENHANCE_WITH_LLM" class="w-3.5 h-3.5 accent-red-500 cursor-pointer rounded" />
+                      <span class="text-xs text-red-300/90">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/40 rounded-lg bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.BULLETIN_SCRIPT_HUMANIZE_WITH_LLM" class="w-3.5 h-3.5 accent-red-500 cursor-pointer rounded" />
+                      <span class="text-xs text-red-300/90">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/40 rounded-lg bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_TRIM_SILENCE" class="w-3.5 h-3.5 accent-red-500 cursor-pointer rounded" />
+                      <span class="text-xs text-red-300/90">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/40 rounded-lg bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_REMOVE_APOSTROPHES" class="w-3.5 h-3.5 accent-red-500 cursor-pointer rounded" />
+                      <span class="text-xs text-red-300/90">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                  <p class="text-xs text-red-400/40">Vurgu/duraklama, doğal konuşma, sessizlik kırpma ve apostrof temizleme</p>
+                </div>
               </div>
             </div>
             <!-- Sub-accordion: Ürün İnceleme -->
@@ -1003,21 +1086,30 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-amber-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <p class="text-xs text-slate-500" x-text="t('pr_override_label')"></p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-slate-500" x-text="t('pr_override_label')"></p>
+                  <button @click="
+                    settings.PR_TTS_PROVIDER = '';
+                    settings.PR_TTS_SPEED = 0;
+                    settings.PR_TTS_LANGUAGE = '';
+                    settings.PR_TTS_STABILITY = settings.SPESHAUDIO_STABILITY || 0.3;
+                    settings.PR_TTS_SIMILARITY = settings.SPESHAUDIO_SIMILARITY_BOOST || 0.5;
+                    settings.PR_TTS_STYLE = settings.SPESHAUDIO_STYLE || 0.75;
+                    settings.PR_OPENAI_TTS_VOICE = '';
+                    triggerAutoSave();
+                  " class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">
+                    Reset
+                  </button>
+                </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5">TTS Sağlayıcı</label>
                   <select x-model="settings.PR_TTS_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
-                    <option value="">(Global TTS kullan)</option>
+                    <option value="">(↑ Global TTS kullan)</option>
                     <option value="openai">OpenAI TTS</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="speshaudio">SpesAudio</option>
                   </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Voice ID</label>
-                  <input type="text" x-model="settings.PR_TTS_VOICE_ID"
-                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 font-mono"
-                    placeholder="(provider default)">
+                  <span x-show="settings.PR_TTS_PROVIDER && settings.PR_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-amber-900/40 text-amber-300 rounded-full">✓ Override Aktif</span>
                 </div>
                 <div x-show="settings.PR_TTS_PROVIDER==='openai'">
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5">OpenAI Ses</label>
@@ -1045,25 +1137,52 @@
                   <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">SpesAudio / ElevenLabs</div>
                   <div>
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Stability</label>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_STABILITY" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="(+settings.PR_TTS_STABILITY||0.3).toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_STABILITY.toFixed(2)"></span>
+                      <button @click="settings.PR_TTS_STABILITY = settings.SPESHAUDIO_STABILITY || 0.3; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Similarity Boost</label>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_SIMILARITY" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="(+settings.PR_TTS_SIMILARITY||0.5).toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_SIMILARITY.toFixed(2)"></span>
+                      <button @click="settings.PR_TTS_SIMILARITY = settings.SPESHAUDIO_SIMILARITY_BOOST || 0.5; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Style</label>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_STYLE" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-10 text-right" x-text="(+settings.PR_TTS_STYLE||0.75).toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_STYLE.toFixed(2)"></span>
+                      <button @click="settings.PR_TTS_STYLE = settings.SPESHAUDIO_STYLE || 0.75; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>
+                </div>
+
+                <!-- Advanced TTS & Script Settings -->
+                <div class="pt-3 border-t border-amber-800/30 space-y-2">
+                  <div class="text-xs font-semibold text-amber-400/60 uppercase tracking-wider">Gelişmiş TTS & Script Ayarları</div>
+                  <div class="flex gap-2 flex-wrap">
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-amber-800/40 rounded-lg bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.PR_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 cursor-pointer rounded" />
+                      <span class="text-xs text-amber-300/90">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-amber-800/40 rounded-lg bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.PR_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 cursor-pointer rounded" />
+                      <span class="text-xs text-amber-300/90">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-amber-800/40 rounded-lg bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.PR_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 cursor-pointer rounded" />
+                      <span class="text-xs text-amber-300/90">Sessizlik Kırp</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 px-3 py-2 border border-amber-800/40 rounded-lg bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
+                      <input type="checkbox" x-model="settings.PR_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 cursor-pointer rounded" />
+                      <span class="text-xs text-amber-300/90">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                  <p class="text-xs text-amber-400/40">Vurgu/duraklama, doğal konuşma, sessizlik kırpma ve apostrof temizleme</p>
                 </div>
               </div>
             </div>
@@ -1384,6 +1503,27 @@
                   </div>
                 </div>
               </div>
+              <!-- Subtitle Provider -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Altyazı Sağlayıcısı (Sadece MoviePy)</label>
+                <select x-model="settings.SUBTITLE_PROVIDER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="ffmpeg">FFmpeg (Basit altyazı)</option>
+                  <option value="pycaps">Pycaps (Modern animasyonlu altyazı)</option>
+                </select>
+                <p class="text-xs text-slate-500 mt-1">
+                  <strong>Not:</strong> Bu ayar sadece "Compositor: MoviePy" seçildiğinde kullanılır.
+                  Remotion kullanıyorsanız, altyazılar yukarıdaki "Subtitle Font/Size/Color/Animation" ayarlarıyla otomatik olarak render edilir.
+                </p>
+              </div>
+              <!-- Pycaps Style (only shown when pycaps selected) -->
+              <div x-show="settings.SUBTITLE_PROVIDER==='pycaps'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Pycaps Stil (Sadece MoviePy+Pycaps)</label>
+                <select x-model="settings.PYCAPS_STYLE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                  <option value="hype">Hype (Dinamik, enerji dolu)</option>
+                  <option value="minimal">Minimal (Sade, profesyonel)</option>
+                  <option value="explosive">Explosive (Patlayıcı efektler)</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -1399,22 +1539,92 @@
           </div>
           <div x-show="open" class="mt-4 space-y-3">
             <!-- Sub-accordion: YT Video -->
-            <div x-data="{open:false}" class="border border-indigo-800/50 rounded-lg">
-              <div @click="open=!open" class="flex items-center justify-between p-3 cursor-pointer">
-                <span class="text-sm font-semibold text-slate-300">▶ <span x-text="t('module_yt_video')"></span></span>
-                <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            <div x-data="{open:false}" class="border border-indigo-800/50 rounded-lg bg-indigo-950/20">
+              <div @click="open=!open" class="flex items-center justify-between p-3 cursor-pointer rounded-lg">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs px-2 py-0.5 bg-indigo-900/60 border border-indigo-700/60 text-indigo-300 rounded-full font-bold">▶ YT</span>
+                  <span class="text-sm font-semibold text-indigo-200" x-text="t('module_yt_video')"></span>
+                </div>
+                <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
-                <p class="text-xs text-indigo-300/60 mb-1">Görsel Kaynak ve Kompozisyon &amp; Efektler bölümleri YT Video pipeline için geçerlidir. Aşağıdaki ayarlar YT Video'ya özgün override'lardır.</p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-indigo-300/60">YT Video modülü için özel görsel ve kompozisyon ayarları. Boş bırakılan ayarlar global ayarlardan devralınır.</p>
+                  <button @click="
+                    settings.YT_VISUALS_PROVIDER = '';
+                    settings.YT_REMOTION_SUBTITLE_FONT = '';
+                    settings.YT_REMOTION_SUBTITLE_SIZE = 0;
+                    settings.YT_REMOTION_SUBTITLE_COLOR = '';
+                    settings.YT_REMOTION_VIDEO_EFFECT = '';
+                    settings.YT_REMOTION_SUBTITLE_ANIMATION = '';
+                  " class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors">
+                    Reset
+                  </button>
+                </div>
                 <div>
-                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Görsel Sağlayıcı Override</label>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Görsel Sağlayıcı</label>
                   <select x-model="settings.YT_VISUALS_PROVIDER" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
-                    <option value="">(Varsayılandan devral)</option>
+                    <option value="">(↑ Global ayardan devral)</option>
                     <option value="pexels">Pexels</option>
                     <option value="pixabay">Pixabay</option>
                     <option value="zimage">ZImage (AI)</option>
                     <option value="dalle">DALL-E</option>
                   </select>
+                  <span x-show="settings.YT_VISUALS_PROVIDER && settings.YT_VISUALS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Altyazı Font Override</label>
+                  <select x-model="settings.YT_REMOTION_SUBTITLE_FONT" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="">(↑ Global ayardan devral)</option>
+                    <option value="bebas">Bebas Neue</option>
+                    <option value="montserrat">Montserrat</option>
+                    <option value="oswald">Oswald</option>
+                    <option value="roboto">Roboto</option>
+                    <option value="inter">Inter</option>
+                    <option value="serif">Serif (Georgia)</option>
+                    <option value="sans">Sans (Arial)</option>
+                  </select>
+                  <span x-show="settings.YT_REMOTION_SUBTITLE_FONT && settings.YT_REMOTION_SUBTITLE_FONT !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Altyazı Boyutu (0 = global)</label>
+                  <div class="flex items-center gap-3">
+                    <input type="range" x-model="settings.YT_REMOTION_SUBTITLE_SIZE" min="0" max="100" step="4" class="flex-1 accent-indigo-500 cursor-pointer" />
+                    <span class="text-sm font-mono text-indigo-400 w-16 text-right" x-text="(+settings.YT_REMOTION_SUBTITLE_SIZE||0)===0?'(global)':(settings.YT_REMOTION_SUBTITLE_SIZE+'px')"></span>
+                  </div>
+                  <span x-show="(+settings.YT_REMOTION_SUBTITLE_SIZE||0) > 0" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Altyazı Rengi</label>
+                  <div class="flex gap-2 items-center">
+                    <input type="color" x-model="settings.YT_REMOTION_SUBTITLE_COLOR" class="w-10 h-10 bg-slate-800 border border-indigo-700 rounded-lg cursor-pointer" />
+                    <input type="text" x-model="settings.YT_REMOTION_SUBTITLE_COLOR" placeholder="(Global renk)" class="flex-1 bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                  </div>
+                  <span x-show="settings.YT_REMOTION_SUBTITLE_COLOR && settings.YT_REMOTION_SUBTITLE_COLOR !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Video Efekti</label>
+                  <select x-model="settings.YT_REMOTION_VIDEO_EFFECT" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="">(↑ Global ayardan devral)</option>
+                    <option value="none">Yok</option>
+                    <option value="vignette">Vignette</option>
+                    <option value="warm">Warm</option>
+                    <option value="cool">Cool</option>
+                    <option value="cinematic">Cinematic</option>
+                  </select>
+                  <span x-show="settings.YT_REMOTION_VIDEO_EFFECT && settings.YT_REMOTION_VIDEO_EFFECT !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Altyazı Animasyonu</label>
+                  <select x-model="settings.YT_REMOTION_SUBTITLE_ANIMATION" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="">(↑ Global ayardan devral)</option>
+                    <option value="hype">Hype</option>
+                    <option value="explosive">Explosive</option>
+                    <option value="vibrant">Vibrant</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="none">None</option>
+                  </select>
+                  <span x-show="settings.YT_REMOTION_SUBTITLE_ANIMATION && settings.YT_REMOTION_SUBTITLE_ANIMATION !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
                 </div>
               </div>
             </div>
@@ -1817,7 +2027,7 @@
 
         <!-- ══ AI TAB ══════════════════════════════════════════════════ -->
 
-        <!-- AI — Section 1: Varsayılan AI Ayarları (open) -->
+        <!-- AI — Section 1: Global AI Ayarları (open) -->
         <div x-show="settingsModule==='ai'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
           <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
             <div class="flex items-center gap-2">
@@ -1883,9 +2093,9 @@
                     </summary>
                     <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.script_system || t('prompt_loading')"></pre>
                   </details>
-                  <textarea x-model="prompts.script_system" rows="10" spellcheck="false"
+                  <textarea x-model="prompts.script_system" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
-                    :placeholder="t('prompt_default_placeholder')"></textarea>
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
                 <!-- Script Humanize Prompt -->
                 <div class="border border-slate-800 rounded-xl p-4">
@@ -1901,9 +2111,9 @@
                     </summary>
                     <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.script_humanize || t('prompt_loading')"></pre>
                   </details>
-                  <textarea x-model="prompts.script_humanize" rows="8" spellcheck="false"
+                  <textarea x-model="prompts.script_humanize" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
-                    :placeholder="t('prompt_default_placeholder')"></textarea>
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
                 <!-- Metadata Prompt -->
                 <div class="border border-slate-800 rounded-xl p-4">
@@ -1918,9 +2128,9 @@
                     </summary>
                     <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.metadata_system || t('prompt_loading')"></pre>
                   </details>
-                  <textarea x-model="prompts.metadata_system" rows="8" spellcheck="false"
+                  <textarea x-model="prompts.metadata_system" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
-                    :placeholder="t('prompt_default_placeholder')"></textarea>
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
                 <!-- TTS Enhance Prompt -->
                 <div class="border border-slate-800 rounded-xl p-4">
@@ -1935,9 +2145,9 @@
                     </summary>
                     <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.tts_enhance || t('prompt_loading')"></pre>
                   </details>
-                  <textarea x-model="prompts.tts_enhance" rows="7" spellcheck="false"
+                  <textarea x-model="prompts.tts_enhance" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
-                    :placeholder="t('prompt_default_placeholder')"></textarea>
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
               </div>
             </div>
@@ -1968,9 +2178,9 @@
                     </summary>
                     <pre class="mt-2 p-3 bg-slate-950 rounded-lg text-xs text-slate-400 font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed" x-text="promptDefaults.bulletin_narration || t('bulletin_narration_default_fallback')"></pre>
                   </details>
-                  <textarea x-model="prompts.bulletin_narration" rows="7" spellcheck="false"
+                  <textarea x-model="prompts.bulletin_narration" rows="1" spellcheck="false"
                     class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-red-500 transition-colors resize-y leading-relaxed"
-                    :placeholder="t('prompt_default_placeholder')"></textarea>
+                    placeholder="Yerleşik varsayılan promptu kullanmak için boş bırakın... (Genişletmek için aşağıya çekin)"></textarea>
                 </div>
               </div>
             </div>
@@ -1985,10 +2195,11 @@
               </div>
               <div x-show="open" class="px-3 pb-3 space-y-3">
                 <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Master Prompt</label>
-                  <textarea x-model="settings.PR_MASTER_PROMPT" rows="4"
-                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 resize-y"
-                    placeholder="Örn: Ürünü Türk alıcılar için değerlendir..."></textarea>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Master Prompt (Ürün URL'sinden Bilgi Çıkarma)</label>
+                  <textarea x-model="settings.PR_MASTER_PROMPT" rows="1"
+                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 resize-y font-mono"
+                    placeholder="Boş bırakılırsa varsayılan AI talimatları kullanılır... (Genişletmek için aşağıya çekin)"></textarea>
+                  <p class="text-xs text-slate-500 mt-1">AI'nın ürün URL'sinden nasıl bilgi çıkaracağını özelleştirin. Örn: "Türk alıcılar için fiyat/performans odaklı değerlendir"</p>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5">AI Çıktı Dili</label>
@@ -1997,6 +2208,17 @@
                     <option value="tr">Türkçe</option>
                     <option value="en">English</option>
                   </select>
+                </div>
+
+                <!-- Auto-generate TTS on render -->
+                <div class="pt-3 border-t border-amber-800/30">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="settings.PR_AUTO_GENERATE_TTS" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 cursor-pointer rounded" />
+                    <div class="flex-1">
+                      <span class="text-sm text-slate-300 font-medium">Render Sırasında Otomatik TTS Oluştur</span>
+                      <p class="text-xs text-slate-500 mt-0.5">Render edilirken ses dosyası yoksa otomatik olarak TTS oluşturulur (ses oluştur butonuna basmayı unutsanız bile)</p>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -2833,10 +3055,11 @@
                   :placeholder="t('pr_url_placeholder')">
               </div>
               <div>
-                <label class="text-xs font-semibold text-slate-300 mb-1 block" x-text="t('pr_auto_prompt_label')"></label>
-                <textarea x-model="prAutoPrompt" rows="2"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 resize-none"
-                  :placeholder="t('pr_auto_prompt_ph')"></textarea>
+                <label class="text-xs font-semibold text-slate-300 mb-1 block">Master Prompt (Özel AI Talimatları - İsteğe Bağlı)</label>
+                <textarea x-model="prAutoPrompt" rows="1"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 resize-y"
+                  placeholder="Boş bırakılırsa varsayılan AI talimatları kullanılır. Özel talimat girmek için buraya yazın ve genişletmek için sürükleyin..."></textarea>
+                <p class="text-xs text-slate-500 mt-1">AI'nın ürün URL'sinden nasıl bilgi çıkaracağını özelleştirmek için kullanın. Boş bırakılabilir.</p>
               </div>
               <div class="flex items-center gap-3 flex-wrap">
                 <button @click="prAutoFill()"
@@ -3029,6 +3252,16 @@
                   <div class="bg-slate-800/40 border border-purple-700/40 rounded-xl p-5">
                     <h2 class="text-sm font-bold text-purple-400 mb-3" x-text="t('pr_tts_title')"></h2>
                     <p class="text-xs text-slate-400 mb-3" x-text="t('pr_tts_hint')"></p>
+
+                    <!-- Auto-generate TTS on render -->
+                    <label class="flex items-center gap-2 px-3 py-2.5 mb-3 border border-purple-700/40 rounded-lg bg-purple-950/20 cursor-pointer hover:bg-purple-900/20 transition-colors">
+                      <input type="checkbox" x-model="prAutoGenerateTTS" class="w-4 h-4 accent-purple-500 cursor-pointer rounded" />
+                      <div class="flex-1">
+                        <span class="text-sm text-purple-300 font-medium">Otomatik TTS Oluştur</span>
+                        <p class="text-xs text-purple-400/60 mt-0.5">Render sırasında ses yoksa otomatik oluşturulur</p>
+                      </div>
+                    </label>
+
                     <div class="space-y-3">
                       <!-- Audio URL override -->
                       <div>
@@ -3488,7 +3721,7 @@ const LANG = {
     settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bulletin', settings_module_product_review: 'Product Review',
     section_bulletin_tts: '🔊 Bulletin TTS', bulletin_tts_fallback_note: 'Override TTS settings for the Bulletin pipeline. Leave Provider empty to inherit the main TTS settings.',
     bulletin_tts_provider_label: 'TTS Provider', bulletin_tts_inherit: '— Inherit from YTRobot —',
-    bulletin_tts_voice_label: 'Voice ID', bulletin_tts_default: '— Default Voice —',
+    bulletin_tts_voice_label: 'Voice ID', bulletin_tts_default: '— Global Voice —',
     bulletin_tts_manual_voice_ph: 'Enter manual Voice ID...',
     bulletin_fetch_voices: 'Fetch Voices',
     bulletin_tts_speed_label: 'Speed', bulletin_tts_inherit_hint: 'Using inherited speed from YTRobot settings.',
@@ -3865,7 +4098,7 @@ const LANG = {
     settings_module_ytrobot: 'YTRobot', settings_module_bulletin: 'Bülten', settings_module_product_review: 'Ürün İnceleme',
     section_bulletin_tts: '🔊 Bülten TTS', bulletin_tts_fallback_note: 'Bülten pipeline\'ı için TTS ayarlarını geçersiz kılın. Sağlayıcıyı boş bırakırsanız ana TTS ayarları devralınır.',
     bulletin_tts_provider_label: 'TTS Sağlayıcı', bulletin_tts_inherit: '— YTRobot\'tan Devral —',
-    bulletin_tts_voice_label: 'Ses ID', bulletin_tts_default: '— Varsayılan Ses —',
+    bulletin_tts_voice_label: 'Ses ID', bulletin_tts_default: '— Global Ses —',
     bulletin_tts_manual_voice_ph: 'Manuel Ses ID girin...',
     bulletin_fetch_voices: 'Sesleri Getir',
     bulletin_tts_speed_label: 'Hız', bulletin_tts_inherit_hint: 'YTRobot ayarlarından devralınan hız kullanılıyor.',
@@ -3897,13 +4130,13 @@ const LANG = {
     settings_tab_ai: 'AI & Script',
     settings_tab_social: 'Sosyal Medya',
     settings_tab_system: 'Sistem',
-    tts_default_section: 'Varsayılan Seslendirme',
+    tts_default_section: 'Global Seslendirme',
     tts_module_overrides: 'Modül Overrideları',
     tts_voice_library: 'Ses Kütüphanesi',
     visuals_source_section: 'Görsel Kaynak',
     visuals_compose_section: 'Kompozisyon & Efektler',
     visuals_module_overrides: 'Modül Stil Overrideları',
-    ai_default_section: 'Varsayılan AI Ayarları',
+    ai_default_section: 'Global AI Ayarları',
     ai_module_section: 'Modül Bazlı Ayarlar',
     system_output_section: 'Çıktı Ayarları',
     system_subtitle_section: 'Altyazı',
@@ -3913,8 +4146,8 @@ const LANG = {
     module_product_review: 'Ürün İnceleme',
     override_hint_ytv: 'YT Video varsayılan TTS ayarlarını kullanır.',
     override_hint_ytv_visuals: 'YT Video Remotion ayarlarını doğrudan kullanır.',
-    bulletin_override_label: 'Bülten için farklı ayar (boş = varsayılan kullanılır)',
-    pr_override_label: 'Ürün İnceleme için farklı ayar (boş = varsayılan kullanılır)',
+    bulletin_override_label: 'Bülten için farklı ayar (boş = global kullanılır)',
+    pr_override_label: 'Ürün İnceleme için farklı ayar (boş = global kullanılır)',
     go_to_api_keys: 'API Anahtarları Sayfasına Git',
     go_to_social_meta: 'Sosyal Medya Sekmesine Git',
   }
@@ -3930,6 +4163,7 @@ function app() {
     newTopic: '', newScriptFile: '', notes: '', logLines: [],
     submitting: false, runError: '',
     settingsSaved: false, notesSaved: false, metaCopied: false, promptsSaved: false,
+    settingsChanged: false, autoSaveTimeout: null, autoSaveEnabled: true,
     voicesList: [], voicesLoading: false, voicesFetchError: '', voicesProvider: '',
     presets: [], presetName: '', presetSaved: false, selectedPreset: '',
     filter: 'all',
@@ -3963,6 +4197,7 @@ function app() {
     prManualOpen: false,
     prAutoUrl: '', prAutoPrompt: '', prAutoLoading: false, prAutoError: '', prAutoSuccess: false,
     prTtsLoading: false, prTtsError: '', prTtsAudioUrl: '', prTtsNarration: '',
+    prAutoGenerateTTS: true,  // Auto-generate TTS on render if audio missing
     prForm: {
       name: '', price: 0, originalPrice: 0, currency: 'TL',
       rating: 4.0, reviewCount: 0, imageUrl: '', galleryUrls: [],
@@ -4203,6 +4438,7 @@ function app() {
       if (this.settings.PR_TTS_STYLE === undefined) this.settings.PR_TTS_STYLE = 0.75;
       if (this.settings.PR_MASTER_PROMPT === undefined) this.settings.PR_MASTER_PROMPT = '';
       if (this.settings.PR_AI_LANGUAGE === undefined) this.settings.PR_AI_LANGUAGE = '';
+      if (this.settings.PR_AUTO_GENERATE_TTS === undefined) this.settings.PR_AUTO_GENERATE_TTS = true;
       // Sync PR render config from settings
       if (this.settings.PR_STYLE)        this.prRenderCfg.style = this.settings.PR_STYLE;
       if (this.settings.PR_FORMAT)       this.prRenderCfg.format = this.settings.PR_FORMAT;
@@ -4211,6 +4447,7 @@ function app() {
       if (this.settings.PR_CURRENCY)     this.prForm.currency = this.settings.PR_CURRENCY;
       if (this.settings.PR_CTA_TEXT)     this.prForm.ctaText = this.settings.PR_CTA_TEXT;
       if (this.settings.PR_MASTER_PROMPT) this.prAutoPrompt = this.settings.PR_MASTER_PROMPT;
+      if (this.settings.PR_AUTO_GENERATE_TTS !== undefined) this.prAutoGenerateTTS = this.settings.PR_AUTO_GENERATE_TTS;
     },
 
     async saveSettings() {
@@ -4221,8 +4458,20 @@ function app() {
       this.settings.BULLETIN_FPS          = String(this.bulletinRenderCfg.fps);
       this.settings.BULLETIN_NETWORK_NAME = this.bulletinRenderCfg.network_name;
       this.settings.BULLETIN_CATEGORY_MAPPING = JSON.stringify(this.categoryTemplates);
+      // Mirror Product Review auto-generate TTS setting
+      this.settings.PR_AUTO_GENERATE_TTS = this.prAutoGenerateTTS;
       await fetch('/api/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.settings }) });
-      this.settingsSaved = true; setTimeout(() => this.settingsSaved = false, 3000);
+      this.settingsSaved = true; this.settingsChanged = false;
+      setTimeout(() => this.settingsSaved = false, 3000);
+    },
+
+    triggerAutoSave() {
+      if (!this.autoSaveEnabled) return;
+      this.settingsChanged = true;
+      if (this.autoSaveTimeout) clearTimeout(this.autoSaveTimeout);
+      this.autoSaveTimeout = setTimeout(() => {
+        this.saveSettings();
+      }, 2000); // 2 saniye debounce
     },
 
     handleSaveSettings() {
@@ -4478,18 +4727,28 @@ function app() {
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.settings),
+        body: JSON.stringify({ values: this.settings }),
       });
       keyTests[provider] = 'loading';
       keyTests[provider + '_msg'] = '';
       try {
         const r = await fetch(`/api/test-key/${provider}`, { method: 'POST' });
+
+        // Check if response is JSON
+        const contentType = r.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await r.text();
+          keyTests[provider] = 'error';
+          keyTests[provider + '_msg'] = `Server hatası (HTTP ${r.status}): ${text.substring(0, 100)}`;
+          return;
+        }
+
         const data = await r.json();
         keyTests[provider] = data.status === 'ok' ? 'ok' : 'error';
         keyTests[provider + '_msg'] = data.message || '';
       } catch(err) {
         keyTests[provider] = 'error';
-        keyTests[provider + '_msg'] = err.message;
+        keyTests[provider + '_msg'] = `Bağlantı hatası: ${err.message}`;
       }
     },
 
@@ -4858,6 +5117,8 @@ function app() {
             format: this.prRenderCfg.format,
             fps: parseInt(this.prRenderCfg.fps),
             channel_name: this.prRenderCfg.channelName,
+            auto_generate_tts: this.prAutoGenerateTTS,
+            lang: this.lang,
           }),
         });
         if (!r.ok) { this.prRendering = false; return; }

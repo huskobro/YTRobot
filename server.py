@@ -14,7 +14,7 @@ from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="YTRobot")
@@ -1177,6 +1177,8 @@ class ProductReviewRenderReq(BaseModel):
     fps: int = 60
     format: str = "16:9"
     channel_name: str = "YTRobot"
+    auto_generate_tts: bool = True
+    lang: str = "tr"
 
 
 @app.post("/api/product-review/render")
@@ -1219,6 +1221,113 @@ def start_product_review_render(body: ProductReviewRenderReq):
     def _do_render():
         try:
             import re as _re
+
+            # Auto-generate TTS if enabled and audio URL is missing
+            if body.auto_generate_tts and not body.product.get("audioUrl"):
+                _on_progress(5, "tts", "Otomatik TTS oluşturuluyor...")
+                try:
+                    from config import settings as cfg
+                    import time as _time
+                    from pipeline.tts import _load_provider as _tts_load
+                    from providers.tts.base import clean_for_tts
+
+                    # Build narration (same logic as /api/product-review/tts)
+                    p = body.product
+                    lang_note = "Türkçe" if body.lang == "tr" else "English"
+
+                    name = p.get("name", "Bu ürün")
+                    price = p.get("price", 0)
+                    original_price = p.get("originalPrice", 0)
+                    currency = p.get("currency", "TL")
+                    rating = p.get("rating", 0)
+                    review_count = p.get("reviewCount", 0)
+                    score = p.get("score", 7)
+                    verdict = p.get("verdict", "")
+                    pros = p.get("pros", [])
+                    cons = p.get("cons", [])
+                    cta = p.get("ctaText", "Linke tıkla!")
+
+                    if body.lang == "tr":
+                        discount_line = ""
+                        if original_price and original_price > price:
+                            discount_pct = round((original_price - price) / original_price * 100)
+                            discount_line = f" Normalde {original_price} {currency} olan bu ürün şu an {price} {currency}'ye satılıyor, yüzde {discount_pct} indirimle."
+                        else:
+                            discount_line = f" Fiyatı {price} {currency}."
+
+                        pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
+                        cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
+
+                        narration = (
+                            f"Merhaba! Bugün {name} inceliyoruz.{discount_line} "
+                            f"{review_count} yorum ve {rating} üzerinden {rating} yıldız aldı. "
+                            f"Artıları: {pros_text} "
+                            f"Eksileri: {cons_text} "
+                            f"Genel puanımız: 10 üzerinden {score}. "
+                            f"{verdict} "
+                            f"{cta}"
+                        )
+                    else:
+                        discount_line = ""
+                        if original_price and original_price > price:
+                            discount_pct = round((original_price - price) / original_price * 100)
+                            discount_line = f" Originally {original_price} {currency}, now {price} {currency} — {discount_pct}% off."
+                        else:
+                            discount_line = f" Priced at {price} {currency}."
+
+                        pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
+                        cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
+
+                        narration = (
+                            f"Hey! Today we're reviewing the {name}.{discount_line} "
+                            f"It has {review_count} reviews and a {rating} star rating. "
+                            f"Pros: {pros_text} "
+                            f"Cons: {cons_text} "
+                            f"Our overall score: {score} out of 10. "
+                            f"{verdict} "
+                            f"{cta}"
+                        )
+
+                    # Generate audio
+                    audio_filename = f"pr_tts_{int(_time.time()*1000)}.mp3"
+                    audio_path = PRODUCT_REVIEW_DIR / audio_filename
+
+                    # Load PR-specific TTS settings
+                    pr_tts_provider = os.environ.get("PR_TTS_PROVIDER") or getattr(cfg, "pr_tts_provider", "")
+                    pr_tts_speed = float(os.environ.get("PR_TTS_SPEED", 0) or getattr(cfg, "pr_tts_speed", 0))
+                    pr_tts_language = os.environ.get("PR_TTS_LANGUAGE") or getattr(cfg, "pr_tts_language", "")
+                    pr_tts_stability = float(os.environ.get("PR_TTS_STABILITY", -1) or -1)
+                    pr_tts_similarity = float(os.environ.get("PR_TTS_SIMILARITY", -1) or -1)
+                    pr_tts_style = float(os.environ.get("PR_TTS_STYLE", -1) or -1)
+                    pr_openai_voice = os.environ.get("PR_OPENAI_TTS_VOICE") or getattr(cfg, "pr_openai_tts_voice", "")
+
+                    # Patch settings temporarily
+                    _orig = {}
+                    def _patch(key, val):
+                        if val:
+                            _orig[key] = getattr(cfg, key, None)
+                            object.__setattr__(cfg, key, val)
+
+                    if pr_tts_speed > 0: _patch("tts_speed", pr_tts_speed)
+                    if pr_tts_language: _patch("speshaudio_language", pr_tts_language)
+                    if pr_tts_stability >= 0: _patch("speshaudio_stability", pr_tts_stability)
+                    if pr_tts_similarity >= 0: _patch("speshaudio_similarity_boost", pr_tts_similarity)
+                    if pr_tts_style >= 0: _patch("speshaudio_style", pr_tts_style)
+                    if pr_openai_voice: _patch("openai_tts_voice", pr_openai_voice)
+
+                    try:
+                        provider = _tts_load(pr_tts_provider if pr_tts_provider else None)
+                        cleaned = clean_for_tts(narration, remove_apostrophes=cfg.tts_remove_apostrophes)
+                        provider.synthesize(cleaned, audio_path)
+                        # Update product dict with generated audio URL
+                        body.product["audioUrl"] = f"/api/product-review/audio/{audio_filename}"
+                    finally:
+                        for k, v in _orig.items():
+                            object.__setattr__(cfg, k, v)
+
+                except Exception as e:
+                    print(f"[WARN] Auto-TTS generation failed: {e}")
+                    # Continue with render even if TTS fails
 
             comp_id = "ProductReview9x16" if body.format == "9:16" else "ProductReview"
 
@@ -1723,8 +1832,8 @@ def test_api_key(provider: str):
     import urllib.request as _req
     cfg = Settings()
 
-    def ok(msg=""): return {"status": "ok", "message": msg or "✓ Bağlantı başarılı"}
-    def fail(msg): return {"status": "error", "message": msg}
+    def ok(msg=""): return JSONResponse({"status": "ok", "message": msg or "✓ Bağlantı başarılı"})
+    def fail(msg): return JSONResponse({"status": "error", "message": msg})
 
     try:
         if provider == "kieai":

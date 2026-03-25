@@ -120,7 +120,7 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
 1.  **Ayarlar Sayfası Revizyonu:** 
     - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
     - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
-    - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin iyileştirilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır.
+    - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin eski ayar penceresinde olduğu gibi korunması iyileştirilmesi için öneriler verilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır. Buna ek olarak ayarlar sayfasında o modül ile ilgili kullanılan tüm ayarlar yer almalıdır. 
 2.  **YTRobot (Genel Video) Modülü ve Ayar Ayrımı:**
     - Bu modül şu an varsayılan (global) ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
     - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden tamamen ayrı yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.

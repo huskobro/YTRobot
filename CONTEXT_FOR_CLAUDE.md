@@ -121,9 +121,13 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
     - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
     - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
     - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin iyileştirilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır.
-2.  **YTRobot (Genel Video) Modülü:**
-    - Bu modül şu an varsayılan ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
-    - Ayarlar sayfasında YTRobot'a özel override seçeneklerinin (kendine has ses, hız veya görsel sağlayıcı ayarları) bulunması gerekmektedir.
+2.  **YTRobot (Genel Video) Modülü ve Ayar Ayrımı:**
+    - Bu modül şu an varsayılan (global) ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
+    - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden tamamen ayrı yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.
+    - Ayarlar sayfasında YTRobot'a özel override seçeneklerinin bulunması gerekmektedir.
+3.  **Profesyonel Yazılımcı Gözüyle İnceleme:**
+    - Claude'un projeyi sadece bir yardımcı olarak değil, "Senior Full-Stack Developer" gözüyle taraması istenmektedir.
+    - Hem **UI/UX tasarımı** (estetik, kullanıcı deneyimi, modern görünüm) hem de **kod mimarisi** (performans, temiz kod, ölçeklenebilirlik) açısından profesyonel önerilerde bulunmalı ve bu önerileri hayata geçirmek için inisiyatif almalıdır.
 
 ---
 **Not:** Bu dosya proje her değiştiğinde güncellenmeli veya taranarak hafızaya alınmalıdır.

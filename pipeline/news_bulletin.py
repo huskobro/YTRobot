@@ -338,6 +338,7 @@ def run_bulletin(
     network_name = bulletin_config.get("networkName", "YTRobot Haber")
     style = bulletin_config.get("style", "breaking")
     default_language = bulletin_config.get("language", "")
+    text_delivery_mode = bulletin_config.get("textDeliveryMode", "per_scene")  # "per_scene" | "single_chunk"
 
     # Design settings
     lower_third = {
@@ -408,14 +409,46 @@ def run_bulletin(
 
         # Step 1: TTS  (0–35%)
         _prog(2, "tts", f"Ses sentezi başlıyor... (0/{n})")
-        for i, item in enumerate(bulletin_items):
-            _check_stop()
-            _check_pause()
-            print(f"  TTS [{i+1}/{n}]: {item.headline[:50]}")
-            item.audio_path = _synthesize(item, work_dir, i)
-            item.duration_frames = _frames_for_audio(item.audio_path, fps)
-            pct = 2 + int((i + 1) / n * 33)
-            _prog(pct, "tts", f"Ses sentezi: {i+1}/{n}")
+
+        if text_delivery_mode == "single_chunk" and n > 1:
+            # ── Single-chunk mode: concatenate all narration texts, TTS once ──
+            # Use a separator so Whisper can align individual items later
+            SEPARATOR = " ... "
+            combined_text = SEPARATOR.join(
+                item.narration for item in bulletin_items
+            )
+            combined_item = BulletinItem(
+                headline="[combined]",
+                narration=combined_text,
+                language=bulletin_items[0].language,
+            )
+            _prog(5, "tts", "Ses sentezi: tüm haberler tek parça...")
+            combined_audio = _synthesize(combined_item, work_dir, 0)
+            combined_path = work_dir / "combined.mp3"
+            combined_audio.rename(combined_path)
+            # Assign same combined audio to all items temporarily
+            total_dur = _audio_duration(combined_path)
+            # Split audio proportionally by narration length for duration
+            total_chars = sum(len(item.narration) for item in bulletin_items)
+            offset_sec = 0.0
+            for i, item in enumerate(bulletin_items):
+                frac = len(item.narration) / max(total_chars, 1)
+                item_dur = total_dur * frac
+                item.audio_path = combined_path  # all point to same file
+                item.duration_frames = max(fps * 3, int(item_dur * fps))
+                pct = 5 + int((i + 1) / n * 28)
+                _prog(pct, "tts", f"Ses süreleri hesaplandı: {i+1}/{n}")
+            _prog(35, "tts", "Ses sentezi tamamlandı (tek parça)")
+        else:
+            # ── Per-scene mode: TTS per item (default) ────────────────────────
+            for i, item in enumerate(bulletin_items):
+                _check_stop()
+                _check_pause()
+                print(f"  TTS [{i+1}/{n}]: {item.headline[:50]}")
+                item.audio_path = _synthesize(item, work_dir, i)
+                item.duration_frames = _frames_for_audio(item.audio_path, fps)
+                pct = 2 + int((i + 1) / n * 33)
+                _prog(pct, "tts", f"Ses sentezi: {i+1}/{n}")
 
         # Step 2: Subtitle alignment (35–60%)
         _check_stop()

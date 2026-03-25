@@ -14,6 +14,7 @@ import { HeadlineCard } from "./components/HeadlineCard";
 import { LowerThird } from "./components/LowerThird";
 import { NewsTicker } from "./components/NewsTicker";
 import { CategoryFlash16x9 } from "./components/CategoryFlash16x9";
+import { NewsItemIntro } from "./components/NewsItemIntro";
 import { CATEGORY_FLASH_DUR, CATEGORY_LABELS } from "./NewsBulletin9x16";
 
 // ── Sequence layout (at 60 fps) ─────────────────────────────────────────────
@@ -36,6 +37,8 @@ const ACCENT = {
   dark: "#94A3B8",
 };
 
+const ITEM_INTRO_DUR = 120; // 2s at 60fps
+
 export const NewsBulletin: React.FC<BulletinProps> = ({
   items,
   ticker,
@@ -43,6 +46,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   style = "breaking",
   showLiveIndicator = false,
   showCategoryFlash = false,
+  showItemIntro = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -68,20 +72,31 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   const HEADLINES_START = 90;
 
   const FLASH_DUR = showCategoryFlash ? CATEGORY_FLASH_DUR : 0;
+  const INTRO_DUR = showItemIntro ? ITEM_INTRO_DUR : 0;
   let cumulativeOffset = HEADLINES_START;
   const sequenced = items.map((item, idx) => {
     const flashFrom = cumulativeOffset;
-    const contentFrom = cumulativeOffset + FLASH_DUR;
-    cumulativeOffset += FLASH_DUR + item.duration;
-    return { item, flashFrom, contentFrom, idx };
+    const introFrom = cumulativeOffset + FLASH_DUR;
+    const contentFrom = cumulativeOffset + FLASH_DUR + INTRO_DUR;
+    cumulativeOffset += FLASH_DUR + INTRO_DUR + item.duration;
+    return { item, flashFrom, introFrom, contentFrom, idx };
   });
+
+  // ── Determine which item is currently active (for dynamic bar/ticker style) ─
+  const activeItem = [...sequenced].reverse().find(s => frame >= s.flashFrom) ?? sequenced[0];
+  const activeStyle = activeItem
+    ? ((activeItem.item.styleOverride && ACCENT[activeItem.item.styleOverride as keyof typeof ACCENT])
+        ? (activeItem.item.styleOverride as keyof typeof ACCENT)
+        : style)
+    : style;
+  const activeAccent = ACCENT[activeStyle];
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Layer 1: Animated background */}
-      <StudioBackground style={style} />
+      {/* Layer 1: Animated background — follows active item style */}
+      <StudioBackground style={activeStyle} />
 
-      {/* Layer 2: Network top bar */}
+      {/* Layer 2: Network top bar — accent follows active item style */}
       <div
         style={{
           position: "absolute",
@@ -89,7 +104,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
           left: 0,
           right: 0,
           height: NETWORK_BAR_HEIGHT,
-          background: `linear-gradient(to right, ${accent} 0%, rgba(10,10,10,0.95) 60%, rgba(10,10,10,0.85) 100%)`,
+          background: `linear-gradient(to right, ${activeAccent} 0%, rgba(10,10,10,0.95) 60%, rgba(10,10,10,0.85) 100%)`,
           display: "flex",
           alignItems: "center",
           paddingLeft: 40,
@@ -97,8 +112,8 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
           transform: `translateY(${barY}px)`,
           opacity: barOpacity,
           zIndex: 10,
-          borderBottom: `2px solid ${accent}`,
-          boxShadow: `0 4px 32px ${accent}44`,
+          borderBottom: `2px solid ${activeAccent}`,
+          boxShadow: `0 4px 32px ${activeAccent}44`,
         }}
       >
         <span
@@ -159,33 +174,42 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
         <BreakingNewsOverlay networkName={networkName} style={style} />
       </Sequence>
 
-      {/* Layer 4: Sequential headlines (with optional category flash prefix) */}
-      {sequenced.map(({ item, flashFrom, contentFrom, idx }) => (
-        <React.Fragment key={idx}>
-          {showCategoryFlash && (
-            <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
-              <CategoryFlash16x9
-                label={CATEGORY_LABELS[(item.styleOverride || style) as string] ?? String(item.styleOverride || style).toUpperCase()}
-                accent={ACCENT[(item.styleOverride || style) as keyof typeof ACCENT] ?? ACCENT[style]}
-              />
-            </Sequence>
-          )}
-          <Sequence from={contentFrom} durationInFrames={item.duration}>
-            {idx === 0 ? (
-              <HeadlineCard item={item} style={style} index={idx} />
-            ) : (
-              <>
-                <HeadlineCard item={item} style={style} index={idx} />
-                <LowerThird item={item} style={style} />
-              </>
+      {/* Layer 4: Sequential headlines (with optional category flash + item intro prefix) */}
+      {sequenced.map(({ item, flashFrom, introFrom, contentFrom, idx }) => {
+        const itemStyle = (item.styleOverride && ACCENT[item.styleOverride as keyof typeof ACCENT])
+          ? (item.styleOverride as keyof typeof ACCENT)
+          : style;
+        const itemAccent = ACCENT[itemStyle];
+        const itemLabel = CATEGORY_LABELS[itemStyle] ?? String(itemStyle).toUpperCase();
+        return (
+          <React.Fragment key={idx}>
+            {showCategoryFlash && (
+              <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
+                <CategoryFlash16x9 label={itemLabel} accent={itemAccent} />
+              </Sequence>
             )}
-          </Sequence>
-        </React.Fragment>
-      ))}
+            {showItemIntro && (
+              <Sequence from={introFrom} durationInFrames={ITEM_INTRO_DUR}>
+                <NewsItemIntro label={itemLabel} accent={itemAccent} networkName={networkName} />
+              </Sequence>
+            )}
+            <Sequence from={contentFrom} durationInFrames={item.duration}>
+              {idx === 0 ? (
+                <HeadlineCard item={item} style={itemStyle} index={idx} />
+              ) : (
+                <>
+                  <HeadlineCard item={item} style={itemStyle} index={idx} />
+                  <LowerThird item={item} style={itemStyle} hasImage={Boolean(item.mediaUrl || item.imageUrl)} />
+                </>
+              )}
+            </Sequence>
+          </React.Fragment>
+        );
+      })}
 
-      {/* Layer 5: Ticker — visible from frame 30 onwards */}
+      {/* Layer 5: Ticker — visible from frame 30 onwards; follows active item style */}
       <Sequence from={30}>
-        <NewsTicker items={ticker} style={style} />
+        <NewsTicker items={ticker} style={activeStyle} />
       </Sequence>
     </AbsoluteFill>
   );

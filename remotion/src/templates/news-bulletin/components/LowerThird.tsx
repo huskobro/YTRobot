@@ -10,6 +10,7 @@ import { NewsItem, SubtitleEntry } from "../types";
 
 interface Props {
   item: NewsItem;
+  hasImage?: boolean;
   style?:
     | "breaking"
     | "tech"
@@ -75,7 +76,7 @@ function renderSubtitles(frame: number, subtitles: SubtitleEntry[], accentColor:
   return <span style={{ color: "#FFFFFF" }}>{active.text}</span>;
 }
 
-export const LowerThird: React.FC<Props> = ({ item, style = "breaking" }) => {
+export const LowerThird: React.FC<Props & { hasImage?: boolean }> = ({ item, style = "breaking", hasImage = false }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // Per-item styleOverride takes priority over bulletin-level style
@@ -142,7 +143,8 @@ export const LowerThird: React.FC<Props> = ({ item, style = "breaking" }) => {
           paddingRight: 60,
           backdropFilter: "blur(6px)",
           minWidth: 600,
-          maxWidth: 1100,
+          // When an image panel is on the right (780px wide + 60px gap), limit width to avoid overlap
+          maxWidth: hasImage ? 980 : 1100,
         }}
       >
         {/* Accent bar — scale from 0 → 1 on the X axis */}

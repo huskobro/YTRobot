@@ -1791,14 +1791,14 @@
 
         <!-- Bulletin Channel Presets -->
         <div x-show="settingsModule==='bulletin'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <button @click="open=!open" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_presets')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
-          <div x-show="open" x-transition>
+          <button @click="open=!open; if(!open && bulletinActivePreset && !bulletinPresetName) bulletinPresetName=bulletinActivePreset" class="w-full flex items-center justify-between text-left mb-0 -m-1 rounded-lg hover:bg-slate-800/40 px-1 py-1 transition-colors"><h2 class="text-sm font-bold text-slate-300" x-text="t('section_bulletin_presets')"></h2><span class="text-slate-500 transition-transform duration-200 text-xs" :class="open?'rotate-180 text-slate-400':''" >▼</span></button>
+          <div x-show="open" x-init="if(bulletinActivePreset && !bulletinPresetName) bulletinPresetName=bulletinActivePreset" x-transition>
           <p class="text-xs text-slate-500 mb-4" x-text="t('bulletin_presets_hint')"></p>
           <!-- Save current as preset -->
           <div class="flex gap-2 mb-4">
             <input x-model="bulletinPresetName" type="text"
                    class="flex-1 bg-slate-950/50 border border-slate-700/60 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-red-500/50 transition-all font-medium"
-                   :placeholder="t('bulletin_preset_name_ph')"
+                   :placeholder="bulletinActivePreset || t('bulletin_preset_name_ph')"
                    @keyup.enter="saveBulletinPreset()" />
             <button @click="saveBulletinPreset()" :disabled="!bulletinPresetName.trim()"
                     class="shrink-0 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all"
@@ -2070,573 +2070,280 @@
         </div>
 
         <!-- ── RENDER ──────────────────────────────────────────── -->
-        <div x-show="bulletinTab==='render'" x-init="initRenderStyles()">
-
-          <!-- ═══ 1. RENDER MODU (en üstte, en belirgin) ════════════════ -->
-          <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 mb-4">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Render Modu</div>
-            <div class="grid grid-cols-3 gap-2">
-              <label @click="bulletinRenderMode='combined'; initRenderStyles()"
-                     class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all select-none"
-                     :class="bulletinRenderMode==='combined' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'">
-                <span class="text-lg">🎬</span>
-                <span class="text-xs font-bold text-white">Tek Video</span>
-                <span class="text-[10px] text-slate-500 text-center">Tüm haberler tek MP4</span>
-                <input type="radio" name="bRenderMode" value="combined" x-model="bulletinRenderMode" class="sr-only" />
-              </label>
-              <label @click="bulletinRenderMode='per_category'; initRenderStyles()"
-                     class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all select-none"
-                     :class="bulletinRenderMode==='per_category' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'">
-                <span class="text-lg">📂</span>
-                <span class="text-xs font-bold text-white">Kategoriye Göre</span>
-                <span class="text-[10px] text-slate-500 text-center">Her kategori ayrı MP4</span>
-                <input type="radio" name="bRenderMode" value="per_category" x-model="bulletinRenderMode" class="sr-only" />
-              </label>
-              <label @click="bulletinRenderMode='per_item'; initRenderStyles()"
-                     class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all select-none"
-                     :class="bulletinRenderMode==='per_item' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'">
-                <span class="text-lg">🗂️</span>
-                <span class="text-xs font-bold text-white">Her Haber Ayrı</span>
-                <span class="text-[10px] text-slate-500 text-center">Her haber kendi stili</span>
-                <input type="radio" name="bRenderMode" value="per_item" x-model="bulletinRenderMode" class="sr-only" />
-              </label>
-            </div>
-          </div>
-
-          <!-- ═══ 2. FORMAT / KANAL / FPS (her modda görünür) ══════════ -->
-          <div class="grid grid-cols-3 gap-3 mb-4">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">Kanal Adı</label>
-              <input x-model="bulletinRenderCfg.network_name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">Format</label>
-              <div class="flex gap-2">
-                <div @click="bulletinRenderCfg.format='16:9'"
-                     class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
-                     :class="bulletinRenderCfg.format==='16:9' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
-                  <div class="border border-slate-500 rounded bg-slate-700" style="width:22px;height:13px"></div>
-                  <span class="text-[10px] text-slate-400">16:9</span>
+        <div x-show="bulletinTab==='render'">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4" x-init="initRenderStyles()">
+            <!-- ① RENDER MODU SEÇICI -->
+            <div class="mb-4">
+              <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Render Modu</div>
+              <div class="grid grid-cols-3 gap-2">
+                <div @click="bulletinRenderMode='combined'; initRenderStyles()"
+                     class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                     :class="bulletinRenderMode==='combined' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                  <div class="text-lg mb-0.5">🎬</div>
+                  <div class="text-[10px] font-bold text-white">Tek Video</div>
+                  <div class="text-[9px] text-slate-500">Tüm haberler birlikte</div>
                 </div>
-                <div @click="bulletinRenderCfg.format='9:16'"
-                     class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
-                     :class="bulletinRenderCfg.format==='9:16' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
-                  <div class="border border-slate-500 rounded bg-slate-700" style="width:8px;height:14px"></div>
-                  <span class="text-[10px] text-slate-400">9:16</span>
+                <div @click="bulletinRenderMode='per_category'; initRenderStyles()"
+                     class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                     :class="bulletinRenderMode==='per_category' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                  <div class="text-lg mb-0.5">📂</div>
+                  <div class="text-[10px] font-bold text-white">Kategoriye Göre</div>
+                  <div class="text-[9px] text-slate-500">Her kategori ayrı MP4</div>
+                </div>
+                <div @click="bulletinRenderMode='per_item'; initRenderStyles()"
+                     class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                     :class="bulletinRenderMode==='per_item' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                  <div class="text-lg mb-0.5">📰</div>
+                  <div class="text-[10px] font-bold text-white">Her Haber Ayrı</div>
+                  <div class="text-[9px] text-slate-500">Her haber kendi stilinde</div>
                 </div>
               </div>
             </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">FPS</label>
-              <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-red-500">
-                <option value="30">30 fps</option>
-                <option value="60">60 fps</option>
-              </select>
-            </div>
-          </div>
 
-          <!-- ═══ 3a. TEK VİDEO — global stil + ayarlar ══════════════════ -->
-          <div x-show="bulletinRenderMode==='combined'" x-transition class="mb-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
-              <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Tüm kategoriler kendi stillerinde oluşturulur ve birleştirilir</div>
-              <div class="flex flex-wrap gap-1.5">
-                <template x-for="cat in getSelectedCategories()" :key="cat">
-                  <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border"
-                       :style="'background:'+({'sport':'#052612','finance':'#1a1400','tech':'#0a1628','science':'#0f0b1e','weather':'#0c1f3d','entertainment':'#2a0f2e','corporate':'#0f1f3d','breaking':'#1a0404','dark':'#0a0a0a'}[getAutoStyle(cat)]||'#1a0404')"
-                       :class="'border-slate-700 text-white'">
-                    <span x-text="cat.toUpperCase()"></span>
-                    <span class="text-slate-400">→</span>
-                    <span x-text="getAutoStyle(cat).toUpperCase()"></span>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <!-- ═══ 3b. KATEGORİYE GÖRE — her kategori için ayrı stil ═════ -->
-          <div x-show="bulletinRenderMode==='per_category'" x-transition class="mb-4">
-            <div class="text-xs font-bold text-slate-300 mb-2">Kategori Yapılandırmaları</div>
-            <div class="space-y-2">
-              <template x-for="cat in getSelectedCategories()" :key="cat">
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span class="px-2 py-0.5 rounded text-[10px] font-bold text-white" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
-                      <span class="text-[10px] text-slate-500" x-text="getSelectedItems().filter(i=>i.category===cat).length + ' haber'"></span>
-                    </div>
-                    <select x-model="bulletinCategoryStyles[cat]"
-                            class="bg-slate-800 border border-slate-600 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-red-500 transition-colors">
-                      <option value="breaking">Breaking / Son Dakika</option>
-                      <option value="tech">Tech / Teknoloji</option>
-                      <option value="corporate">Corporate / Kurumsal</option>
-                      <option value="sport">Sport / Spor</option>
-                      <option value="finance">Finance / Ekonomi</option>
-                      <option value="weather">Weather / Hava</option>
-                      <option value="science">Science / Bilim</option>
-                      <option value="entertainment">Entertainment / Eğlence</option>
-                      <option value="dark">Dark Minimal</option>
-                    </select>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- ═══ 3c. HER HABER AYRI — her haber için ayrı stil ══════════ -->
-          <div x-show="bulletinRenderMode==='per_item'" x-transition class="mb-4">
-            <div class="text-xs font-bold text-slate-300 mb-2">Haber Yapılandırmaları</div>
-            <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
-              <template x-for="item in getSelectedItems()" :key="item.url||item.id||item.title">
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex-1 min-w-0">
-                      <div class="text-[10px] font-semibold text-white truncate" x-text="item.title"></div>
-                      <span class="text-[10px] px-1.5 py-0.5 rounded mt-0.5 inline-block text-white" :class="getCatColor(item.category)" x-text="(item.category||'').toUpperCase()"></span>
-                    </div>
-                    <select :x-model="'bulletinItemStyles[\'' + (item.url||item.id||item.title) + '\']'"
-                            @change="bulletinItemStyles[item.url||item.id||item.title] = $event.target.value"
-                            :value="bulletinItemStyles[item.url||item.id||item.title] || getAutoStyle(item.category)"
-                            class="shrink-0 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-red-500 transition-colors">
-                      <option value="breaking">Breaking</option>
-                      <option value="tech">Tech</option>
-                      <option value="corporate">Corporate</option>
-                      <option value="sport">Sport</option>
-                      <option value="finance">Finance</option>
-                      <option value="weather">Weather</option>
-                      <option value="science">Science</option>
-                      <option value="entertainment">Entertainment</option>
-                      <option value="dark">Dark</option>
-                    </select>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- ═══ 4. GLOBAL AYARLAR (Lower Third + Ticker) ═══════════════ -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-            <div x-data="{ open: false }">
-              <button @click="open=!open" class="w-full flex items-center justify-between text-left">
-                <span class="text-xs font-bold text-slate-300">Lower Third / Ticker Ayarları</span>
-                <span class="text-slate-500 text-xs transition-transform duration-200" :class="open?'rotate-180':''">▼</span>
-              </button>
-            <div x-show="open" x-transition class="mt-3">
-            <!-- Style cards — sadece combined modda görünür -->
-            <div x-show="bulletinRenderMode==='combined'" class="mb-4">
-              <label class="block text-[10px] font-bold text-slate-500 mb-2">Global Görsel Stil (Combined fallback)</label>
-              <div class="flex gap-1.5 flex-wrap">
-                <template x-for="[s,bg,ac,lbl] in [['breaking','#0d0d0d','#dc2626','SON DAKİKA'],['tech','#0a1628','#00e5ff','TEKNOLOJİ'],['corporate','#0f1f3d','#2563eb','KURUMSAL'],['sport','#052612','#10b981','SPOR'],['finance','#1a1400','#f59e0b','EKONOMİ'],['weather','#0c1f3d','#38bdf8','HAVA'],['science','#0f0b1e','#8b5cf6','BİLİM'],['entertainment','#2a0f2e','#ec4899','EĞLENCE'],['dark','#050505','#94a3b8','GENEL']]" :key="s">
-                  <div @click="bulletinRenderCfg.style=s"
-                       class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                       :class="bulletinRenderCfg.style===s ? 'border-red-500 ring-1 ring-red-500/30' : 'border-transparent hover:border-slate-500'"
-                       :style="'width:70px;height:42px;background:'+bg">
-                    <div class="absolute top-0 inset-x-0 h-1" :style="'background:'+ac"></div>
-                    <div class="absolute inset-0 flex flex-col items-start justify-center px-1.5 pt-1">
-                      <span class="text-white font-bold" style="font-size:8px" x-text="lbl"></span>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Lower Third -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" x-text="t('section_bulletin_lower_third')"></h3>
-                  <button @click="settings.BULLETIN_LOWER_THIRD_ENABLED = settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'false' : 'true'"
-                          class="w-9 h-5 rounded-full transition-colors relative"
-                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'bg-indigo-600' : 'bg-slate-700'">
-                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
-                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
-                  </button>
-                </div>
-                <div class="space-y-2" x-show="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true'" x-transition>
-                  <input x-model="settings.BULLETIN_LOWER_THIRD_TEXT" type="text" :placeholder="t('bulletin_lower_third_text_ph')"
-                         class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" />
-                  <div class="grid grid-cols-2 gap-2">
-                    <select x-model="settings.BULLETIN_LOWER_THIRD_FONT" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none">
-                      <option value="bebas">Bebas Neue</option>
-                      <option value="montserrat">Montserrat</option>
-                      <option value="oswald">Oswald</option>
-                      <option value="inter">Inter</option>
-                    </select>
-                    <div class="flex gap-1.5 items-center">
-                      <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="color" class="w-7 h-7 rounded bg-transparent cursor-pointer" />
-                      <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="text" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-[10px] text-white font-mono" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- Ticker -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" x-text="t('section_bulletin_ticker')"></h3>
-                  <button @click="settings.BULLETIN_TICKER_ENABLED = settings.BULLETIN_TICKER_ENABLED === 'true' ? 'false' : 'true'"
-                          class="w-9 h-5 rounded-full transition-colors relative"
-                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'bg-red-600' : 'bg-slate-700'">
-                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
-                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
-                  </button>
-                </div>
-                <div class="space-y-2" x-show="settings.BULLETIN_TICKER_ENABLED === 'true'" x-transition>
-                  <div class="grid grid-cols-2 gap-2">
-                    <select x-model="settings.BULLETIN_TICKER_SPEED" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none">
-                      <option value="2" x-text="t('bulletin_ticker_speed_slow')"></option>
-                      <option value="3">Normal</option>
-                      <option value="5" x-text="t('bulletin_ticker_speed_fast')"></option>
-                    </select>
-                    <button @click="settings.BULLETIN_SHOW_LIVE_INDICATOR = settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'false' : 'true'"
-                            class="py-1.5 px-2 rounded-lg border flex items-center justify-center gap-1.5 transition-all"
-                            :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-900/40 border-red-500 text-red-400' : 'bg-slate-800 border-slate-700 text-slate-500'">
-                      <span class="w-2 h-2 rounded-full" :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-500 animate-pulse' : 'bg-slate-700'"></span>
-                      <span class="text-[10px] font-bold">LIVE</span>
-                    </button>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div class="flex gap-1.5 items-center">
-                      <input x-model="settings.BULLETIN_TICKER_BG" type="color" class="w-7 h-7 rounded bg-transparent cursor-pointer" />
-                      <input x-model="settings.BULLETIN_TICKER_BG" type="text" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-[10px] text-white font-mono" />
-                    </div>
-                    <div class="flex gap-1.5 items-center">
-                      <input x-model="settings.BULLETIN_TICKER_COLOR" type="color" class="w-7 h-7 rounded bg-transparent cursor-pointer" />
-                      <input x-model="settings.BULLETIN_TICKER_COLOR" type="text" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-[10px] text-white font-mono" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </div>
-            </div>
-          </div>
-
-          <!-- ═══ 5. GEÇİŞ ANİMASYONLARI ══════════════════════════════════ -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 mb-4 space-y-2">
-            <label class="flex items-center justify-between cursor-pointer select-none">
+            <!-- ② FORMAT / KANAL / FPS -->
+            <div class="grid grid-cols-3 gap-3 mb-4">
               <div>
-                <div class="text-xs font-semibold text-white">Kategori geçiş animasyonu</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Her haber öncesinde 1.5sn kategori flash ekranı</div>
-              </div>
-              <div class="relative ml-3 shrink-0">
-                <input type="checkbox" x-model="bulletinShowCategoryFlash" class="sr-only peer" />
-                <div class="w-10 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
-              </div>
-            </label>
-            <label class="flex items-center justify-between cursor-pointer select-none">
-              <div>
-                <div class="text-xs font-semibold text-white">Haber arası giriş geçişi (2sn)</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Her haberin başında branded giriş animasyonu</div>
-              </div>
-              <div class="relative ml-3 shrink-0">
-                <input type="checkbox" x-model="bulletinShowItemIntro" class="sr-only peer" />
-                <div class="w-10 h-5 bg-slate-700 peer-checked:bg-indigo-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
-              </div>
-            </label>
-          </div>
-
-          <!-- ═══ 6. SEÇİLİ HABERLER ════════════════════════════════════════ -->
-          <div class="mb-4" x-show="selectedDraftCount()>0">
-            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5" x-text="t('bulletin_selected_items')"></div>
-            <div class="space-y-1 max-h-32 overflow-y-auto">
-              <template x-for="item in getSelectedItems()" :key="item.id">
-                <div class="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/40 rounded-lg text-xs">
-                  <span class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span>
-                  <span class="flex-1 truncate text-slate-300" x-text="item.title"></span>
-                  <span class="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded text-white" :class="getCatColor(item.category)" x-text="(item.category||'').toUpperCase()"></span>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- ═══ 7. RENDER BUTONU ══════════════════════════════════════════ -->
-          <div class="mb-4">
-            <div x-data="{ _dummy: true }">
-            <div class="hidden">
-
-                <!-- Breaking / Son Dakika — Red -->
-                <div @click="bulletinRenderCfg.style='breaking'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='breaking' ? 'border-red-500 ring-1 ring-red-500/30' : 'border-transparent hover:border-red-400'"
-                     style="width:125px;height:68px;background:#0d0d0d">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#dc2626"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#dc2626;font-weight:900;letter-spacing:0.1em">SON DAKİKA</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Breaking</span>
-                    <span style="font-size:7px;color:#6b7280">Dark + Kırmızı</span>
-                  </div>
-                </div>
-
-                <!-- Tech — Cyan -->
-                <div @click="bulletinRenderCfg.style='tech'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='tech' ? 'border-cyan-500 ring-1 ring-cyan-500/30' : 'border-transparent hover:border-cyan-400'"
-                     style="width:125px;height:68px;background:#0a1628">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#00e5ff"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#00e5ff;font-weight:900;letter-spacing:0.1em">TEKNOLOJİ</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Tech</span>
-                    <span style="font-size:7px;color:#6b7280">Navy + Cyan</span>
-                  </div>
-                </div>
-
-                <!-- Corporate — Cobalt Blue -->
-                <div @click="bulletinRenderCfg.style='corporate'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='corporate' ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-transparent hover:border-blue-400'"
-                     style="width:125px;height:68px;background:#0f1f3d">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#2563eb"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#60a5fa;font-weight:900;letter-spacing:0.1em">KURUMSAL</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Corporate</span>
-                    <span style="font-size:7px;color:#6b7280">Navy + Mavi</span>
-                  </div>
-                </div>
-
-                <!-- Sport — Emerald Green -->
-                <div @click="bulletinRenderCfg.style='sport'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='sport' ? 'border-emerald-500 ring-1 ring-emerald-500/30' : 'border-transparent hover:border-emerald-400'"
-                     style="width:125px;height:68px;background:#052612">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#10b981"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#10b981;font-weight:900;letter-spacing:0.1em">SPOR</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Sport</span>
-                    <span style="font-size:7px;color:#6b7280">Koyu + Yeşil</span>
-                  </div>
-                </div>
-
-                <!-- Finance — Amber/Gold -->
-                <div @click="bulletinRenderCfg.style='finance'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='finance' ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-transparent hover:border-amber-400'"
-                     style="width:125px;height:68px;background:#1a1400">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#f59e0b"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#f59e0b;font-weight:900;letter-spacing:0.1em">EKONOMİ</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Finance</span>
-                    <span style="font-size:7px;color:#6b7280">Siyah + Altın</span>
-                  </div>
-                </div>
-
-                <!-- Weather — Sky Blue -->
-                <div @click="bulletinRenderCfg.style='weather'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='weather' ? 'border-sky-400 ring-1 ring-sky-400/30' : 'border-transparent hover:border-sky-300'"
-                     style="width:125px;height:68px;background:linear-gradient(135deg,#0c1f3d,#1e3a5f)">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#38bdf8"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#38bdf8;font-weight:900;letter-spacing:0.1em">HAVA DURUMU</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Weather</span>
-                    <span style="font-size:7px;color:#6b7280">Gece + Açık Mavi</span>
-                  </div>
-                </div>
-
-                <!-- Science — Violet/Purple -->
-                <div @click="bulletinRenderCfg.style='science'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='science' ? 'border-violet-500 ring-1 ring-violet-500/30' : 'border-transparent hover:border-violet-400'"
-                     style="width:125px;height:68px;background:#0f0b1e">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#8b5cf6"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#8b5cf6;font-weight:900;letter-spacing:0.1em">BİLİM</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Science</span>
-                    <span style="font-size:7px;color:#6b7280">Siyah + Mor</span>
-                  </div>
-                </div>
-
-                <!-- Entertainment — Hot Pink -->
-                <div @click="bulletinRenderCfg.style='entertainment'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='entertainment' ? 'border-pink-500 ring-1 ring-pink-500/30' : 'border-transparent hover:border-pink-400'"
-                     style="width:125px;height:68px;background:#2a0f2e">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#ec4899"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#ec4899;font-weight:900;letter-spacing:0.1em">EĞLENCE</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Entertainment</span>
-                    <span style="font-size:7px;color:#6b7280">Mor + Pembe</span>
-                  </div>
-                </div>
-
-                <!-- Dark Minimal — Monochrome -->
-                <div @click="bulletinRenderCfg.style='dark'"
-                     class="relative cursor-pointer border-2 rounded-xl overflow-hidden transition-all select-none"
-                     :class="bulletinRenderCfg.style==='dark' ? 'border-slate-400 ring-1 ring-slate-400/30' : 'border-transparent hover:border-slate-500'"
-                     style="width:125px;height:68px;background:#050505">
-                  <div class="absolute top-0 inset-x-0 h-1.5" style="background:#94a3b8"></div>
-                  <div class="absolute inset-0 flex flex-col items-start justify-center px-2.5 pt-1.5 gap-0.5">
-                    <span style="font-size:7px;color:#94a3b8;font-weight:900;letter-spacing:0.1em">GENEL</span>
-                    <span style="font-size:10px;color:white;font-weight:700">Dark Minimal</span>
-                    <span style="font-size:7px;color:#6b7280">Siyah + Gri</span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <!-- Detailed Design Controls (Lower Third, Ticker, Live) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
-              <!-- Lower Third Column -->
-              <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider" x-text="t('section_bulletin_lower_third')"></h3>
-                  <button @click="settings.BULLETIN_LOWER_THIRD_ENABLED = settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'false' : 'true'"
-                          class="w-9 h-5 rounded-full transition-colors relative"
-                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'bg-indigo-600' : 'bg-slate-700'">
-                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
-                          :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
-                  </button>
-                </div>
-                
-                <div class="space-y-3" x-show="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true'" x-transition>
-                  <div>
-                    <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_text_label')"></label>
-                    <input x-model="settings.BULLETIN_LOWER_THIRD_TEXT" type="text" :placeholder="t('bulletin_lower_third_text_ph')" 
-                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors" />
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_font_label')"></label>
-                      <select x-model="settings.BULLETIN_LOWER_THIRD_FONT" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
-                        <option value="bebas">Bebas Neue</option>
-                        <option value="montserrat">Montserrat</option>
-                        <option value="oswald">Oswald</option>
-                        <option value="inter">Inter</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_lower_third_color_label')"></label>
-                      <div class="flex gap-2 items-center">
-                        <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
-                        <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Ticker Column -->
-              <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider" x-text="t('section_bulletin_ticker')"></h3>
-                  <button @click="settings.BULLETIN_TICKER_ENABLED = settings.BULLETIN_TICKER_ENABLED === 'true' ? 'false' : 'true'"
-                          class="w-9 h-5 rounded-full transition-colors relative"
-                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'bg-red-600' : 'bg-slate-700'">
-                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
-                          :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
-                  </button>
-                </div>
-
-                <div class="space-y-3" x-show="settings.BULLETIN_TICKER_ENABLED === 'true'" x-transition>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_speed_label')"></label>
-                      <select x-model="settings.BULLETIN_TICKER_SPEED" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
-                        <option value="2" x-text="t('bulletin_ticker_speed_slow')"></option>
-                        <option value="3">Normal</option>
-                        <option value="5" x-text="t('bulletin_ticker_speed_fast')"></option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_show_live_label')"></label>
-                      <button @click="settings.BULLETIN_SHOW_LIVE_INDICATOR = settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'false' : 'true'"
-                              class="w-full py-2 px-3 rounded-lg border flex items-center justify-center gap-2 transition-all"
-                              :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-900/40 border-red-500 text-red-400' : 'bg-slate-900 border-slate-700 text-slate-500'">
-                        <span class="w-2 h-2 rounded-full" :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-500 animate-pulse' : 'bg-slate-700'"></span>
-                        <span class="text-[10px] font-bold uppercase" x-text="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'LIVE' : 'OFF'"></span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_bg_label')"></label>
-                      <div class="flex gap-2 items-center">
-                        <input x-model="settings.BULLETIN_TICKER_BG" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
-                        <input x-model="settings.BULLETIN_TICKER_BG" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_ticker_color_label')"></label>
-                      <div class="flex gap-2 items-center">
-                        <input x-model="settings.BULLETIN_TICKER_COLOR" type="color" class="w-8 h-8 rounded bg-transparent cursor-pointer" />
-                        <input x-model="settings.BULLETIN_TICKER_COLOR" type="text" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-[10px] text-white font-mono" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Category -> Template Mapping inline in Render -->
-            <div class="mb-5 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50" x-show="[...new Set(getSelectedItems().map(i=>i.category))].filter(Boolean).length > 0">
-              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2" x-text="t('bulletin_category_mapping') || 'Kategori → Görsel Stil'"></h3>
-              <p class="text-[10px] text-slate-500 mb-3" x-text="t('bulletin_mapping_render_hint') || 'Seçili haberlerdeki kategorilerin hangi şablonla çizileceğini ayarlayın.'"></p>
-              
-              <div class="space-y-2">
-                <template x-for="cat in [...new Set(getSelectedItems().map(i=>i.category))].filter(Boolean)" :key="cat">
-                  <div class="p-2.5 bg-slate-900/50 rounded border border-slate-700/30">
-                    <div class="flex items-center justify-between gap-4">
-                      <div class="flex items-center gap-2 text-[10px] font-bold">
-                        <span class="px-2 py-0.5 text-white rounded shadow-sm" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
-                        <span class="text-slate-500">→</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <select x-model="categoryTemplates[cat]" @change="saveSettings()"
-                                class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-red-500 transition-colors w-32">
-                          <option value="">— Varsayılan —</option>
-                          <option value="breaking">Breaking / Son Dakika</option>
-                          <option value="tech">Tech / Teknoloji</option>
-                          <option value="corporate">Corporate / Kurumsal</option>
-                          <option value="sport">Sport / Spor</option>
-                          <option value="finance">Finance / Ekonomi</option>
-                          <option value="weather">Weather / Hava Durumu</option>
-                          <option value="science">Science / Bilim</option>
-                          <option value="entertainment">Entertainment / Eğlence</option>
-                          <option value="dark">Dark Minimal</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <!-- Format + network + fps row -->
-            <div class="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_network_name')"></label>
-                <input x-model="bulletinRenderCfg.network_name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" />
+                <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_network_name')"></label>
+                <input x-model="bulletinRenderCfg.network_name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_format')"></label>
-                <div class="flex gap-2">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_format')"></label>
+                <div class="flex gap-1.5">
                   <div @click="bulletinRenderCfg.format='16:9'"
-                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1 transition-all select-none"
                        :class="bulletinRenderCfg.format==='16:9' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
-                    <div class="border border-slate-500 rounded bg-slate-700" style="width:26px;height:15px"></div>
-                    <span class="text-xs text-slate-400">16:9</span>
+                    <div class="border border-slate-500 rounded bg-slate-700" style="width:20px;height:11px"></div>
+                    <span class="text-[9px] text-slate-400">16:9</span>
                   </div>
                   <div @click="bulletinRenderCfg.format='9:16'"
-                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                       class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1 transition-all select-none"
                        :class="bulletinRenderCfg.format==='9:16' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
-                    <div class="border border-slate-500 rounded bg-slate-700" style="width:9px;height:16px"></div>
-                    <span class="text-xs text-slate-400">9:16</span>
+                    <div class="border border-slate-500 rounded bg-slate-700" style="width:7px;height:12px"></div>
+                    <span class="text-[9px] text-slate-400">9:16</span>
                   </div>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_fps')"></label>
-                <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('bulletin_fps')"></label>
+                <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
                   <option value="30">30 fps</option>
                   <option value="60">60 fps</option>
                 </select>
               </div>
             </div>
+
+            <!-- ③ MOD'A ÖZEL PANEL -->
+
+            <!-- Combined: kategori→stil otomatik eşleme özeti + fallback style -->
+            <div x-show="bulletinRenderMode==='combined'" x-transition class="mb-4">
+              <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Varsayılan Stil (Fallback)</div>
+              <div class="flex gap-1.5 flex-wrap mb-3">
+                <template x-for="[key,label,color] in [['breaking','Breaking','#dc2626'],['tech','Tech','#00e5ff'],['corporate','Corporate','#2563eb'],['sport','Sport','#10b981'],['finance','Finance','#f59e0b'],['weather','Weather','#38bdf8'],['science','Science','#8b5cf6'],['entertainment','Entertain.','#ec4899'],['dark','Dark','#94a3b8']]" :key="key">
+                  <div @click="bulletinRenderCfg.style=key"
+                       class="cursor-pointer px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all select-none"
+                       :class="bulletinRenderCfg.style===key ? 'border-current text-white bg-slate-700' : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                       :style="bulletinRenderCfg.style===key ? 'border-color:'+color+';color:'+color : ''">
+                    <span x-text="label"></span>
+                  </div>
+                </template>
+              </div>
+              <!-- Auto-mapped categories display -->
+              <div x-show="getSelectedCategories().length > 0" class="space-y-1">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-1">Kategori Eşleme (Otomatik)</div>
+                <template x-for="cat in getSelectedCategories()" :key="cat">
+                  <div class="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg text-[10px]">
+                    <span class="px-1.5 py-0.5 text-white rounded font-bold" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                    <span class="text-slate-500">→</span>
+                    <span class="text-slate-300 font-bold" x-text="getAutoStyle(cat)"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Per-category: her kategori için stil seçici -->
+            <div x-show="bulletinRenderMode==='per_category'" x-transition class="mb-4">
+              <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Kategori Stilleri</div>
+              <div x-show="getSelectedCategories().length === 0" class="text-[10px] text-slate-500 italic">Haber seçin</div>
+              <div class="space-y-2">
+                <template x-for="cat in getSelectedCategories()" :key="cat">
+                  <div class="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/40">
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 text-white rounded text-[10px] font-bold" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                        <span class="text-[9px] text-slate-500" x-text="'otomatik: ' + getAutoStyle(cat)"></span>
+                      </div>
+                      <select x-model="bulletinCategoryStyles[cat]"
+                              class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <option value="breaking">Breaking</option>
+                        <option value="tech">Tech</option>
+                        <option value="corporate">Corporate</option>
+                        <option value="sport">Sport</option>
+                        <option value="finance">Finance</option>
+                        <option value="weather">Weather</option>
+                        <option value="science">Science</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Per-item: her haber için stil seçici -->
+            <div x-show="bulletinRenderMode==='per_item'" x-transition class="mb-4">
+              <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Haber Stilleri</div>
+              <div x-show="getSelectedItems().length === 0" class="text-[10px] text-slate-500 italic">Haber seçin</div>
+              <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                <template x-for="item in getSelectedItems()" :key="item.id || item.url || item.title">
+                  <div class="p-2 bg-slate-800/60 rounded-lg border border-slate-700/40">
+                    <div class="flex items-start gap-2">
+                      <div class="flex-1 min-w-0">
+                        <div class="text-[10px] text-slate-300 font-medium truncate" x-text="item.title"></div>
+                        <span class="text-[9px] text-slate-500 uppercase" x-text="item.category"></span>
+                      </div>
+                      <select :x-model="'bulletinItemStyles[\'' + (item.url||item.id||item.title) + '\']'"
+                              @change="bulletinItemStyles[item.url||item.id||item.title] = $event.target.value"
+                              class="bg-slate-900 border border-slate-600 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none shrink-0">
+                        <option value="breaking">Breaking</option>
+                        <option value="tech">Tech</option>
+                        <option value="corporate">Corporate</option>
+                        <option value="sport">Sport</option>
+                        <option value="finance">Finance</option>
+                        <option value="weather">Weather</option>
+                        <option value="science">Science</option>
+                        <option value="entertainment">Entertain.</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- ④ GLOBAL AYARLAR (Lower Third + Ticker) — collapsible -->
+            <div x-data="{ openGlobal: false }" class="mb-4">
+              <button @click="openGlobal=!openGlobal" class="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-xl text-[10px] font-bold text-slate-400 uppercase hover:bg-slate-800 transition-colors">
+                <span>Global Ayarlar (Lower Third · Ticker)</span>
+                <span :class="openGlobal ? 'rotate-180' : ''" class="transition-transform text-xs">▼</span>
+              </button>
+              <div x-show="openGlobal" x-transition class="mt-2 p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Lower Third -->
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="t('section_bulletin_lower_third')"></span>
+                      <button @click="settings.BULLETIN_LOWER_THIRD_ENABLED = settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'false' : 'true'"
+                              class="w-8 h-4 rounded-full transition-colors relative"
+                              :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'bg-indigo-600' : 'bg-slate-700'">
+                        <span class="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all"
+                              :class="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
+                      </button>
+                    </div>
+                    <div x-show="settings.BULLETIN_LOWER_THIRD_ENABLED === 'true'" x-transition class="space-y-2">
+                      <input x-model="settings.BULLETIN_LOWER_THIRD_TEXT" type="text" :placeholder="t('bulletin_lower_third_text_ph')"
+                             class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-indigo-500" />
+                      <div class="flex gap-2">
+                        <select x-model="settings.BULLETIN_LOWER_THIRD_FONT" class="flex-1 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none">
+                          <option value="bebas">Bebas</option>
+                          <option value="montserrat">Montserrat</option>
+                          <option value="oswald">Oswald</option>
+                          <option value="inter">Inter</option>
+                        </select>
+                        <input x-model="settings.BULLETIN_LOWER_THIRD_COLOR" type="color" class="w-8 h-7 rounded bg-transparent cursor-pointer" />
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Ticker -->
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="t('section_bulletin_ticker')"></span>
+                      <button @click="settings.BULLETIN_TICKER_ENABLED = settings.BULLETIN_TICKER_ENABLED === 'true' ? 'false' : 'true'"
+                              class="w-8 h-4 rounded-full transition-colors relative"
+                              :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'bg-red-600' : 'bg-slate-700'">
+                        <span class="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all"
+                              :class="settings.BULLETIN_TICKER_ENABLED === 'true' ? 'left-4' : 'left-0.5'"></span>
+                      </button>
+                    </div>
+                    <div x-show="settings.BULLETIN_TICKER_ENABLED === 'true'" x-transition class="space-y-2">
+                      <select x-model="settings.BULLETIN_TICKER_SPEED" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none">
+                        <option value="2" x-text="t('bulletin_ticker_speed_slow')"></option>
+                        <option value="3">Normal</option>
+                        <option value="5" x-text="t('bulletin_ticker_speed_fast')"></option>
+                      </select>
+                      <div class="flex gap-2">
+                        <div class="flex-1 flex items-center gap-1">
+                          <input x-model="settings.BULLETIN_TICKER_BG" type="color" class="w-7 h-6 rounded bg-transparent cursor-pointer" />
+                          <span class="text-[9px] text-slate-500">BG</span>
+                        </div>
+                        <div class="flex-1 flex items-center gap-1">
+                          <input x-model="settings.BULLETIN_TICKER_COLOR" type="color" class="w-7 h-6 rounded bg-transparent cursor-pointer" />
+                          <span class="text-[9px] text-slate-500">TXT</span>
+                        </div>
+                        <button @click="settings.BULLETIN_SHOW_LIVE_INDICATOR = settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'false' : 'true'"
+                                class="px-2 py-1 rounded border text-[9px] font-bold uppercase transition-all"
+                                :class="settings.BULLETIN_SHOW_LIVE_INDICATOR === 'true' ? 'bg-red-900/40 border-red-500 text-red-400' : 'bg-slate-900 border-slate-700 text-slate-500'">
+                          LIVE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ⑤ GEÇİŞ ANİMASYONLARI -->
+            <div class="space-y-2 mb-4">
+              <label class="flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors select-none">
+                <div>
+                  <div class="text-[10px] font-bold text-slate-300">Kategori geçiş animasyonu</div>
+                  <div class="text-[9px] text-slate-500 mt-0.5">Her haber öncesinde 1.5sn kategori flash</div>
+                </div>
+                <div class="relative ml-3 shrink-0">
+                  <input type="checkbox" x-model="bulletinShowCategoryFlash" class="sr-only peer" />
+                  <div class="w-9 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                </div>
+              </label>
+              <label class="flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors select-none">
+                <div>
+                  <div class="text-[10px] font-bold text-slate-300">Haber intro animasyonu</div>
+                  <div class="text-[9px] text-slate-500 mt-0.5">Her haber başında 2sn branded intro</div>
+                </div>
+                <div class="relative ml-3 shrink-0">
+                  <input type="checkbox" x-model="bulletinShowItemIntro" class="sr-only peer" />
+                  <div class="w-9 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                </div>
+              </label>
+            </div>
+
+            <!-- ⑥ METİN TESLİM MODU -->
             <div class="mb-4">
-              <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_selected_items')"></div>
-              <div x-show="selectedDraftCount()===0" class="text-xs text-slate-500 italic" x-text="t('bulletin_no_items_selected')"></div>
-              <div class="space-y-1.5">
+              <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Metin Teslimat Modu</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div @click="bulletinTextMode='per_scene'"
+                     class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                     :class="bulletinTextMode==='per_scene' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                  <div class="text-sm mb-0.5">📋</div>
+                  <div class="text-[10px] font-bold text-white">Sahne Sahne</div>
+                  <div class="text-[9px] text-slate-500">Her haber kendi sesi</div>
+                </div>
+                <div @click="bulletinTextMode='single_chunk'"
+                     class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                     :class="bulletinTextMode==='single_chunk' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                  <div class="text-sm mb-0.5">📄</div>
+                  <div class="text-[10px] font-bold text-white">Tek Parça</div>
+                  <div class="text-[9px] text-slate-500">Tüm metin tek ses</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ⑦ SEÇİLİ HABERLER ÖZETİ -->
+            <div class="mb-4">
+              <div class="text-[10px] font-bold text-slate-500 uppercase mb-1.5" x-text="t('bulletin_selected_items') + ' (' + selectedDraftCount() + ')'"></div>
+              <div x-show="selectedDraftCount()===0" class="text-[10px] text-slate-500 italic" x-text="t('bulletin_no_items_selected')"></div>
+              <div class="space-y-1 max-h-32 overflow-y-auto">
                 <template x-for="item in getSelectedItems()" :key="item.id">
-                  <div class="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg text-xs">
+                  <div class="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg text-[10px]">
                     <span class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span>
                     <span class="flex-1 truncate text-slate-300" x-text="item.title"></span>
                     <span class="shrink-0 text-slate-500 uppercase" x-text="item.category"></span>
@@ -2644,35 +2351,7 @@
                 </template>
               </div>
             </div>
-            <!-- Render modu -->
-            <div class="bg-slate-800/60 border border-slate-700/40 rounded-xl p-3 mb-3">
-              <div class="text-xs font-semibold text-slate-400 mb-2.5">Render Modu</div>
-              <div class="space-y-1">
-                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
-                  <input type="radio" name="bRenderMode" value="combined" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
-                  <div><div class="text-xs font-semibold text-white">Tek Video</div><div class="text-xs text-slate-500">Tüm haberler tek MP4'te</div></div>
-                </label>
-                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
-                  <input type="radio" name="bRenderMode" value="per_category" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
-                  <div><div class="text-xs font-semibold text-white">Kategoriye Göre Ayrı</div><div class="text-xs text-slate-500">Her kategori ayrı stilinde ayrı MP4</div></div>
-                </label>
-                <label class="flex items-start gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-slate-700/40 transition-colors">
-                  <input type="radio" name="bRenderMode" value="per_item" x-model="bulletinRenderMode" class="mt-0.5 accent-red-500" />
-                  <div><div class="text-xs font-semibold text-white">Her Haber Ayrı Video</div><div class="text-xs text-slate-500">Her haber kendi stilinde ayrı MP4</div></div>
-                </label>
-              </div>
-            </div>
-            <!-- Kategori geçiş flash toggle -->
-            <label class="flex items-center justify-between px-3 py-2.5 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors mb-3 select-none">
-              <div>
-                <div class="text-xs font-semibold text-slate-300">Kategori geçiş animasyonu</div>
-                <div class="text-xs text-slate-500 mt-0.5">Her haber öncesinde 1.5sn kategori flash ekranı</div>
-              </div>
-              <div class="relative ml-3 shrink-0">
-                <input type="checkbox" x-model="bulletinShowCategoryFlash" class="sr-only peer" />
-                <div class="w-10 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
-              </div>
-            </label>
+
 
             <button @click="startBulletinRender()" :disabled="bulletinRendering || selectedDraftCount()===0"
                     class="w-full py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2">
@@ -3374,8 +3053,9 @@ function app() {
     bulletinRenderMode: 'combined',
     bulletinShowCategoryFlash: false,
     bulletinShowItemIntro: false,
-    bulletinCategoryStyles: {},   // {cat: style} — per-category style overrides
-    bulletinItemStyles: {},        // {url: style} — per-item style overrides
+    bulletinTextMode: 'per_scene',   // 'per_scene' | 'single_chunk'
+    bulletinCategoryStyles: {},
+    bulletinItemStyles: {},
     bulletinCategoryOutputs: {},
     _bulletinPoll: null,
     _sse: null, _timer: null,
@@ -3942,14 +3622,12 @@ function app() {
     },
 
     initRenderStyles() {
-      // Initialize per-category styles with auto-mapped defaults
       const cats = this.getSelectedCategories();
       cats.forEach(cat => {
         if (!this.bulletinCategoryStyles[cat]) {
           this.bulletinCategoryStyles[cat] = this.getAutoStyle(cat);
         }
       });
-      // Initialize per-item styles with category default
       this.getSelectedItems().forEach(item => {
         const key = item.url || item.id || item.title;
         if (key && !this.bulletinItemStyles[key]) {
@@ -3983,11 +3661,12 @@ function app() {
             format: this.bulletinRenderCfg.format,
             preset_name: this.bulletinActivePreset,
             category_templates: this.categoryTemplates,
-            category_styles: this.bulletinCategoryStyles,
-            item_styles: this.bulletinItemStyles,
             render_mode: this.bulletinRenderMode,
             show_category_flash: this.bulletinShowCategoryFlash,
             show_item_intro: this.bulletinShowItemIntro,
+            text_delivery_mode: this.bulletinTextMode,
+            category_styles: this.bulletinCategoryStyles,
+            item_styles: this.bulletinItemStyles,
             // Design settings
             lower_third_enabled: this.settings.BULLETIN_LOWER_THIRD_ENABLED === 'true',
             lower_third_text: this.settings.BULLETIN_LOWER_THIRD_TEXT,

@@ -123,11 +123,13 @@ Proje çalışması için şu anahtarların `.env` dosyasında bulunması gereki
     - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin eski ayar penceresinde olduğu gibi korunması iyileştirilmesi için öneriler verilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır. Buna ek olarak ayarlar sayfasında o modül ile ilgili kullanılan tüm ayarlar yer almalıdır. 
 2.  **YTRobot (Genel Video) Modülü ve Ayar Ayrımı:**
     - Bu modül şu an varsayılan (global) ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
-    - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden tamamen ayrı yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.
-    - Ayarlar sayfasında YTRobot'a özel override seçeneklerinin bulunması gerekmektedir.
-3.  **Profesyonel Yazılımcı Gözüyle İnceleme:**
-    - Claude'un projeyi sadece bir yardımcı olarak değil, "Senior Full-Stack Developer" gözüyle taraması istenmektedir.
-    - Hem **UI/UX tasarımı** (estetik, kullanıcı deneyimi, modern görünüm) hem de **kod mimarisi** (performans, temiz kod, ölçeklenebilirlik) açısından profesyonel önerilerde bulunmalı ve bu önerileri hayata geçirmek için inisiyatif almalıdır.
+    - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden **tamamen ayrı** yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.
+    - Ayarlar sayfasında YTRobot'a özel bir bölüm ve override seçenekleri bulunmalıdır.
+3.  **Profesyonel Yazılımcı Gözüyle İnceleme ve Öneriler:**
+    - Claude'un projeyi sadece bir yardımcı olarak değil, bir **"Senior Full-Stack Developer"** gözüyle taraması ve analiz etmesi istenmektedir.
+    - **UI/UX Önerileri:** Modern tasarım trendleri, kullanıcı deneyimi iyileştirmeleri ve görsel estetik (renk paletleri, animasyonlar vb.) konularında profesyonel tavsiyeler sunmalı.
+    - **Kod Mimarisi Önerileri:** Kodun temizliği (clean code), modülerlik, performans optimizasyonları ve ölçeklenebilirlik açısından projeyi değerlendirmeli.
+    - Claude, bu önerileri sadece sunmakla kalmamalı, sistemi daha profesyonel bir seviyeye taşımak için inisiyatif almalıdır.
 
 ---
 **Not:** Bu dosya proje her değiştiğinde güncellenmeli veya taranarak hafızaya alınmalıdır.

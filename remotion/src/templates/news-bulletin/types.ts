@@ -80,6 +80,11 @@ export interface BulletinProps {
    * Defaults to false — pass true to enable.
    */
   showCategoryFlash?: boolean;
+  /**
+   * Show a 2s branded intro sequence at the start of each news item.
+   * Defaults to false — pass true to enable.
+   */
+  showItemIntro?: boolean;
 }
 
 export const defaultBulletinProps: BulletinProps = {

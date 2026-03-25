@@ -13,6 +13,7 @@ import {
 import { BulletinProps, NewsItem, SubtitleEntry } from "./types";
 import { StudioBackground } from "./components/StudioBackground";
 import { NewsTicker } from "./components/NewsTicker";
+import { NewsItemIntro } from "./components/NewsItemIntro";
 
 // ── 9:16 Vertical News Bulletin (1080×1920) ──────────────────────────────────
 //
@@ -712,6 +713,8 @@ const BreakingFlash9x16: React.FC<{
 
 // ── Main 9:16 composition ────────────────────────────────────────────────────
 
+const ITEM_INTRO_DUR_9x16 = 120; // 2s at 60fps
+
 export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   items,
   ticker,
@@ -719,6 +722,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   style = "breaking",
   showLiveIndicator = false,
   showCategoryFlash = false,
+  showItemIntro = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -734,12 +738,14 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   const HEADLINES_START = 70;
 
   const FLASH_DUR = showCategoryFlash ? CATEGORY_FLASH_DUR : 0;
+  const INTRO_DUR = showItemIntro ? ITEM_INTRO_DUR_9x16 : 0;
   let cumulativeOffset = HEADLINES_START;
   const sequenced = items.map((item, idx) => {
     const flashFrom = cumulativeOffset;
-    const contentFrom = cumulativeOffset + FLASH_DUR;
-    cumulativeOffset += FLASH_DUR + item.duration;
-    return { item, flashFrom, contentFrom, idx };
+    const introFrom = cumulativeOffset + FLASH_DUR;
+    const contentFrom = cumulativeOffset + FLASH_DUR + INTRO_DUR;
+    cumulativeOffset += FLASH_DUR + INTRO_DUR + item.duration;
+    return { item, flashFrom, introFrom, contentFrom, idx };
   });
 
   return (
@@ -782,22 +788,31 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
         <BreakingFlash9x16 networkName={networkName} bulletinStyle={style} />
       </Sequence>
 
-      {/* Headlines (with optional category flash prefix) */}
-      {sequenced.map(({ item, flashFrom, contentFrom, idx }) => (
-        <React.Fragment key={idx}>
-          {showCategoryFlash && (
-            <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
-              <CategoryFlash9x16
-                label={CATEGORY_LABELS[(item.styleOverride || style) as string] ?? String(item.styleOverride || style).toUpperCase()}
-                accent={ACCENT[(item.styleOverride || style) as keyof typeof ACCENT] ?? ACCENT[style]}
-              />
+      {/* Headlines (with optional category flash + item intro prefix) */}
+      {sequenced.map(({ item, flashFrom, introFrom, contentFrom, idx }) => {
+        const itemStyle = (item.styleOverride && ACCENT[item.styleOverride as keyof typeof ACCENT])
+          ? (item.styleOverride as keyof typeof ACCENT)
+          : style;
+        const itemAccent = ACCENT[itemStyle];
+        const itemLabel = CATEGORY_LABELS[itemStyle] ?? String(itemStyle).toUpperCase();
+        return (
+          <React.Fragment key={idx}>
+            {showCategoryFlash && (
+              <Sequence from={flashFrom} durationInFrames={CATEGORY_FLASH_DUR}>
+                <CategoryFlash9x16 label={itemLabel} accent={itemAccent} />
+              </Sequence>
+            )}
+            {showItemIntro && (
+              <Sequence from={introFrom} durationInFrames={ITEM_INTRO_DUR_9x16}>
+                <NewsItemIntro label={itemLabel} accent={itemAccent} networkName={networkName} />
+              </Sequence>
+            )}
+            <Sequence from={contentFrom} durationInFrames={item.duration}>
+              <VerticalHeadlineCard item={item} bulletinStyle={itemStyle} index={idx} />
             </Sequence>
-          )}
-          <Sequence from={contentFrom} durationInFrames={item.duration}>
-            <VerticalHeadlineCard item={item} bulletinStyle={style} index={idx} />
-          </Sequence>
-        </React.Fragment>
-      ))}
+          </React.Fragment>
+        );
+      })}
 
       {/* Ticker */}
       <Sequence from={30}>

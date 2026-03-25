@@ -410,7 +410,9 @@ class SettingsReq(BaseModel):
 
 @app.put("/api/settings")
 def save_settings(body: SettingsReq):
+    from config import reload_settings
     _write_env(body.values)
+    reload_settings()
     return {"ok": True}
 
 
@@ -754,6 +756,8 @@ class BulletinRenderReq(BaseModel):
 
 @app.post("/api/bulletin/render")
 def start_bulletin_render(body: BulletinRenderReq):
+    from config import reload_settings
+    reload_settings()
     import secrets as _secrets
     from pipeline.news_bulletin import run_bulletin as render_bulletin
 

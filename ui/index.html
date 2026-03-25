@@ -731,6 +731,7 @@
                 <option value="elevenlabs">ElevenLabs</option>
                 <option value="openai">OpenAI TTS</option>
                 <option value="google">Google TTS</option>
+                <option value="qwen3">Qwen3 (Local)</option>
               </select>
             </div>
             <!-- Speed -->
@@ -817,6 +818,51 @@
                 </div>
               </div>
             </div>
+
+            <!-- Qwen3 Local Settings -->
+            <div x-show="settings.TTS_PROVIDER==='qwen3'" class="space-y-3 border border-slate-700/60 rounded-xl p-4 bg-slate-800/30">
+              <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Qwen3 TTS (Local) Ayarları</div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Model Tipi</label>
+                  <select x-model="settings.QWEN3_MODEL_TYPE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="custom">Custom Voice (Presets)</option>
+                    <option value="design">Voice Design (Prompt)</option>
+                    <option value="clone">Voice Clone (Audio)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Cihaz (Device)</label>
+                  <select x-model="settings.QWEN3_DEVICE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="auto">Auto</option>
+                    <option value="cpu">CPU</option>
+                    <option value="mps">MPS (Apple Silicon)</option>
+                    <option value="cuda">CUDA (NVIDIA)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Model ID / Path</label>
+                <input x-model="settings.QWEN3_MODEL_ID" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice" />
+              </div>
+
+              <div x-show="settings.QWEN3_MODEL_TYPE === 'custom'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Speaker (Ses)</label>
+                <input x-model="settings.QWEN3_SPEAKER" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="E.g. Vivian, Ryan" />
+              </div>
+
+              <div x-show="settings.QWEN3_MODEL_TYPE !== 'clone'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Ses Talimatı (Instruct)</label>
+                <textarea x-model="settings.QWEN3_VOICE_INSTRUCT" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="E.g. 'Enerjik bir ses tonuyla söyle' veya 'In an incredulous tone'"></textarea>
+              </div>
+
+              <div x-show="settings.QWEN3_MODEL_TYPE === 'clone'">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Referans Ses Dosyası (Path/URL)</label>
+                <input x-model="settings.QWEN3_REF_AUDIO" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500 transition-colors" placeholder="/path/to/ref.wav or https://..." />
+              </div>
+            </div>
             <!-- TTS Enhance with LLM -->
             <div class="flex items-start justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
               <div>
@@ -895,6 +941,7 @@
                     <option value="speshaudio">SpesAudio</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="openai">OpenAI TTS</option>
+                    <option value="qwen3">Qwen3 (Local)</option>
                   </select>
                   <span x-show="settings.YT_TTS_PROVIDER && settings.YT_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full">✓ Override Aktif</span>
                 </div>
@@ -933,6 +980,40 @@
                     <input type="range" x-model="settings.YT_TTS_STYLE" min="-1" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-700" />
                   </div>
                 </div>
+                <!-- Qwen3 Local Settings for YT -->
+                <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-indigo-800/30">
+                  <div class="text-xs font-semibold text-indigo-400/60 uppercase tracking-widest">Qwen3 Local Ayarları Override</div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Model Tipi</label>
+                      <select x-model="settings.YT_QWEN3_MODEL_TYPE" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="custom">Custom Voice</option>
+                        <option value="design">Voice Design</option>
+                        <option value="clone">Voice Clone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Cihaz</label>
+                      <select x-model="settings.YT_QWEN3_DEVICE" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="auto">Auto</option>
+                        <option value="cpu">CPU</option>
+                        <option value="mps">MPS</option>
+                        <option value="cuda">CUDA</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Model ID / Path</label>
+                    <input x-model="settings.YT_QWEN3_MODEL_ID" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-xs text-indigo-200/80 font-mono focus:outline-none focus:border-indigo-500" placeholder="(Globalden Devral)" />
+                  </div>
+                  <div x-show="(settings.YT_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE) !== 'clone'">
+                    <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Instruct</label>
+                    <textarea x-model="settings.YT_QWEN3_VOICE_INSTRUCT" rows="2" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-xs text-indigo-200/80 focus:outline-none focus:border-indigo-500" placeholder="(Globalden Devral)"></textarea>
+                  </div>
+                </div>
+
                 <!-- Advanced TTS & Script Options -->
                 <div class="pt-3 border-t border-indigo-800/30 space-y-2">
                   <div class="text-xs font-semibold text-indigo-400/60 uppercase tracking-wider">Gelişmiş TTS & Script Ayarları</div>
@@ -989,6 +1070,7 @@
                     <option value="speshaudio">SpesAudio</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="openai">OpenAI TTS</option>
+                    <option value="qwen3">Qwen3 (Local)</option>
                   </select>
                   <span x-show="settings.BULLETIN_TTS_PROVIDER && settings.BULLETIN_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-900/40 text-red-300 rounded-full">✓ Override Aktif</span>
                 </div>
@@ -1051,6 +1133,40 @@
                     </div>
                   </div>
                 </div>
+                <!-- Qwen3 Local Settings for Bulletin -->
+                <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-red-800/30">
+                  <div class="text-xs font-semibold text-red-400/60 uppercase tracking-widest">Qwen3 Local Ayarları Override</div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-semibold text-red-300/80 mb-1.5">Model Tipi</label>
+                      <select x-model="settings.BULLETIN_QWEN3_MODEL_TYPE" class="w-full bg-slate-800 border border-red-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="custom">Custom Voice</option>
+                        <option value="design">Voice Design</option>
+                        <option value="clone">Voice Clone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-red-300/80 mb-1.5">Cihaz</label>
+                      <select x-model="settings.BULLETIN_QWEN3_DEVICE" class="w-full bg-slate-800 border border-red-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="auto">Auto</option>
+                        <option value="cpu">CPU</option>
+                        <option value="mps">MPS</option>
+                        <option value="cuda">CUDA</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-red-300/80 mb-1.5">Model ID / Path</label>
+                    <input x-model="settings.BULLETIN_QWEN3_MODEL_ID" class="w-full bg-slate-800 border border-red-800/50 rounded-lg px-3 py-2 text-xs text-red-200/80 font-mono focus:outline-none focus:border-red-500" placeholder="(Globalden Devral)" />
+                  </div>
+                  <div x-show="(settings.BULLETIN_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE) !== 'clone'">
+                    <label class="block text-xs font-semibold text-red-300/80 mb-1.5">Instruct</label>
+                    <textarea x-model="settings.BULLETIN_QWEN3_VOICE_INSTRUCT" rows="2" class="w-full bg-slate-800 border border-red-800/50 rounded-lg px-3 py-2 text-xs text-red-200/80 focus:outline-none focus:border-red-500" placeholder="(Globalden Devral)"></textarea>
+                  </div>
+                </div>
+
                 <!-- Advanced TTS & Script Options for Bulletin -->
                 <div class="pt-3 border-t border-red-800/30 space-y-2">
                   <div class="text-xs font-semibold text-red-400/60 uppercase tracking-wider">Gelişmiş TTS & Script Ayarları</div>
@@ -1108,6 +1224,7 @@
                     <option value="openai">OpenAI TTS</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="speshaudio">SpesAudio</option>
+                    <option value="qwen3">Qwen3 (Local)</option>
                   </select>
                   <span x-show="settings.PR_TTS_PROVIDER && settings.PR_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-amber-900/40 text-amber-300 rounded-full">✓ Override Aktif</span>
                 </div>
@@ -1158,6 +1275,40 @@
                       <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_STYLE.toFixed(2)"></span>
                       <button @click="settings.PR_TTS_STYLE = settings.SPESHAUDIO_STYLE || 0.75; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Qwen3 Local Settings for PR -->
+                <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-amber-800/30">
+                  <div class="text-xs font-semibold text-amber-400/60 uppercase tracking-widest">Qwen3 Local Ayarları Override</div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-semibold text-amber-300/80 mb-1.5">Model Tipi</label>
+                      <select x-model="settings.PR_QWEN3_MODEL_TYPE" class="w-full bg-slate-800 border border-amber-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="custom">Custom Voice</option>
+                        <option value="design">Voice Design</option>
+                        <option value="clone">Voice Clone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-amber-300/80 mb-1.5">Cihaz</label>
+                      <select x-model="settings.PR_QWEN3_DEVICE" class="w-full bg-slate-800 border border-amber-800/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors">
+                        <option value="">(Globalden Devral)</option>
+                        <option value="auto">Auto</option>
+                        <option value="cpu">CPU</option>
+                        <option value="mps">MPS</option>
+                        <option value="cuda">CUDA</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-amber-300/80 mb-1.5">Model ID / Path</label>
+                    <input x-model="settings.PR_QWEN3_MODEL_ID" class="w-full bg-slate-800 border border-amber-800/50 rounded-lg px-3 py-2 text-xs text-amber-200/80 font-mono focus:outline-none focus:border-amber-500" placeholder="(Globalden Devral)" />
+                  </div>
+                  <div x-show="(settings.PR_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE) !== 'clone'">
+                    <label class="block text-xs font-semibold text-amber-300/80 mb-1.5">Instruct</label>
+                    <textarea x-model="settings.PR_QWEN3_VOICE_INSTRUCT" rows="2" class="w-full bg-slate-800 border border-amber-800/50 rounded-lg px-3 py-2 text-xs text-amber-200/80 focus:outline-none focus:border-amber-500" placeholder="(Globalden Devral)"></textarea>
                   </div>
                 </div>
 
@@ -4511,6 +4662,12 @@ function app() {
       if (this.settings.BULLETIN_CATEGORY_MAPPING) {
         try { this.categoryTemplates = JSON.parse(this.settings.BULLETIN_CATEGORY_MAPPING); } catch(e) { this.categoryTemplates = {}; }
       }
+      if (!this.settings.QWEN3_MODEL_ID) this.settings.QWEN3_MODEL_ID = 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice';
+      if (!this.settings.QWEN3_MODEL_TYPE) this.settings.QWEN3_MODEL_TYPE = 'custom';
+      if (!this.settings.QWEN3_SPEAKER) this.settings.QWEN3_SPEAKER = 'Vivian';
+      if (!this.settings.QWEN3_DEVICE) this.settings.QWEN3_DEVICE = 'auto';
+      if (!this.settings.QWEN3_VOICE_INSTRUCT) this.settings.QWEN3_VOICE_INSTRUCT = '';
+      if (!this.settings.QWEN3_REF_AUDIO) this.settings.QWEN3_REF_AUDIO = '';
       // Product Review defaults
       if (!this.settings.PR_STYLE) this.settings.PR_STYLE = 'modern';
       if (!this.settings.PR_FORMAT) this.settings.PR_FORMAT = '16:9';

@@ -71,6 +71,11 @@ def _get_bulletin_tts() -> dict:
         "similarity_boost": settings.bulletin_tts_similarity_boost if settings.bulletin_tts_similarity_boost >= 0.0 else settings.speshaudio_similarity_boost,
         "style_val": settings.bulletin_tts_style if settings.bulletin_tts_style >= 0.0 else settings.speshaudio_style,
         "language_override": settings.bulletin_tts_language or None,
+        # Qwen3 Overrides
+        "qwen3_model_id": settings.bulletin_qwen3_model_id or settings.qwen3_model_id,
+        "qwen3_model_type": settings.bulletin_qwen3_model_type or settings.qwen3_model_type,
+        "qwen3_voice_instruct": settings.bulletin_qwen3_voice_instruct or settings.qwen3_voice_instruct,
+        "qwen3_device": settings.bulletin_qwen3_device or settings.qwen3_device,
     }
 
 
@@ -121,9 +126,21 @@ def _synthesize(item: BulletinItem, out_dir: Path, index: int) -> Path:
     provider = _load_provider(bts["provider"])
     if bts["voice_id"] and hasattr(provider, "voice_id"):
         provider.voice_id = bts["voice_id"]  # type: ignore[attr-defined]
+    
     text = clean_for_tts(item.narration, remove_apostrophes=settings.tts_remove_apostrophes)
     audio_path = out_dir / f"item_{index:02d}.mp3"
-    provider.synthesize(text, audio_path)
+
+    # Pass Qwen3 overrides if provider supports it
+    syn_kwargs = {}
+    if bts["provider"] == "qwen3":
+        syn_kwargs.update({
+            "model_id": bts["qwen3_model_id"],
+            "model_type": bts["qwen3_model_type"],
+            "voice_instruct": bts["qwen3_voice_instruct"],
+            "device": bts["qwen3_device"]
+        })
+    
+    provider.synthesize(text, audio_path, **syn_kwargs)
     return audio_path
 
 

@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
-from typing import Literal
+from typing import Literal, Optional
+import os
+from dotenv import load_dotenv
 
 
 class Settings(BaseSettings):
@@ -18,7 +20,7 @@ class Settings(BaseSettings):
     script_humanize_with_llm: bool = False  # Gemini pass to rewrite script for natural human speech
 
     # TTS
-    tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio"] = "openai"
+    tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio", "qwen3"] = "openai"
     tts_enhance_with_llm: bool = False  # Run Gemini to add TTS emphasis/pauses before synthesis
     tts_speed: float = 1.0             # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
     tts_remove_apostrophes: bool = True  # strip ' to prevent micro-pause glitches (safe for Turkish)
@@ -34,6 +36,14 @@ class Settings(BaseSettings):
     speshaudio_similarity_boost: float = 0.5
     speshaudio_style: float = 0.75
 
+    # Qwen3 TTS (Local)
+    qwen3_model_id: str = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+    qwen3_model_type: Literal["custom", "design", "clone"] = "custom"
+    qwen3_speaker: str = "Vivian"
+    qwen3_voice_instruct: str = ""
+    qwen3_ref_audio: str = ""
+    qwen3_device: str = "auto"
+
     # YT Video-specific TTS (optional; falls back to global TTS if empty/sentinel)
     yt_tts_provider: str = ""          # empty = use tts_provider
     yt_tts_voice_id: str = ""          # empty = global voice
@@ -42,6 +52,10 @@ class Settings(BaseSettings):
     yt_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     yt_tts_similarity_boost: float = -1.0
     yt_tts_style: float = -1.0
+    yt_qwen3_model_id: str = ""
+    yt_qwen3_model_type: str = ""
+    yt_qwen3_voice_instruct: str = ""
+    yt_qwen3_device: str = ""
     yt_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
     yt_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
     yt_tts_trim_silence: bool | None = None         # None = use tts_trim_silence
@@ -70,6 +84,10 @@ class Settings(BaseSettings):
     bulletin_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     bulletin_tts_similarity_boost: float = -1.0
     bulletin_tts_style: float = -1.0
+    bulletin_qwen3_model_id: str = ""
+    bulletin_qwen3_model_type: str = ""
+    bulletin_qwen3_voice_instruct: str = ""
+    bulletin_qwen3_device: str = ""
     bulletin_tts_language: str = ""          # empty = global provider default
     bulletin_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
     bulletin_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
@@ -117,6 +135,10 @@ class Settings(BaseSettings):
     pr_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     pr_tts_similarity_boost: float = -1.0
     pr_tts_style: float = -1.0
+    pr_qwen3_model_id: str = ""
+    pr_qwen3_model_type: str = ""
+    pr_qwen3_voice_instruct: str = ""
+    pr_qwen3_device: str = ""
     pr_tts_enhance_with_llm: bool | None = None     # None = use tts_enhance_with_llm
     pr_tts_remove_apostrophes: bool | None = None   # None = use tts_remove_apostrophes
     pr_tts_trim_silence: bool | None = None         # None = use tts_trim_silence
@@ -152,3 +174,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def reload_settings():
+    """Reload settings from .env file into the singleton instance."""
+    load_dotenv(override=True)
+    new_settings = Settings()
+    # Update the existing settings object's dict
+    for key, value in new_settings.model_dump().items():
+        setattr(settings, key, value)
+    print("  [Config] Settings reloaded from .env")

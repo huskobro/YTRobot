@@ -705,6 +705,10 @@
                   :class="settingsModule==='social_meta'?'bg-violet-700 text-white shadow-md shadow-violet-900/40':'text-slate-400 hover:text-white hover:bg-slate-800'">
             📱 <span x-text="t('settings_tab_social')"></span>
           </button>
+          <button @click="settingsModule='modules'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='modules'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            📦 <span x-text="t('settings_tab_modules')"></span>
+          </button>
           <button @click="settingsModule='system'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
                   :class="settingsModule==='system'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
             ⚙️ <span x-text="t('settings_tab_system')"></span>
@@ -2225,22 +2229,111 @@
           </div>
         </div>
 
-        <!-- AI — Section 3: Sosyal Medya AI (closed) -->
-        <div x-show="settingsModule==='ai'" x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-          <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-2">
-              <span class="text-base">📱</span>
-              <span class="font-semibold text-white">Sosyal Medya AI</span>
+        <!-- ══ MODULES TAB ══════════════════════════════════════════════ -->
+        <div x-show="settingsModule==='modules'" class="space-y-6">
+
+          <!-- YTRobot Section -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center text-[10px]">▶</span>
+              <span x-text="t('settings_module_ytrobot')"></span>
+            </h2>
+            <p class="text-xs text-slate-500 mb-4" x-text="t('settings_yt_override_note')"></p>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl opacity-60">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Modül Özellikleri</div>
+                <div class="text-xs text-slate-400 italic">Genel ayarları kullanır. Modül bazlı override butonları yakında eklenecektir.</div>
+              </div>
+              <div class="p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
+                 <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Durum</div>
+                 <div class="flex items-center gap-2">
+                   <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                   <span class="text-xs text-green-400 font-semibold">Aktif Modül</span>
+                 </div>
+              </div>
             </div>
-            <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
-          <div x-show="open" class="mt-4">
-            <p class="text-xs text-slate-500 mb-3">Sosyal medya metadata AI ayarları için Sosyal Medya sekmesine gidin.</p>
-            <button @click="settingsModule='social_meta'" class="px-4 py-2 bg-violet-700 hover:bg-violet-600 text-white text-xs font-semibold rounded-lg transition-colors" x-text="t('go_to_social_meta')"></button>
+
+          <!-- News Bulletin Section -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-red-700 rounded flex items-center justify-center text-[10px]">📺</span>
+              <span x-text="t('settings_module_bulletin')"></span>
+            </h2>
+
+            <div class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-5 mb-4">
+              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4" x-text="t('settings_rss_title')"></h3>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_name_label')"></label>
+                  <input x-model="newSrc.name" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="Haber Kaynağı Adı" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_url_label')"></label>
+                  <input x-model="newSrc.url" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="https://..." />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_category_label')"></label>
+                  <input x-model="newSrc.category" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1" x-text="t('settings_rss_lang_label')"></label>
+                  <select x-model="newSrc.language" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    <option value="tr">Türkçe</option>
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                  </select>
+                </div>
+                <div class="md:col-span-1 flex items-end">
+                  <button @click="addBulletinSource()"
+                          class="w-full h-[38px] bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-red-900/20">
+                    + <span x-text="t('settings_rss_add_btn')"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Existing Sources Mini-List -->
+            <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+              <template x-for="src in bulletinSources" :key="src.id">
+                <div class="flex items-center justify-between p-3 bg-slate-800/40 border border-slate-700/40 rounded-lg group">
+                  <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 rounded-full" :class="src.enabled ? 'bg-green-500' : 'bg-slate-600'"></div>
+                    <div>
+                      <div class="text-xs font-bold text-white" x-text="src.name"></div>
+                      <div class="text-[10px] text-slate-500 truncate max-w-[200px]" x-text="src.url"></div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[9px] px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded" x-text="src.category"></span>
+                    <button @click="deleteBulletinSource(src.id)" class="text-slate-500 hover:text-red-400 p-1">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
+
+          <!-- Product Review Section Placeholder -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-amber-600 rounded flex items-center justify-center text-[10px]">🛒</span>
+              <span x-text="t('settings_module_pr')"></span>
+            </h2>
+            <div class="p-8 border-2 border-dashed border-slate-800 rounded-2xl text-center">
+              <div class="text-slate-600 text-xs italic">Modül ayarları bu sekme üzerinden yönetilecektir.</div>
+            </div>
+          </div>
+
         </div>
 
-        <!-- ══ SYSTEM TAB ══════════════════════════════════════════════ -->
+        <!-- ══ SYSTEM TAB ══════════════════════════════════════════════════ -->
 
         <!-- System — Section 1: Çıktı Ayarları (open) -->
         <div x-show="settingsModule==='system'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
@@ -2537,9 +2630,14 @@
         <!-- ── KAYNAKLAR ──────────────────────────────────────── -->
         <div x-show="bulletinTab==='sources'">
           <!-- Source selection panel -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
-            <h2 class="text-sm font-bold text-slate-300 mb-4" x-text="t('bulletin_source_select')"></h2>
-            
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-bold text-slate-300" x-text="t('bulletin_source_select')"></h2>
+              <button @click="loadSettings(); view='settings'; settingsModule='modules'" 
+                      class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-[10px] text-slate-400 font-bold transition-all">
+                + <span x-text="t('settings_rss_add_btn')"></span>
+              </button>
+            </div>
+
             <div class="mb-4">
               <div class="text-xs font-semibold text-slate-400 mb-2" x-text="t('bulletin_filter_cat') || 'Kategori Filtresi'"></div>
               <div class="flex flex-wrap gap-2">
@@ -2580,7 +2678,7 @@
                   if(bulletinSourceFilterCat !== 'All' && s.category !== bulletinSourceFilterCat) return false;
                   if(bulletinSourceFilterPreset !== 'All') {
                     const p = bulletinPresets.find(pr => pr.name === bulletinSourceFilterPreset);
-                    if(!p || !p.values || !p.values.selected_sources) return true; 
+                    if(!p || !p.values || !p.values.selected_sources) return true;
                     if(!p.values.selected_sources.includes(s.id)) return false;
                   }
                   return true;
@@ -2689,8 +2787,7 @@
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </template>
+                      </template>
                   </div>
                 </div>
               </template>
@@ -3371,9 +3468,6 @@
           </div>
         </div>
 
-      </div>
-    </div>
-
   </main>
 
   <!-- Global Confirm Save Modal -->
@@ -3407,8 +3501,6 @@ const LANG = {
     steps_label: 'steps',
     status_queued: 'QUEUED', status_running: 'RUNNING', status_completed: 'COMPLETED', status_failed: 'FAILED',
     status_stopped: 'STOPPED', status_paused: 'PAUSED',
-    filter_all: 'All', filter_running: 'Running', filter_queued: 'Queued', filter_paused: 'Paused',
-    filter_completed: 'Completed', filter_failed: 'Failed', filter_stopped: 'Stopped',
     btn_stop: 'Stop', btn_pause: 'Pause', btn_resume: 'Resume',
     btn_restart: 'Restart', btn_delete: 'Delete',
     confirm_delete_msg: 'Delete this session and all its files? This cannot be undone.',
@@ -3601,7 +3693,7 @@ const LANG = {
     bulletin_add_source: 'Add RSS Source',
     bulletin_src_name: 'Name', bulletin_src_name_ph: 'e.g. BBC News',
     bulletin_src_url: 'RSS Feed URL',
-    bulletin_src_category: 'Category', bulletin_src_category_ph: 'e.g. World, Economy, Tech',
+    bulletin_src_category: 'Category',
     bulletin_src_lang: 'Language',
     bulletin_add_btn: '+ Add Source',
     bulletin_no_sources: 'No sources yet. Add an RSS feed URL above.',
@@ -3714,7 +3806,7 @@ const LANG = {
     bulletin_show_live_hint: 'Show a pulsing red dot + "LIVE" label next to the network name.',
     // Bulletin Prompts
     section_bulletin_prompts: '✏️ Bulletin Master Prompt',
-    bulletin_prompts_hint: 'Customize the AI prompt for generating bulletin narrations. Leave empty to use the built-in default. Changes take effect on the next run.',
+    bulletin_prompts_hint: 'Override the default Gemini system prompts. Leave empty to use the built-in default. Changes take effect on the next run.',
     prompt_bulletin_narration_label: '1 · Bulletin Narration Prompt',
     prompt_bulletin_narration_hint: 'Controls how the AI summarizes and narrates news items for TTS.',
     anim_desc_hype: 'Zoom up', anim_desc_explosive: 'Slide left', anim_desc_vibrant: 'Pop', anim_desc_minimal: 'Fade', anim_desc_none: 'Static',
@@ -3751,8 +3843,20 @@ const LANG = {
     settings_tab_tts: 'Voice',
     settings_tab_visuals: 'Visual & Effects',
     settings_tab_ai: 'AI & Script',
-    settings_tab_social: 'Social Media',
+    settings_tab_social: 'Social Meta',
     settings_tab_system: 'System',
+    settings_tab_modules: 'Modules',
+    settings_module_ytrobot: 'YTRobot (General Video)',
+    settings_module_bulletin: 'News Bulletin',
+    settings_module_pr: 'Product Review',
+    settings_rss_title: 'News Sources (RSS)',
+    settings_rss_name_label: 'Source Name',
+    settings_rss_url_label: 'RSS/Source URL',
+    settings_rss_category_label: 'Category',
+    settings_rss_lang_label: 'Language',
+    settings_rss_add_btn: 'Add Source',
+    settings_yt_defaults_title: 'YTRobot Defaults',
+    settings_yt_override_note: 'Even if using defaults, YTRobot is treated as a separate module.',
     tts_default_section: 'Default Voice',
     tts_module_overrides: 'Module Overrides',
     tts_voice_library: 'Voice Library',
@@ -3784,8 +3888,6 @@ const LANG = {
     steps_label: 'adım',
     status_queued: 'KUYRUKTA', status_running: 'ÇALIŞIYOR', status_completed: 'TAMAMLANDI', status_failed: 'BAŞARISIZ',
     status_stopped: 'DURDURULDU', status_paused: 'DURAKLATILDI',
-    filter_all: 'Tümü', filter_running: 'Çalışan', filter_queued: 'Kuyrukta', filter_paused: 'Duraklatılan',
-    filter_completed: 'Tamamlanan', filter_failed: 'Başarısız', filter_stopped: 'Durdurulan',
     btn_stop: 'Durdur', btn_pause: 'Duraklat', btn_resume: 'Devam Et',
     btn_restart: 'Yeniden Başlat', btn_delete: 'Sil',
     confirm_delete_msg: 'Bu oturum ve tüm dosyaları silinsin mi? Bu işlem geri alınamaz.',
@@ -3978,7 +4080,7 @@ const LANG = {
     bulletin_add_source: 'RSS Kaynağı Ekle',
     bulletin_src_name: 'Ad', bulletin_src_name_ph: 'örn. BBC Türkçe',
     bulletin_src_url: 'RSS Besleme URL',
-    bulletin_src_category: 'Kategori', bulletin_src_category_ph: 'örn. Dünya, Ekonomi, Teknoloji',
+    bulletin_src_category: 'Kategori',
     bulletin_src_lang: 'Dil',
     bulletin_add_btn: '+ Kaynak Ekle',
     bulletin_no_sources: 'Henüz kaynak yok. Yukarıya bir RSS besleme URL ekleyin.',
@@ -4130,6 +4232,18 @@ const LANG = {
     settings_tab_ai: 'AI & Script',
     settings_tab_social: 'Sosyal Medya',
     settings_tab_system: 'Sistem',
+    settings_tab_modules: 'Modüller',
+    settings_module_ytrobot: 'YTRobot (Genel Video)',
+    settings_module_bulletin: 'Haber Bülteni',
+    settings_module_pr: 'Ürün İnceleme',
+    settings_rss_title: 'Haber Kaynakları (RSS)',
+    settings_rss_name_label: 'Kaynak Adı',
+    settings_rss_url_label: 'RSS/Kaynak URL',
+    settings_rss_category_label: 'Kategori',
+    settings_rss_lang_label: 'Dil',
+    settings_rss_add_btn: 'Kaynak Ekle',
+    settings_yt_defaults_title: 'YTRobot Varsayılanları',
+    settings_yt_override_note: 'Varsayılan ayarları kullansa bile YTRobot ayrı bir modül olarak yönetilir.',
     tts_default_section: 'Global Seslendirme',
     tts_module_overrides: 'Modül Overrideları',
     tts_voice_library: 'Ses Kütüphanesi',

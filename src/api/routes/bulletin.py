@@ -15,6 +15,7 @@ from src.core.utils import (
     _load_bulletin_sources, _save_bulletin_sources, _load_bulletin_history, _append_bulletin_history
 )
 from src.core.queue import queue_manager
+from src.core.cache import asset_cache
 
 router = APIRouter(prefix="/api/bulletin", tags=["bulletin"])
 
@@ -66,11 +67,14 @@ def _build_news_items(item_list: list, body_data: dict) -> list:
             or mapping_from_settings
             or _resolve_auto_style(cat, body_data.get("style", "breaking"))
         )
+        img_url = item.get("image_url", "")
+        cached_img = asset_cache.get_url_cache(img_url) if img_url else ""
+        
         news_item = {
             "headline": item.get("title", ""),
             "subtext": item.get("narration", item.get("summary", "")),
             "duration": body_data.get("fps", 30) * 8,
-            "imageUrl": item.get("image_url", ""),
+            "imageUrl": str(cached_img.absolute()) if cached_img else "",
             "language": item.get("language", "tr"),
             "category": cat,
         }

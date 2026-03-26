@@ -20,11 +20,13 @@ from src.api.routes.product import router as product_router
 from src.api.routes.system import router as system_router
 from src.api.routes.social import router as social_router
 from src.core.queue import queue_manager
+from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    asset_cache.cleanup() # Disk optimization
     queue_manager.start()
     yield
     # Shutdown

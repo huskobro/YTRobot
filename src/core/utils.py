@@ -14,6 +14,8 @@ BULLETIN_SOURCES_FILE = Path("bulletin_sources.json")
 BULLETIN_HISTORY_FILE = Path("bulletin_history.json")
 BULLETIN_DIR = Path("output/bulletins")
 PRODUCT_REVIEW_DIR = Path("output/product_reviews")
+ASSETS_DIR = Path("assets")
+CACHE_DIR = ASSETS_DIR / "cache"
 
 def _list_presets() -> list:
     if not PRESETS_DIR.exists():

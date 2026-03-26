@@ -19,8 +19,18 @@ from src.api.routes.bulletin import router as bulletin_router
 from src.api.routes.product import router as product_router
 from src.api.routes.system import router as system_router
 from src.api.routes.social import router as social_router
+from src.core.queue import queue_manager
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="YTRobot API", version="2.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    queue_manager.start()
+    yield
+    # Shutdown
+    await queue_manager.stop()
+
+app = FastAPI(title="YTRobot API", version="2.0.0", lifespan=lifespan)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):

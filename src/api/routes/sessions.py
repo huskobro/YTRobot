@@ -12,6 +12,8 @@ from src.core.utils import (
 )
 from src.core.process_registry import get_proc, kill_proc
 from src.core.pipeline_runner import _run, STEPS
+from src.core.queue import queue_manager
+import asyncio
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 
@@ -24,16 +26,18 @@ def get_session(sid: str):
     return _read_session(sid)
 
 @router.post("/run")
-def start_run(req: RunReq):
+async def start_run(req: RunReq):
     if not req.topic and not req.script_file:
         raise HTTPException(400, "Provide topic or script_file")
     sid = datetime.now().strftime("%Y%m%d_%H%M%S")
     _session_dir(sid).mkdir(parents=True, exist_ok=True)
+    
     preset_env = {}
     if req.preset_name:
         p = PRESETS_DIR / f"{req.preset_name}.json"
         if p.exists():
             preset_env = json.loads(p.read_text())
+
     session = {
         "id": sid,
         "topic": req.topic or req.script_file,
@@ -54,8 +58,24 @@ def start_run(req: RunReq):
         "module": "yt_video",
     }
     _write_session(sid, session)
-    threading.Thread(target=_run, args=(sid, req.topic, req.script_file, preset_env), daemon=True).start()
-    return {"session_id": sid}
+
+    # Use queue manager instead of raw thread
+    await queue_manager.add_job("yt_video", {
+        "topic": req.topic,
+        "script_file": req.script_file,
+        "preset_env": preset_env
+    }, sid)
+    
+    return {"session_id": sid, "status": "queued"}
+
+async def run_pipeline_task(sid: str, data: dict, job_type: str):
+    """Bridge for QueueManager to call the core runner safely."""
+    # Since _run is synchronous, we run it in a separate thread but managed by asyncio
+    topic = data.get("topic")
+    script_file = data.get("script_file")
+    preset_env = data.get("preset_env", {})
+    
+    await asyncio.to_thread(_run, sid, topic, script_file, preset_env)
 
 @router.post("/sessions/{sid}/stop")
 def stop_session(sid: str):

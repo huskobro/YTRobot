@@ -370,7 +370,18 @@ function app() {
 
     async loadSessions() {
       try {
+        const oldSessions = JSON.parse(JSON.stringify(this.sessions || []));
         this.sessions = await this.apiFetch('/api/sessions');
+        
+        // Notify success sound for newly completed jobs
+        this.sessions.forEach(s => {
+          const old = oldSessions.find(o => o.id === s.id);
+          if (old && old.status !== 'completed' && s.status === 'completed') {
+            this.playSound('success');
+            // If it was the current session being watched, maybe do something?
+          }
+        });
+
         if (this.currentSession) {
           const u = this.sessions.find(s => s.id === this.currentSession.id);
           if (u) this.currentSession = u;
@@ -1032,7 +1043,12 @@ function app() {
               clearInterval(this._bulletinPoll);
               this.bulletinRendering = false;
               this.bulletinPaused = false;
-              if (job.status === 'completed') this.bulletinProgress = 100;
+              if (job.status === 'completed') {
+                this.bulletinProgress = 100;
+                this.playSound('success');
+              } else if (job.status === 'failed') {
+                this.playSound('error');
+              }
             }
           } catch(e) {}
         }, 2000);
@@ -1174,7 +1190,12 @@ function app() {
             if (job.status === 'completed' || job.status === 'failed') {
               clearInterval(this._prPoll);
               this.prRendering = false;
-              if (job.status === 'completed') this.prProgress = 100;
+              if (job.status === 'completed') {
+                this.prProgress = 100;
+                this.playSound('success');
+              } else {
+                this.playSound('error');
+              }
             }
           } catch(e) {}
         }, 2000);

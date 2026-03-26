@@ -2,6 +2,7 @@ import json
 import threading
 import time
 import secrets
+import asyncio
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -13,13 +14,14 @@ from src.core.utils import (
     BULLETIN_SOURCES_FILE, BULLETIN_HISTORY_FILE, BULLETIN_DIR,
     _load_bulletin_sources, _save_bulletin_sources, _load_bulletin_history, _append_bulletin_history
 )
+from src.core.queue import queue_manager
 
 router = APIRouter(prefix="/api/bulletin", tags=["bulletin"])
 
 _bulletin_jobs: dict[str, dict] = {}
 _bulletin_jobs_lock = threading.Lock()
 
-# Auto-map Turkish/English category names → Remotion style keys
+# Auto-map categories
 _AUTO_STYLE_MAP: dict = {
     "spor": "sport", "sport": "sport",
     "finans": "finance", "finance": "finance", "ekonomi": "finance", "borsa": "finance",
@@ -33,8 +35,164 @@ _AUTO_STYLE_MAP: dict = {
 }
 
 def _resolve_auto_style(cat: str, fallback: str = "breaking") -> str:
-    """Return the Remotion style key that best matches a category name."""
     return _AUTO_STYLE_MAP.get((cat or "").lower().strip(), fallback)
+
+# --- Helper functions for render (Global Scope) ---
+
+def _on_progress(bid: str, progress: int, step: str, step_label: str):
+    with _bulletin_jobs_lock:
+        job = _bulletin_jobs.get(bid)
+        if not job: return
+        if progress == -1 and step == "_proc":
+            try: job["_pid"] = int(step_label)
+            except: pass
+            return
+        job["progress"] = progress
+        job["step"] = step
+        job["step_label"] = step_label
+        elapsed = time.time() - job["started_at"]
+        if progress > 2: job["eta"] = round(elapsed / progress * (100 - progress))
+        else: job["eta"] = None
+
+def _build_news_items(item_list: list, body_data: dict) -> list:
+    news_items = []
+    for item in item_list:
+        cat = (item.get("category") or "").lower().strip()
+        item_key = item.get("url") or item.get("source_url") or item.get("id") or item.get("title") or ""
+        mapping_from_settings = body_data.get("category_templates", {}).get(cat)
+        style_override = (
+            body_data.get("item_styles", {}).get(item_key)
+            or body_data.get("category_styles", {}).get(cat)
+            or mapping_from_settings
+            or _resolve_auto_style(cat, body_data.get("style", "breaking"))
+        )
+        news_item = {
+            "headline": item.get("title", ""),
+            "subtext": item.get("narration", item.get("summary", "")),
+            "duration": body_data.get("fps", 30) * 8,
+            "imageUrl": item.get("image_url", ""),
+            "language": item.get("language", "tr"),
+            "category": cat,
+        }
+        if style_override: news_item["styleOverride"] = style_override
+        src_url = item.get("url") or item.get("source_url") or ""
+        if src_url: news_item["sourceUrl"] = src_url
+        pub_date = item.get("published") or item.get("published_date") or ""
+        if pub_date: news_item["publishedDate"] = pub_date
+        news_items.append(news_item)
+    return news_items
+
+def _build_props(news_items: list, comp_style: str, ticker_items: list, body_data: dict) -> dict:
+    comp_id = "NewsBulletin9x16" if body_data.get("format") == "9:16" else "NewsBulletin"
+    return {
+        "items": news_items, "ticker": ticker_items, "networkName": body_data.get("network_name"),
+        "style": comp_style, "fps": body_data.get("fps", 30), "composition": comp_id,
+        "lowerThirdEnabled": body_data.get("lower_third_enabled"), "lowerThirdText": body_data.get("lower_third_text"),
+        "lowerThirdFont": body_data.get("lower_third_font"), "lowerThirdColor": body_data.get("lower_third_color"),
+        "lowerThirdSize": body_data.get("lower_third_size"), "tickerEnabled": body_data.get("ticker_enabled"),
+        "tickerSpeed": body_data.get("ticker_speed"), "tickerBg": body_data.get("ticker_bg"),
+        "tickerColor": body_data.get("ticker_color"), "showLive": body_data.get("show_live"),
+        "showCategoryFlash": body_data.get("show_category_flash"), "showItemIntro": body_data.get("show_item_intro"),
+        "textDeliveryMode": body_data.get("text_delivery_mode"), "showSource": body_data.get("show_source"),
+        "showDate": body_data.get("show_date"), "lang": body_data.get("lang"),
+    }
+
+def _make_ticker(item_list: list, body_data: dict) -> list:
+    return body_data.get("ticker") if body_data.get("ticker") else [{"text": f"• {item.get('title', '')}"} for item in item_list[:8]]
+
+async def run_bulletin_task(bid: str, data: dict):
+    await asyncio.to_thread(_do_bulletin_render_sync, bid, data)
+
+def _do_bulletin_render_sync(bid: str, data: dict):
+    from config import reload_settings
+    reload_settings()
+    from pipeline.news_bulletin import run_bulletin as render_bulletin
+    
+    body_data = data.get("body", {})
+    render_mode = data.get("render_mode", "combined")
+    _stop_event = threading.Event()
+    _pause_event = threading.Event()
+    
+    with _bulletin_jobs_lock:
+        _bulletin_jobs[bid] = {
+            "id": bid, "status": "running", "output": None, "error": None,
+            "progress": 0, "step": "init", "step_label": "Başlatılıyor...",
+            "started_at": time.time(), "eta": None,
+            "_stop": _stop_event, "_pause": _pause_event, "_pid": None,
+        }
+
+    try:
+        raw_items: list = body_data.get("items", [])
+        effective_mode = render_mode
+        if body_data.get("render_per_category") and effective_mode == "combined":
+            effective_mode = "per_category"
+
+        output_path = BULLETIN_DIR / f"{bid}.mp4"
+
+        if effective_mode == "per_item":
+            output_files = {}
+            total_items = len(raw_items)
+            for i, item in enumerate(raw_items):
+                cat = (item.get("category") or "").lower().strip()
+                item_key = item.get("url") or item.get("source_url") or item.get("id") or item.get("title") or ""
+                item_style = (
+                    body_data.get("item_styles", {}).get(item_key) or body_data.get("category_styles", {}).get(cat)
+                    or (body_data.get("category_templates", {}).get(cat))
+                    or _resolve_auto_style(cat, body_data.get("style", "breaking"))
+                )
+                item_label = f"item_{i:02d}"
+                item_output = BULLETIN_DIR / f"{bid}_{item_label}.mp4"
+                prog_start, prog_end = 5 + int(i / total_items * 90), 5 + int((i+1) / total_items * 90)
+                def _item_progress(p, s, sl, ps=prog_start, pe=prog_end, b=bid, lbl=item_label):
+                    mapped = ps + int(p / 100 * (pe - ps))
+                    _on_progress(b, mapped, s, f"[{lbl}] {sl}")
+                props = _build_props(_build_news_items([item], body_data), item_style, [], body_data)
+                render_bulletin(props, item_output, body_data.get("fps"), body_data.get("category_templates"), _item_progress, _stop_event, _pause_event)
+                output_files[item_label] = str(item_output)
+            if body_data.get("preset_name"):
+                urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
+                if urls: _append_bulletin_history(body_data.get("preset_name"), urls)
+            with _bulletin_jobs_lock:
+                _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"], _bulletin_jobs[bid]["outputs"] = "completed", str(output_path), output_files
+        elif effective_mode == "per_category":
+            category_groups = defaultdict(list)
+            for item in raw_items:
+                cat = (item.get("category") or "").lower().strip()
+                category_groups[cat or "__other__"].append(item)
+            cats = list(category_groups.keys())
+            total_cats, output_files = len(cats), {}
+            for i, cat in enumerate(cats):
+                cat_items = category_groups[cat]
+                cat_style = body_data.get("category_styles", {}).get(cat) or (body_data.get("category_templates", {}).get(cat)) or (_resolve_auto_style(cat, body_data.get("style", "breaking")) if cat != "__other__" else body_data.get("style", "breaking"))
+                cat_label = cat if cat != "__other__" else "diger"
+                cat_output = BULLETIN_DIR / f"{bid}_{cat_label}.mp4"
+                prog_start, prog_end = 5 + int(i / total_cats * 90), 5 + int((i+1) / total_cats * 90)
+                def _cat_progress(p, s, sl, ps=prog_start, pe=prog_end, b=bid, cl=cat_label):
+                    mapped = ps + int(p / 100 * (pe - ps))
+                    _on_progress(b, mapped, s, f"[{cl.upper()}] {sl}")
+                props = _build_props(_build_news_items(cat_items, body_data), cat_style, _make_ticker(cat_items, body_data), body_data)
+                render_bulletin(props, cat_output, body_data.get("fps"), body_data.get("category_templates"), _cat_progress, _stop_event, _pause_event)
+                output_files[cat_label] = str(cat_output)
+            if body_data.get("preset_name"):
+                urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
+                if urls: _append_bulletin_history(body_data.get("preset_name"), urls)
+            with _bulletin_jobs_lock:
+                _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"], _bulletin_jobs[bid]["outputs"] = "completed", str(output_path), output_files
+        else:
+            news_items = _build_news_items(raw_items, body_data)
+            props = _build_props(news_items, body_data.get("style"), _make_ticker(raw_items, body_data), body_data)
+            render_bulletin(props, output_path, body_data.get("fps"), body_data.get("category_templates"), lambda p,s,sl,b=bid: _on_progress(b,p,s,sl), _stop_event, _pause_event)
+            if body_data.get("preset_name"):
+                urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
+                if urls: _append_bulletin_history(body_data.get("preset_name"), urls)
+            with _bulletin_jobs_lock:
+                _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"] = "completed", str(output_path)
+    except Exception as exc:
+        with _bulletin_jobs_lock:
+            _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["error"] = "failed", str(exc)
+        raise exc
+
+# --- Router Endpoints ---
 
 @router.get("/history")
 def get_bulletin_history():
@@ -93,27 +251,19 @@ def delete_bulletin_source(src_id: str):
 def create_bulletin_draft(body: BulletinDraftReq):
     from pipeline.news_fetcher import fetch_and_draft
     sources = _load_bulletin_sources()
-    if not sources:
-        raise HTTPException(400, "No sources configured")
+    if not sources: raise HTTPException(400, "No sources configured")
     used_urls: set[str] = set()
     if body.preset_name:
         history = _load_bulletin_history()
         used_urls = set(history.get(body.preset_name, []))
-    result = fetch_and_draft(
-        sources,
-        max_items_per_source=body.max_items_per_source,
-        language_override=body.language_override,
-        source_ids=body.source_ids,
-        used_urls=used_urls if used_urls else None,
-    )
+    result = fetch_and_draft(sources, max_items_per_source=body.max_items_per_source, language_override=body.language_override, source_ids=body.source_ids, used_urls=used_urls if used_urls else None)
     return result
 
 @router.get("/status/{bid}")
 def get_bulletin_status(bid: str):
     with _bulletin_jobs_lock:
         job = _bulletin_jobs.get(bid)
-    if job is None:
-        raise HTTPException(404, "Bulletin job not found")
+    if job is None: raise HTTPException(404, "Bulletin job not found")
     result = {k: v for k, v in job.items() if not k.startswith("_")}
     started = job.get("started_at")
     result["elapsed"] = round(time.time() - started) if started else 0
@@ -121,162 +271,19 @@ def get_bulletin_status(bid: str):
     return result
 
 @router.post("/render")
-def start_bulletin_render(body: BulletinRenderReq):
-    from config import reload_settings
-    reload_settings()
-    from pipeline.news_bulletin import run_bulletin as render_bulletin
-
+async def start_bulletin_render(body: BulletinRenderReq):
     bid = "bul_" + secrets.token_hex(6)
     BULLETIN_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = BULLETIN_DIR / f"{bid}.mp4"
-
-    _stop_event = threading.Event()
-    _pause_event = threading.Event()
+    
     with _bulletin_jobs_lock:
-        _bulletin_jobs[bid] = {
-            "id": bid, "status": "running", "output": None, "error": None,
-            "progress": 0, "step": "init", "step_label": "Başlatılıyor...",
-            "started_at": time.time(), "eta": None,
-            "_stop": _stop_event, "_pause": _pause_event, "_pid": None,
-        }
+        _bulletin_jobs[bid] = {"id": bid, "status": "queued", "started_at": time.time()}
 
-    def _on_progress(progress: int, step: str, step_label: str):
-        with _bulletin_jobs_lock:
-            job = _bulletin_jobs.get(bid)
-            if not job: return
-            if progress == -1 and step == "_proc":
-                try: job["_pid"] = int(step_label)
-                except: pass
-                return
-            job["progress"] = progress
-            job["step"] = step
-            job["step_label"] = step_label
-            elapsed = time.time() - job["started_at"]
-            if progress > 2: job["eta"] = round(elapsed / progress * (100 - progress))
-            else: job["eta"] = None
-
-    def _build_news_items(item_list: list) -> list:
-        news_items = []
-        for item in item_list:
-            cat = (item.get("category") or "").lower().strip()
-            item_key = item.get("url") or item.get("source_url") or item.get("id") or item.get("title") or ""
-            mapping_from_settings = body.category_templates.get(cat)
-            style_override = (
-                body.item_styles.get(item_key)
-                or body.category_styles.get(cat)
-                or mapping_from_settings
-                or _resolve_auto_style(cat, body.style)
-            )
-            news_item = {
-                "headline": item.get("title", ""),
-                "subtext": item.get("narration", item.get("summary", "")),
-                "duration": body.fps * 8,
-                "imageUrl": item.get("image_url", ""),
-                "language": item.get("language", "tr"),
-                "category": cat,
-            }
-            if style_override: news_item["styleOverride"] = style_override
-            src_url = item.get("url") or item.get("source_url") or ""
-            if src_url: news_item["sourceUrl"] = src_url
-            pub_date = item.get("published") or item.get("published_date") or ""
-            if pub_date: news_item["publishedDate"] = pub_date
-            news_items.append(news_item)
-        return news_items
-
-    def _build_props(news_items: list, comp_style: str, ticker_items: list) -> dict:
-        comp_id = "NewsBulletin9x16" if body.format == "9:16" else "NewsBulletin"
-        return {
-            "items": news_items, "ticker": ticker_items, "networkName": body.network_name,
-            "style": comp_style, "fps": body.fps, "composition": comp_id,
-            "lowerThirdEnabled": body.lower_third_enabled, "lowerThirdText": body.lower_third_text,
-            "lowerThirdFont": body.lower_third_font, "lowerThirdColor": body.lower_third_color,
-            "lowerThirdSize": body.lower_third_size, "tickerEnabled": body.ticker_enabled,
-            "tickerSpeed": body.ticker_speed, "tickerBg": body.ticker_bg,
-            "tickerColor": body.ticker_color, "showLive": body.show_live,
-            "showCategoryFlash": body.show_category_flash, "showItemIntro": body.show_item_intro,
-            "textDeliveryMode": body.text_delivery_mode, "showSource": body.show_source,
-            "showDate": body.show_date, "lang": body.lang,
-        }
-
-    def _make_ticker(item_list: list) -> list:
-        return body.ticker if body.ticker else [{"text": f"• {item.get('title', '')}"} for item in item_list[:8]]
-
-    def _do_render():
-        try:
-            raw_items: list = body.items
-            effective_mode = body.render_mode
-            if body.render_per_category and effective_mode == "combined":
-                effective_mode = "per_category"
-
-            if effective_mode == "per_item":
-                output_files = {}
-                total_items = len(raw_items)
-                for i, item in enumerate(raw_items):
-                    cat = (item.get("category") or "").lower().strip()
-                    item_key = item.get("url") or item.get("source_url") or item.get("id") or item.get("title") or ""
-                    item_style = (
-                        body.item_styles.get(item_key) or body.category_styles.get(cat)
-                        or (body.category_templates.get(cat) if body.category_templates else None)
-                        or _resolve_auto_style(cat, body.style)
-                    )
-                    item_label = f"item_{i:02d}"
-                    item_output = BULLETIN_DIR / f"{bid}_{item_label}.mp4"
-                    prog_start, prog_end = 5 + int(i / total_items * 90), 5 + int((i+1) / total_items * 90)
-                    def _item_progress(progress: int, step: str, step_label: str, _ps=prog_start, _pe=prog_end, _lbl=item_label):
-                        mapped = _ps + int(progress / 100 * (_pe - _ps))
-                        _on_progress(mapped, step, f"[{_lbl}] {step_label}")
-                    props = _build_props(_build_news_items([item]), item_style, [])
-                    render_bulletin(props, item_output, body.fps, body.category_templates, _item_progress, _stop_event, _pause_event)
-                    output_files[item_label] = str(item_output)
-                if body.preset_name:
-                    urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
-                    if urls: _append_bulletin_history(body.preset_name, urls)
-                with _bulletin_jobs_lock:
-                    _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"], _bulletin_jobs[bid]["outputs"] = "completed", str(output_path), output_files
-            elif effective_mode == "per_category":
-                category_groups = defaultdict(list)
-                uncategorised = []
-                for item in raw_items:
-                    cat = (item.get("category") or "").lower().strip()
-                    if cat: category_groups[cat].append(item)
-                    else: uncategorised.append(item)
-                if uncategorised: category_groups["__other__"] = uncategorised
-                cats = list(category_groups.keys())
-                total_cats, output_files = len(cats), {}
-                for i, cat in enumerate(cats):
-                    cat_items = category_groups[cat]
-                    cat_style = body.category_styles.get(cat) or (body.category_templates.get(cat) if body.category_templates else None) or (_resolve_auto_style(cat, body.style) if cat != "__other__" else body.style)
-                    cat_label = cat if cat != "__other__" else "diger"
-                    cat_output = BULLETIN_DIR / f"{bid}_{cat_label}.mp4"
-                    prog_start, prog_end = 5 + int(i / total_cats * 90), 5 + int((i+1) / total_cats * 90)
-                    def _cat_progress(progress: int, step: str, step_label: str, _ps=prog_start, _pe=prog_end, _cat=cat_label):
-                        mapped = _ps + int(progress / 100 * (_pe - _ps))
-                        _on_progress(mapped, step, f"[{_cat.upper()}] {step_label}")
-                    props = _build_props(_build_news_items(cat_items), cat_style, _make_ticker(cat_items))
-                    render_bulletin(props, cat_output, body.fps, body.category_templates, _cat_progress, _stop_event, _pause_event)
-                    output_files[cat_label] = str(cat_output)
-                if body.preset_name:
-                    urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
-                    if urls: _append_bulletin_history(body.preset_name, urls)
-                with _bulletin_jobs_lock:
-                    _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"], _bulletin_jobs[bid]["outputs"] = "completed", str(output_path), output_files
-            else:
-                news_items = _build_news_items(raw_items)
-                props = _build_props(news_items, body.style, _make_ticker(raw_items))
-                render_bulletin(props, output_path, body.fps, body.category_templates, _on_progress, _stop_event, _pause_event)
-                if body.preset_name:
-                    urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
-                    if urls: _append_bulletin_history(body.preset_name, urls)
-                with _bulletin_jobs_lock:
-                    _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["output"] = "completed", str(output_path)
-        except InterruptedError:
-            with _bulletin_jobs_lock:
-                _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["step_label"] = "cancelled", "Durduruldu"
-        except Exception as exc:
-            with _bulletin_jobs_lock:
-                _bulletin_jobs[bid]["status"], _bulletin_jobs[bid]["error"] = "failed", str(exc)
-
-    threading.Thread(target=_do_render, daemon=True).start()
+    await queue_manager.add_job("bulletin", {
+        "bid": bid,
+        "body": body.model_dump(),
+        "render_mode": body.render_mode
+    }, bid)
+    
     return {"bulletin_id": bid}
 
 @router.post("/render/{bid}/stop")

@@ -78,6 +78,10 @@ function app() {
     prRendering: false, prJobId: null, prJobStatus: '', prJobError: '',
     prProgress: 0, prStepLabel: '', _prPoll: null,
     // Wizard Extended Options (Normal Video)
+    batchTopics: '',
+    batchSubmitting: false,
+    batchSubmitResult: null,
+    batchError: '',
     wizardQuality: 'standard',
     wizardPlatform: 'youtube_16_9',
     wizardSubtitleStyle: 'hype',
@@ -412,6 +416,36 @@ function app() {
 
     downloadStatsCsv() {
       window.open('/api/stats/export-csv', '_blank');
+    },
+
+    async submitBatch() {
+      const lines = this.batchTopics.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+      this.batchSubmitting = true;
+      this.batchError = '';
+      this.batchSubmitResult = null;
+      const results = [];
+      try {
+        for (const topic of lines) {
+          try {
+            const data = await this.apiFetch('/api/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ topic, preset_name: this.selectedPreset || '' }),
+            });
+            results.push({ topic, id: data.session_id, ok: true });
+          } catch(e) {
+            results.push({ topic, error: e.message, ok: false });
+          }
+        }
+        this.batchSubmitResult = results;
+        this.batchTopics = '';
+        this.loadSessions();
+      } catch(e) {
+        this.batchError = e.message;
+      } finally {
+        this.batchSubmitting = false;
+      }
     },
 
     renderDailyChart(canvasId) {

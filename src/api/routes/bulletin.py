@@ -87,6 +87,7 @@ def _build_news_items(item_list: list, body_data: dict) -> list:
     return news_items
 
 def _build_props(news_items: list, comp_style: str, ticker_items: list, body_data: dict) -> dict:
+    from config import settings
     comp_id = "NewsBulletin9x16" if body_data.get("format") == "9:16" else "NewsBulletin"
     return {
         "items": news_items, "ticker": ticker_items, "networkName": body_data.get("network_name"),
@@ -99,6 +100,15 @@ def _build_props(news_items: list, comp_style: str, ticker_items: list, body_dat
         "showCategoryFlash": body_data.get("show_category_flash"), "showItemIntro": body_data.get("show_item_intro"),
         "textDeliveryMode": body_data.get("text_delivery_mode"), "showSource": body_data.get("show_source"),
         "showDate": body_data.get("show_date"), "lang": body_data.get("lang"),
+        "settings": {
+            "subtitleFont": body_data.get("subtitle_font") or getattr(settings, "remotion_subtitle_font", "bebas"),
+            "subtitleSize": body_data.get("subtitle_size") or getattr(settings, "remotion_subtitle_size", 68),
+            "subtitleColor": body_data.get("subtitle_color") or getattr(settings, "remotion_subtitle_color", "#ffffff"),
+            "subtitleBg": body_data.get("subtitle_bg") or getattr(settings, "remotion_subtitle_bg", "none"),
+            "subtitleStroke": body_data.get("subtitle_stroke") if body_data.get("subtitle_stroke") is not None else getattr(settings, "remotion_subtitle_stroke", 2),
+            "karaokeEnabled": body_data.get("karaoke_enabled") if body_data.get("karaoke_enabled") is not None else getattr(settings, "remotion_karaoke_enabled", True),
+            "subtitleAnimation": body_data.get("subtitle_animation") or getattr(settings, "remotion_subtitle_animation", "hype"),
+        }
     }
 
 def _make_ticker(item_list: list, body_data: dict) -> list:

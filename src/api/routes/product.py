@@ -160,7 +160,57 @@ def _do_product_render_sync(rid: str, data: dict):
 
         # --- Remotion Render ---
         comp_id = "ProductReview9x16" if format_mode == "9:16" else "ProductReview"
-        props = {"product": product, "style": style, "fps": fps, "channelName": channel_name}
+        
+        # Build Subtitles with Word-Level Timing (Karaoke)
+        final_subtitles = []
+        try:
+            from pipeline.subtitles import generate_word_timing
+            from pipeline.script import Scene as PipelineScene
+            
+            # Mock a scene object for the subtitle aligner
+            p_scene = PipelineScene(id="pr", title=product.get("name", ""), narration=narration)
+            audio_path = PRODUCT_REVIEW_DIR / product["audioUrl"].split("/")[-1]
+            
+            # Generate word_timing.json
+            wt_path = generate_word_timing([audio_path], [p_scene], PRODUCT_REVIEW_DIR, fps=fps)
+            if wt_path.exists():
+                wt_data = json.loads(wt_path.read_text(encoding="utf-8"))
+                if wt_data and len(wt_data) > 0:
+                    scene_wt = wt_data[0] # Single scene for product review
+                    for chunk in scene_wt.get("chunks", []):
+                        sub_entry = {
+                            "text": chunk["text"],
+                            "startFrame": round(chunk["startSec"] * fps),
+                            "endFrame": round(chunk["endSec"] * fps),
+                            "words": []
+                        }
+                        for w in chunk.get("words", []):
+                            sub_entry["words"].append({
+                                "word": w["word"],
+                                "startFrame": round(w["startSec"] * fps),
+                                "endFrame": round(w["endSec"] * fps)
+                            })
+                        final_subtitles.append(sub_entry)
+        except Exception as wt_err:
+            print(f"[WARN] Word timing generation failed: {wt_err}")
+
+        props = {
+            "product": product, 
+            "style": style, 
+            "fps": fps, 
+            "channelName": channel_name,
+            "subtitles": final_subtitles,
+            "settings": {
+                "subtitleFont": getattr(settings, "remotion_subtitle_font", "bebas"),
+                "subtitleSize": getattr(settings, "remotion_subtitle_size", 68),
+                "subtitleColor": getattr(settings, "remotion_subtitle_color", "#ffffff"),
+                "subtitleBg": getattr(settings, "remotion_subtitle_bg", "none"),
+                "subtitleStroke": getattr(settings, "remotion_subtitle_stroke", 2),
+                "karaokeEnabled": getattr(settings, "remotion_karaoke_enabled", True),
+                "subtitleAnimation": getattr(settings, "remotion_subtitle_animation", "hype"),
+            }
+        }
+        
         _on_product_progress(rid, 10, "render", "Remotion render başlıyor...")
         
         remotion_dir = Path(__file__).parent.parent.parent.parent / "remotion"

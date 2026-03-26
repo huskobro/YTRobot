@@ -553,6 +553,16 @@ def run_bulletin(
                 # Source & date display
                 "showSource": bulletin_config.get("showSource", False),
                 "showDate": bulletin_config.get("showDate", False),
+                # Global Video Settings (Karaoke, etc)
+                "settings": {
+                    "subtitleFont": bulletin_config.get("subtitleFont") or getattr(settings, "remotion_subtitle_font", "bebas"),
+                    "subtitleSize": bulletin_config.get("subtitleSize") or getattr(settings, "remotion_subtitle_size", 68),
+                    "subtitleColor": bulletin_config.get("subtitleColor") or getattr(settings, "remotion_subtitle_color", "#ffffff"),
+                    "subtitleBg": bulletin_config.get("subtitleBg") or getattr(settings, "remotion_subtitle_bg", "none"),
+                    "subtitleStroke": bulletin_config.get("subtitleStroke") if bulletin_config.get("subtitleStroke") is not None else getattr(settings, "remotion_subtitle_stroke", 2),
+                    "karaokeEnabled": bulletin_config.get("karaokeEnabled") if bulletin_config.get("karaokeEnabled") is not None else getattr(settings, "remotion_karaoke_enabled", True),
+                    "subtitleAnimation": bulletin_config.get("subtitleAnimation") or getattr(settings, "remotion_subtitle_animation", "hype"),
+                }
             }
 
             _check_stop()

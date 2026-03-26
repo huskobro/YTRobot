@@ -2730,7 +2730,14 @@
           </div>
 
           <!-- System Section 3: Master Prompt Yönetimi -->
-          <div x-data="{open:false, activePrompt:'yt'}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/10">
+          <div x-data="{
+            open:false,
+            activePrompt:'yt',
+            showBuiltin: false,
+            builtinTitle: '',
+            builtinContent: '',
+            viewBuiltin(title, content) { this.builtinTitle=title; this.builtinContent=content; this.showBuiltin=true; }
+          }" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/10">
             <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center text-indigo-400">📝</div>
@@ -2739,6 +2746,27 @@
               <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </div>
             <div x-show="open" class="mt-6 space-y-4">
+              <!-- Yerleşik Prompt Modal -->
+              <div x-show="showBuiltin" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.75);" @click.self="showBuiltin=false">
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl shadow-black/50 flex flex-col max-h-[80vh]">
+                  <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                      <span class="text-base">👁</span>
+                      <span class="text-sm font-black text-white uppercase tracking-wider" x-text="builtinTitle"></span>
+                    </div>
+                    <button @click="showBuiltin=false" class="text-slate-400 hover:text-white transition-colors text-lg leading-none">✕</button>
+                  </div>
+                  <div class="p-5 overflow-y-auto flex-1">
+                    <pre class="text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed" x-text="builtinContent"></pre>
+                  </div>
+                  <div class="px-5 py-3 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-[9px] text-slate-500">Bu yerleşik prompt, alan boş bırakıldığında sistem tarafından kullanılır.</span>
+                    <button @click="showBuiltin=false" class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-colors">Kapat</button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Modül Sekme Seçici -->
               <div class="flex gap-1 p-1 bg-slate-950/60 rounded-xl border border-slate-800 w-fit">
                 <template x-for="mod in [{id:'yt',icon:'📽',label:'YT Video',color:'indigo'},{id:'bulletin',icon:'📺',label:'Bülten',color:'red'},{id:'pr',icon:'🛒',label:'Ürün İnceleme',color:'amber'},{id:'social',icon:'📱',label:'Sosyal Meta',color:'violet'}]" :key="mod.id">
@@ -2755,7 +2783,11 @@
               <div x-show="activePrompt==='yt'" class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">YouTube Video — Senaryo Master Promptu</label>
-                  <button @click="settings.YT_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  <div class="flex gap-1.5">
+                    <button @click="viewBuiltin('YT Video — Yerleşik Senaryo Promptu', `You are an expert YouTube scriptwriter whose videos get millions of views.\n\nAUDIENCE\n--------\n{audience}\n\nVIDEO STRUCTURE (follow this strictly)\n---------------------------------------\n• Scene 0 — HOOK: The first 30 seconds. Create an irresistible question, tension, or bold claim.\n• Scene 1 — Establish the surface problem AND hint at the deeper emotional problem.\n• Scenes 2–8 — Deliver value progressively. Tell stories, build tension, use examples.\n• Scene 9 — Resolve the deeper emotional problem. Leave the viewer feeling transformed.\n\nCONVERSATIONAL WRITING STYLE\n• Write exactly as a person speaks — contractions (it\'s, you\'re, don\'t, I\'ve), fragments OK\n• Vary sentence rhythm: SHORT punchy sentences. Followed by longer ones.\n• NEVER use: \"In conclusion\", \"Furthermore\", \"Delve into\", \"Leverage\"\n• Write to ONE person — say \"you\" not \"viewers\"\n\nTTS VOICE EMPHASIS MARKERS\n• CAPITALIZE words that need strong spoken emphasis\n• Use \"...\" for meaningful pauses before impactful statements\n• NEVER use \"/\" (slash) — write \"or\" instead\n\nOUTPUT FORMAT\nReturn ONLY a valid JSON object with key \"scenes\" containing exactly 10 elements.\nEach element: \"narration\" (3–6 sentences) + \"visual_query\" (3–5 word stock footage phrase)`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.YT_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
                 </div>
                 <textarea x-model="settings.YT_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
                   class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-all resize-none font-mono"
@@ -2772,7 +2804,11 @@
               <div x-show="activePrompt==='bulletin'" class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Haber Bülteni — Haber Özet Promptu</label>
-                  <button @click="settings.BULLETIN_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  <div class="flex gap-1.5">
+                    <button @click="viewBuiltin('Bülten — Yerleşik Narrasyon Promptu', `You are a professional broadcast news anchor writer. Your job is to rewrite a news article as a short spoken narration for a TV news bulletin.\n\nRULES (follow all strictly):\n1. Write 2-4 sentences of natural spoken news language — authoritative but clear.\n2. Use the headline as your opening hook, then expand with key facts from the summary.\n3. Do NOT include: journalist names, bylines, publication names, \"according to\", \"it is reported\".\n4. Do NOT start with \"In\" or \"Today\" — vary your openings.\n5. Write in the language specified in the LANGUAGE field.\n   If Turkish: use formal broadcast Turkish (standard news register, not colloquial).\n6. Never invent facts not present in the provided text.\n7. End with a single strong declarative sentence that closes the item cleanly.\n8. Length: 40-80 words total.\n9. ANTI-CLICKBAIT — absolutely no sensationalism.\n10. If any language did not specified, auto detect it and write formal content.\n\nReturn ONLY the narration text. No JSON, no explanation, no quotation marks.`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.BULLETIN_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
                 </div>
                 <textarea x-model="settings.BULLETIN_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
                   class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-red-500 transition-all resize-none font-mono"
@@ -2789,7 +2825,11 @@
               <div x-show="activePrompt==='pr'" class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ürün İnceleme — İnceleme Tonu Promptu</label>
-                  <button @click="settings.PR_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  <div class="flex gap-1.5">
+                    <button @click="viewBuiltin('Ürün İnceleme — Yerleşik Prompt', `(Ürün İnceleme modülü için özel bir yerleşik sistem promptu tanımlanmamıştır.\n\nBu alana kendi talimatlarınızı girerek AI\'nın ürün inceleme videolarını nasıl\noluşturacağını belirleyebilirsiniz.\n\nÖrnek talimatlar:\n• Ürünün güçlü yönlerini ön plana çıkar\n• Fiyat-performans dengesini vurgula\n• İzleyiciyi satın almaya teşvik et\n• Teknik detayları sade dille açıkla)`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.PR_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
                 </div>
                 <textarea x-model="settings.PR_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
                   class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 transition-all resize-none font-mono"
@@ -2806,7 +2846,11 @@
               <div x-show="activePrompt==='social'" class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sosyal Medya Meta — İçerik Promptu</label>
-                  <button @click="settings.SOCIAL_META_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  <div class="flex gap-1.5">
+                    <button @click="viewBuiltin('Sosyal Meta — Yerleşik Prompt', `You are a social media metadata expert. Generate optimized metadata for the given video content.\n\nFor each requested field, generate:\n• title — Compelling, SEO-optimized title under 60 characters\n• description — Engaging description under 150 characters with keywords\n• tags — 10-15 relevant hashtags without the # symbol\n• source — Original source URL or channel name if available\n• link — Primary link to share\n\nRULES:\n1. Match the language of the input content\n2. Use relevant keywords naturally\n3. Avoid clickbait — be accurate and compelling\n4. For Turkish content: use Turkish keywords and cultural context\n5. Return as JSON with requested field keys only\n\nReturn ONLY a valid JSON object with the requested fields.`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.SOCIAL_META_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
                 </div>
                 <textarea x-model="settings.SOCIAL_META_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
                   class="w-full bg-slate-950 border border-violet-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500 transition-all resize-none font-mono"

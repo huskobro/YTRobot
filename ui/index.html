@@ -17,6 +17,66 @@
 
 <div x-data="app()" x-init="init()" x-cloak class="flex h-screen relative">
 
+  <!-- ── Command Palette ──────────────────────────────────────────────── -->
+  <div x-show="showCommandPalette" 
+       class="fixed inset-0 command-palette-overlay flex items-start justify-center pt-[15vh] px-4"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @keydown.window="handleCommandKey($event)">
+    
+    <div @click.away="showCommandPalette = false"
+         class="command-palette-modal rounded-2xl overflow-hidden flex flex-col"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-95 -translate-y-8"
+         x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+      
+      <!-- Input Area -->
+      <div class="flex items-center px-6 py-5 border-b border-slate-800/80">
+        <span class="text-xl mr-4 opacity-50">🔍</span>
+        <input id="command-input" 
+               x-model="commandQuery"
+               type="text" 
+               class="command-input flex-1 text-white placeholder-slate-600"
+               placeholder="Komut ara veya bir sekme seç... (Esc ile kapat)"
+               autocomplete="off" />
+      </div>
+
+      <!-- Results List -->
+      <div class="max-h-[45vh] overflow-y-auto p-2 custom-scrollbar scale-in">
+        <template x-for="(cmd, index) in filteredCommands()" :key="cmd.id">
+          <div @click="executeCommand(cmd)"
+               @mouseenter="selectedCommandIndex = index"
+               class="command-item flex items-center gap-4 px-4 py-3.5 rounded-xl cursor-pointer border border-transparent"
+               :class="selectedCommandIndex === index ? 'selected bg-slate-800/50' : ''">
+            <div class="command-icon w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-lg shrink-0 transition-all"
+                 x-text="cmd.icon"></div>
+            <div class="flex-1">
+              <div class="text-sm font-bold text-white tracking-wide" x-text="cmd.title"></div>
+              <div class="text-[10px] text-slate-500 font-mono uppercase mt-0.5" x-text="cmd.id"></div>
+            </div>
+            <div x-show="selectedCommandIndex === index" class="text-xs text-slate-600 font-bold bg-slate-900 px-2 py-1 rounded-md border border-slate-800">ENTER</div>
+          </div>
+        </template>
+        
+        <div x-show="filteredCommands().length === 0" class="py-12 text-center">
+          <div class="text-3xl mb-3 opacity-20">🕵️‍♂️</div>
+          <div class="text-slate-500 text-sm font-medium">Sonuç bulunamadı...</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-3 bg-slate-950/50 border-t border-slate-800/50 flex items-center gap-6 justify-end text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+        <div class="flex items-center gap-2"><span>↑↓</span> SEÇ</div>
+        <div class="flex items-center gap-2"><span>ENTER</span> GİT</div>
+        <div class="flex items-center gap-2"><span>ESC</span> KAPAT</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Global Error Toast ───────────────────────────────────────────── -->
   <div x-show="globalError" 
        x-transition:enter="transition ease-out duration-300"

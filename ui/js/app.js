@@ -83,6 +83,20 @@ function app() {
     _errorTimeout: null,
     wizardStep: 1,
     wizardMaxSteps: 3,
+    showCommandPalette: false,
+    commandQuery: '',
+    selectedCommandIndex: 0,
+    commands: [
+      { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', action: () => app.view = 'dashboard' },
+      { id: 'nav_new_run', title: 'New Video / Yeni Video Başlat', icon: '✨', action: () => app.view = 'new-run' },
+      { id: 'nav_settings', title: 'Settings / Ayarlar', icon: '⚙️', action: () => app.view = 'settings' },
+      { id: 'nav_api_keys', title: 'API Keys / Anahtarlar', icon: '🔑', action: () => app.view = 'api-keys' },
+      { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: () => app.view = 'bulletin' },
+      { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: () => app.view = 'product_review' },
+      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: () => app.view = 'social-meta' },
+      { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: () => app.loadSessions() },
+      { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: () => app.globalError = null }
+    ],
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
@@ -107,6 +121,59 @@ function app() {
       if (module === 'normal') this.wizardMaxSteps = 3;
       else if (module === 'bulletin') this.wizardMaxSteps = 3;
       else if (module === 'product_review') this.wizardMaxSteps = 3;
+    },
+
+    // ── Command Palette Methods ──
+    toggleCommandPalette() {
+      if (!this.showCommandPalette) {
+        // Blur any active element to prevent focus conflicts
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        this.showCommandPalette = true;
+        this.commandQuery = '';
+        this.selectedCommandIndex = 0;
+        // Aggrresive focus with multiple retries for browser stability
+        setTimeout(() => {
+          const inp = document.getElementById('command-input');
+          if (inp) {
+            inp.focus();
+            inp.select(); // Text select to allow quick overwrite
+          }
+        }, 50);
+        setTimeout(() => document.getElementById('command-input')?.focus(), 150);
+      } else {
+        this.showCommandPalette = false;
+      }
+    },
+
+    filteredCommands() {
+      if (!this.commandQuery) return this.commands;
+      const q = this.commandQuery.toLowerCase();
+      return this.commands.filter(c => 
+        c.title.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
+      );
+    },
+
+    executeCommand(cmd) {
+      if (cmd && cmd.action) {
+        cmd.action();
+        this.showCommandPalette = false;
+      }
+    },
+
+    handleCommandKey(e) {
+      const filtered = this.filteredCommands();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.selectedCommandIndex = (this.selectedCommandIndex + 1) % filtered.length;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.selectedCommandIndex = (this.selectedCommandIndex - 1 + filtered.length) % filtered.length;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        this.executeCommand(filtered[this.selectedCommandIndex]);
+      } else if (e.key === 'Escape') {
+        this.showCommandPalette = false;
+      }
     },
 
     showError(msg) {
@@ -150,13 +217,30 @@ function app() {
     pipelineSteps() { return this.t('pipeline_steps'); },
 
     async init() {
-      await this.loadSettings();
-      await this.loadPrompts();
-      await this.loadBulletinSources();
-      await this.loadSessions();
-      await this.loadPresets();
-      this.loadBulletinPresets();
-      this.loadBulletinHistory();
+      // 1. Register Global Listeners First (Immune to API failures)
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          this.toggleCommandPalette();
+        }
+      });
+
+      // 2. Load Data (Parallel & Fault Tolerant)
+      console.log("Initializing YTRobot data...");
+      try {
+        await Promise.allSettled([
+          this.loadSettings(),
+          this.loadPrompts(),
+          this.loadBulletinSources(),
+          this.loadSessions(),
+          this.loadPresets()
+        ]);
+        this.loadBulletinPresets();
+        this.loadBulletinHistory();
+      } catch (e) {
+        console.error("Initialization error:", e);
+      }
+      
       this._timer = setInterval(() => this.loadSessions(), 3000);
     },
 

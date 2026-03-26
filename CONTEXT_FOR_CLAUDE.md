@@ -1,17 +1,18 @@
 # YTRobot Projesi — Claude.ai Kapsamlı Bağlam Dosyası
 
-Bu dosya, Claude AI'nın (veya diğer asistanların) bu proje üzerinde çalışırken ihtiyaç duyabileceği tüm mimari, teknolojik ve işlevsel detayları içerir. **En güncel hal (25 Mart 2026) taranarak oluşturulmuştur.**
+Bu dosya, Claude AI'nın (veya diğer asistanların) bu proje üzerinde çalışırken ihtiyaç duyabileceği tüm mimari, teknolojik ve işlevsel detayları içerir. **En güncel hal (26 Mart 2026) Faz 8: Frontend Excellence geçişi sonrası oluşturulmuştur.**
 
 ---
 
 ## 1. Proje Genel Tanımı
 
-**YTRobot**, profesyonel kalitede YouTube videolarını (Haber Bülteni, Shorts, Ürün İnceleme) tamamen otomatik veya yarı-otomatik olarak üreten Python tabanlı bir "Automated Video Production" platformudur.
+**YTRobot**, profesyonel kalitede YouTube videolarını (Haber Bülteni, Shorts, Ürün İnceleme) tamamen otomatik veya yarı-otomatik olarak üreten Python tabanlı bir "Automated Video Production" platformudur. **v3.5 Gold Edition** itibariyle tam otonom bir içerik fabrikasına dönüşmüştür.
 
 ### Ana Modüller:
 1.  **Haber Bülteni (News Bulletin):** RSS/Kaynaklardan haber çekip, 16:9 veya 9:16 formatında profesyonel yayın grafiklerine sahip haber videoları üretir.
-2.  **YTRobot (Genel Video):** Bir konu veya hazır script'ten yola çıkarak stok video, seslendirme ve altyazı içeren videolar üretir. Bu modülün, varsayılan ayarları kullansa bile sistemde ayrı bir modül olarak tanımlanması ve kendine ait ayarlarının/override butonlarının olması gerekmektedir.
+2.  **YTRobot (Genel Video):** Bir konu veya hazır script'ten yola çıkarak stok video, seslendirme ve altyazı içeren videolar üretir.
 3.  **Ürün İnceleme (Product Review):** Belirli ürünler için yapay zeka ile senaryo yazıp inceleme videoları hazırlar.
+4.  **Analitik Dashboard (Yeni):** Sistem performansı, render başarı oranları ve AI kullanım istatistiklerini gerçek zamanlı takip eder.
 
 ---
 
@@ -20,116 +21,54 @@ Bu dosya, Claude AI'nın (veya diğer asistanların) bu proje üzerinde çalış
 | Katman | Teknoloji / Kütüphane | Detay |
 | :--- | :--- | :--- |
 | **Backend API** | FastAPI + Uvicorn | `server.py` (Asenkron, thread-based job yönetimi) |
-| **Core Logic** | Python 3.14 | `pipeline/` klasörü altındaki modüller |
 | **Video Rendering** | **Remotion** (Birincil) | React + TypeScript (`remotion/` klasörü) |
-| **Video Rendering** | MoviePy (İkincil) | FFmpeg tabanlı Python kütüphanesi |
-| **Frontend UI** | Alpine.js + Tailwind | `ui/index.html` (Single-file SPA approach) |
-| **LLM / AI** | Kie.ai (Gemini 2.5 Flash) | Temel script ve metadata üretimi için kullanılır |
-| **LLM / AI** | OpenAI / Anthropic | Yedek veya gelişmiş analizler için kullanılır |
-| **TTS (Seslendirme)** | SpeshAudio, OpenAI, ElevenLabs | `speshaudio` Türkçe için öncelikli tercihtir |
-| **Görseller** | ZImage, Pexels, Pixabay | Stok videolar ve AI tabanlı görseller |
-| **Altyazı** | Pycaps | CSS tabanlı modern/hareketli altyazılar |
+| **Frontend UI** | Alpine.js + Vanilla CSS | `ui/index.html` (Premium Dark UI, Glassmorphism) |
+| **LLM / AI** | Kie.ai (Gemini 2.5 Flash) | Birincil zeka katmanı (Script, Metadata, B-Roll Selection) |
+| **TTS (Seslendirme)** | SpeshAudio, OpenAI | `speshaudio` Türkçe vurgu için optimize edilmiştir |
+| **Otonom Paylaşım** | Google/YouTube API | Render sonrası otomatik metadata üretimi ve paylaşım |
 
 ---
 
-## 3. Mimari ve Dizin Yapısı
+## 3. Faz 8: Frontend Excellence & Gold Edition Yenilikleri
 
-```bash
-YTRobot/
-├── server.py                  # FastAPI sunucusu ve API endpointleri
-├── config.py                  # Pydantic tabanlı ayar yönetimi (.env kullanılır)
-├── main.py                    # CLI entry point ve pipeline orkestrasyonu
-├── ytrobot.sh                 # Tek komutla sunucuları başlatma/durdurma scripti
-├── pipeline/                  # İş akışı mantığı
-│   ├── script.py              # Senaryo yazımı (LLM/Dikte)
-│   ├── tts.py                 # Seslendirme yönetimi
-│   ├── visuals.py             # Stok video/görsel eşleştirme
-│   ├── subtitles.py           # Altyazı senkronu (Whisper entegrasyonu)
-│   ├── composer.py            # Backendlere (Remotion/MoviePy) iş gönderme
-│   ├── news_fetcher.py        # Haber çekme ve draft temizleme
-│   └── news_bulletin.py       # Haber bültenine özel hazırlık pipeline'ı
-├── providers/                 # Dış servis entegrasyonları
-├── remotion/                  # React Tabanlı Video Motoru
-│   ├── src/templates/         # Video şablonları (News, Product Review vb.)
-│   └── src/index.ts           # Remotion giriş noktası
-├── ui/                        # Web Arayüzü
-│   └── index.html             # Alpine.js tabanlı dashboard
-├── output/                    # Üretilen her video için session klasörleri
-├── presets/                   # Kanal ayarları (JSON formatında)
-├── bulletin_sources.json      # RSS/Haber kaynakları listesi
-└── bulletin_history.json      # Kullanılmış haberleri takibi (Deduplication)
-```
+### A. Premium Dark UI/UX
+- **Görsel Dil:** Glassmorphism (`.glass-card`), Neon Glow (`.neon-glow`) ve yumuşak animasyonlar (`.fade-in-up`) ile modernize edildi.
+- **Hiyerarşi:** Sidebar üzerinden erişilebilen modüler bir yapı kuruldu. "Visuals" ve "Social Otonom" bölümleri Alpine.js state yönetimiyle senkronize edildi.
+
+### B. Analitik & Sağlık Paneli
+- `/api/stats` uç noktası üzerinden çekilen verilerle; toplam oturum sayısı, ortalama render süresi ve AI model dağılımı interaktif kartlarla gösterilir.
+- Render hataları ve başarı oranları (Success Rate) anlık takip edilebilir.
+
+### C. Otonom Kontrol Merkezi
+- **AI B-Roll:** Gemini AI, senaryo içeriğine göre en alakalı stok videoları/görselleri Pexels/Pixabay üzerinden otomatik seçer.
+- **Sosyal Medya Otonomu:** YouTube ve Reels için platforma özel metadata (başlık, açıklama, etiket) üretimi ve otomatik kuyruğa alma desteği eklendi.
 
 ---
 
 ## 4. Kritik İş Akışları (Workflows)
 
-### A. Haber Bülteni (News Bulletin) Akışı
-1.  **Draft:** `news_fetcher.py` ile RSS kaynaklarından haberler çekilir. `bulletin_history.json` kullanılarak daha önce üretilmiş haberler elenir.
-2.  **Seçim:** Kullanıcı UI üzerinden haberleri seçer ve sıralar.
-3.  **Haber Grubu Hazırlığı:** Seçilen her haber için LLM ile seslendirme metni yazılır, görseller bulunur.
-4.  **Render:** 
-    - `combined`: Tüm haberler tek video.
-    - `per_category`: Haberleri kategorilerine göre bölerek birden fazla video üretir.
-    - `per_item`: Her haber için ayrı tekil video üretir.
-5.  **Görsel Şablonlar:** Kategori ismine göre (`spor` -> `sport`, `finans` -> `finance` vb.) Remotion stili otomatik seçilir.
-
-### B. Video Re-do (Yeniden Yap)
-`redo.py` scripti, mevcut bir session üzerinde sadece belirli aşamaları (örneğin sadece altyazıyı veya sadece görselleri) değiştirip tekrar render almayı sağlar.
-
-### C. Altyazı Sistemi (Subtitles)
-- **Pycaps:** Modern, "hype" stili, kelime kelime yanan altyazılar üretir.
-- **Whisper Entegrasyonu:** Ses dosyaları Whisper ile taranarak mükemmel zamanlama elde edilir.
-- **Karaoke:** Remotion şablonlarında kelime bazlı vurgulama (Karaoke) desteği vardır.
+### A. Otonom Render & Paylaşım
+1.  **Üretim:** Kullanıcı konuyu girer veya RSS'ten haber seçer.
+2.  **AI Seçimi:** LLM senaryoyu yazar ve **AI B-Roll** modülü sahneleri planlar.
+3.  **Render:** Remotion üzerinden 60 FPS kalitesinde video birleştirilir.
+4.  **Otonom Paylaşım:** Render bitince sistem platforma özel metadata üretir ve (ayarlar etkinse) YouTube'a "Private/Unlisted" olarak yükler.
 
 ---
 
-## 5. Yapılandırma ve Ortam Değişkenleri (.env)
+## 5. Geliştiriciler (Claude) İçin Teknik Notlar
 
-Proje çalışması için şu anahtarların `.env` dosyasında bulunması gerekir:
-- `KIEAI_API_KEY`: Gemini 2.5 Flash için temel AI anahtarı.
-- `OPENAI_API_KEY`: Alternatif LLM ve TTS için.
-- `SPESHAUDIO_API_KEY`: Türkçe seslendirme için en önemli anahtar.
-- `PEXELS_API_KEY` / `PIXABAY_API_KEY`: Stok videolar için.
-- `COMPOSER_PROVIDER`: `remotion` olarak set edilmelidir (yüksek kalite için).
+1.  **State Yönetimi:** `ui/js/app.js` içindeki `app()` fonksiyonu tüm durumu yönetir. `parseFloat` ve `parseInt` kontrolleri ile UI çökmeleri (NaN hataları) engellenmelidir.
+2.  **Çeviri (i18n):** `ui/js/translations.js` dosyası hem TR hem EN desteği sunar. Yeni eklenen özelliklerin her iki dilde de anahtarı olmalıdır.
+3.  **Hata Giderme:** Remotion render hataları genellikle font eksikliği veya duration mismatch kaynaklıdır. `server.log` dosyası ilk bakılacak yerdir.
+4.  **Mutlak vs Göreceli Yollar:** `/api/...` şeklinde mutlak yollar yerine, bazı platformlarda yaşanabilen `FILE_NOT_FOUND` hataları için göreceli yolların kullanımı (index.html'de) tercih edilebilir.
 
 ---
 
-## 6. Geliştiriciler (Claude) İçin İpuçları
+## 6. Gelecek Vizyonu (V4.0 Projeksiyonu)
 
-1.  **Remotion Değişiklikleri:** `remotion/src` altındaki `.tsx` dosyaları değiştirildiğinde `npm run studio` açık olduğu sürece anlık izlenebilir. Render testi için `server.py` üzerinden tetikleme yapılır.
-2.  **Log Takibi:** API hataları `logs/api.log`, Remotion hataları `logs/remotion.log` içindedir.
-3.  **Portlar:** Dashboard `8080`, Remotion Studio `3000` portunda çalışır.
-4.  **Hata Giderme:** Eğer video render'da görsel donması oluyorsa `pipeline/visuals.py` tarafında videonun süresi ile sesin süresinin eşleşip eşleşmediği (Loop/Trim) kontrol edilmelidir.
-5.  **Yeni Haber Kaynağı:** `bulletin_sources.json` dosyasına eklenen yeni bir RSS, draft sayfasında hemen görünür hale gelir.
+1.  **Cloud Rendering:** Lokal CPU yerine AWS Lambda/Google Cloud Run üzerinde ölçeklenebilir render.
+2.  **Çoklu Dil (Dublaj):** Videoların AI ile otomatik olarak farklı dillerde seslendirilip üretilmesi.
+3.  **Mobil App:** Üretim süreçlerini uzaktan yönetmek için PWA veya Flutter tabanlı mobil arayüz.
 
 ---
-
-## 7. Dosya İsimlendirme Kuralları (Output)
-`output/` klasörü altında tarih formatında (`YYYYMMDD_HHMMSS`) veya `bul_` / `pr_` ön ekiyle sessionlar oluşturulur. Her session içinde:
-- `script.json`: AI tarafından yazılan bölümler.
-- `audio/`: Her sahne için ses dosyaları.
-- `clips/`: Her sahne için görsel dosyalar.
-- `metadata.json`: Başlık, açıklama ve etiketler.
-- `final_output.mp4`: Nihai video.
-
----
-
-## 8. Bekleyen UI Geliştirmeleri ve Kritik Notlar
-
-1.  **Ayarlar Sayfası Revizyonu:** 
-    - Eskiden modül bazlı (Haber, İnceleme vb.) olan sekmelendirme yapısı, yeni versiyonda özellik bazlı (Seslendirme, Görsel Stil, Altyazı vb.) olarak değiştirilmiştir.
-    - Sekmelerin içine **"Modül Override"** butonları eklenmiştir (örneğin: Genel ayarlardan farklı bir ses seçmek için).
-    - **Kritik:** Eski versiyondaki bazı ayarların bu geçiş sırasında silindiği veya eksik kaldığı şüphesi vardır. Ayrıca görsellerin ve UI estetiğinin eski ayar penceresinde olduğu gibi korunması iyileştirilmesi için öneriler verilmesi için Claude'a talimat verilmiştir; bu çalışmanın tam bittiğinden emin olunmalı ve eksikler tamamlanmalıdır. Buna ek olarak ayarlar sayfasında o modül ile ilgili kullanılan tüm ayarlar yer almalıdır. 
-2.  **YTRobot (Genel Video) Modülü ve Ayar Ayrımı:**
-    - Bu modül şu an varsayılan (global) ayarları kullanıyor olsa da, mimari olarak diğer modüller (Haber, Ürün İnceleme) gibi bağımsız bir modül olarak ele alınmalıdır.
-    - **Ayar Hiyerarşisi:** "Varsayılan Ayarlar" (Global) ile "YTRobot Modül Ayarları" birbirinden **tamamen ayrı** yönetilmelidir. YTRobot'un kendine has ses, hız veya görsel sağlayıcı ayarları olabilmeli ve bu ayarlar genel varsayılanlardan bağımsız olarak set edilebilmelidir.
-    - Ayarlar sayfasında YTRobot'a özel bir bölüm ve override seçenekleri bulunmalıdır.
-3.  **Profesyonel Yazılımcı Gözüyle İnceleme ve Öneriler:**
-    - Claude'un projeyi sadece bir yardımcı olarak değil, bir **"Senior Full-Stack Developer"** gözüyle taraması ve analiz etmesi istenmektedir.
-    - **UI/UX Önerileri:** Modern tasarım trendleri, kullanıcı deneyimi iyileştirmeleri ve görsel estetik (renk paletleri, animasyonlar vb.) konularında profesyonel tavsiyeler sunmalı.
-    - **Kod Mimarisi Önerileri:** Kodun temizliği (clean code), modülerlik, performans optimizasyonları ve ölçeklenebilirlik açısından projeyi değerlendirmeli.
-    - Claude, bu önerileri sadece sunmakla kalmamalı, sistemi daha profesyonel bir seviyeye taşımak için inisiyatif almalıdır.
-
----
-**Not:** Bu dosya proje her değiştiğinde güncellenmeli veya taranarak hafızaya alınmalıdır.
+**Mühür:** YTRobot v3.5 - Gold Edition "Content Factory" Edition.

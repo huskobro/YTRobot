@@ -1659,25 +1659,25 @@
                   <input x-model="settings.PR_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-200 font-mono focus:outline-none focus:border-amber-500" placeholder="Model ID..." />
                   <textarea x-model="settings.PR_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-100/70 focus:outline-none focus:border-amber-500" placeholder="Voice Instruct..."></textarea>
                 </div>
-                <!-- Gelişmiş İşleme Ayarları -->
-                <div class="pt-3 border-t border-amber-900/20">
-                  <div class="text-[9px] font-bold text-amber-400/60 uppercase tracking-widest mb-2">Gelişmiş İşleme</div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center gap-2 px-3 py-2.5 border border-amber-800/30 rounded-xl bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.PR_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 rounded" />
-                      <span class="text-[10px] text-amber-300/90 font-bold">TTS İyileştirme</span>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-amber-900/20">
+                  <div class="text-[11px] font-black text-amber-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">TTS İyileştirme</span>
                     </label>
-                    <label class="flex items-center gap-2 px-3 py-2.5 border border-amber-800/30 rounded-xl bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.PR_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 rounded" />
-                      <span class="text-[10px] text-amber-300/90 font-bold">Script İnsanlaştırma</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Script İnsanlaştırma</span>
                     </label>
-                    <label class="flex items-center gap-2 px-3 py-2.5 border border-amber-800/30 rounded-xl bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.PR_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 rounded" />
-                      <span class="text-[10px] text-amber-300/90 font-bold">Sessizlik Temizle</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Sessizlik Temizle</span>
                     </label>
-                    <label class="flex items-center gap-2 px-3 py-2.5 border border-amber-800/30 rounded-xl bg-amber-950/10 cursor-pointer hover:bg-amber-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.PR_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-amber-500 rounded" />
-                      <span class="text-[10px] text-amber-300/90 font-bold">Apostrof Temizle</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Apostrof Temizle</span>
                     </label>
                   </div>
                 </div>

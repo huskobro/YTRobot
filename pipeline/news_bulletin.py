@@ -404,13 +404,36 @@ def run_bulletin(
         # Parse items
         _cat_templates = category_templates or {}
         bulletin_items: list[BulletinItem] = []
-        for raw in items_raw:
+        from pipeline.visuals.broll import broll_manager
+        
+        for i, raw in enumerate(items_raw):
             narration = raw.get("narration") or raw.get("subtext") or raw.get("headline", "")
+            img_url = raw.get("imageUrl", "")
+            
+            # --- Auto B-Roll Fallback for Bulletin ---
+            if not img_url:
+                print(f"  [NewsBulletin] No image for item {i}, searching B-Roll...")
+                try:
+                    # Search for an image (not video for headlines usually looks better)
+                    found_url = broll_manager.get_auto_media(narration, media_type="image")
+                    if found_url:
+                        # Download to work_dir
+                        import requests
+                        img_filename = f"broll_item_{i}.jpg"
+                        img_path = Path(work_dir) / img_filename
+                        resp = requests.get(found_url, timeout=15)
+                        with open(img_path, "wb") as f:
+                            f.write(resp.content)
+                        img_url = str(img_path.absolute())
+                        print(f"  [NewsBulletin] B-Roll image saved: {img_filename}")
+                except Exception as e:
+                    print(f"  [NewsBulletin] B-Roll search failed: {e}")
+
             bi = BulletinItem(
                 headline=raw.get("headline", ""),
                 narration=narration,
                 subtext=raw.get("subtext", ""),
-                image_url=raw.get("imageUrl", ""),
+                image_url=img_url,
                 language=raw.get("language", default_language),
                 source_url=raw.get("sourceUrl", ""),
                 published_date=raw.get("publishedDate", ""),

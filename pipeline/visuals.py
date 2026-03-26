@@ -3,6 +3,7 @@ from pathlib import Path
 from config import settings
 from pipeline.script import Scene
 from providers.visuals.base import BaseVisualsProvider
+from pipeline.visuals.broll import broll_manager
 
 
 def _load_provider() -> BaseVisualsProvider:
@@ -37,7 +38,21 @@ def fetch_visuals(scenes: list[Scene], session_dir: Path) -> list[Path]:
         if out.exists():
             print(f"  [Visuals] Scene {i} already exists, skipping.")
         else:
-            print(f"  [Visuals] Fetching visual for scene {i}: {scene.visual_query!r}")
-            provider.fetch(scene.visual_query, out)
+            query = scene.visual_query or scene.description or scene.text
+            print(f"  [Visuals] Fetching visual for scene {i}: {query!r}")
+            # Try provider first
+            try:
+                provider.fetch(query, out)
+            except Exception as e:
+                print(f"  [Visuals] Provider failed, trying B-Roll fallback: {e}")
+                auto_url = broll_manager.get_auto_media(query, media_type="video" if ext == ".mp4" else "image")
+                if auto_url:
+                    import requests
+                    resp = requests.get(auto_url, timeout=20)
+                    with open(out, "wb") as f:
+                        f.write(resp.content)
+                        print(f"  [Visuals] B-Roll saved to {out}")
+                else:
+                    print(f"  [Visuals] B-Roll fallback failed too.")
         visual_paths.append(out)
     return visual_paths

@@ -539,6 +539,14 @@ function app() {
       if (!this.settings.QWEN3_DEVICE) this.settings.QWEN3_DEVICE = 'auto';
       if (!this.settings.QWEN3_VOICE_INSTRUCT) this.settings.QWEN3_VOICE_INSTRUCT = '';
       if (!this.settings.QWEN3_REF_AUDIO) this.settings.QWEN3_REF_AUDIO = '';
+      // YT Video override defaults
+      if (this.settings.YT_VISUALS_PROVIDER === undefined) this.settings.YT_VISUALS_PROVIDER = '';
+      if (this.settings.YT_COMPOSER_PROVIDER === undefined) this.settings.YT_COMPOSER_PROVIDER = '';
+      if (this.settings.YT_ZIMAGE_ASPECT_RATIO === undefined) this.settings.YT_ZIMAGE_ASPECT_RATIO = '';
+      if (this.settings.YT_REMOTION_VIDEO_EFFECT === undefined) this.settings.YT_REMOTION_VIDEO_EFFECT = '';
+      // Bulletin override defaults
+      if (this.settings.BULLETIN_VIDEO_EFFECT === undefined) this.settings.BULLETIN_VIDEO_EFFECT = 'none';
+      if (this.settings.BULLETIN_CATEGORY_MAPPING === undefined) this.settings.BULLETIN_CATEGORY_MAPPING = '';
       // Product Review defaults
       if (!this.settings.PR_STYLE) this.settings.PR_STYLE = 'modern';
       if (!this.settings.PR_FORMAT) this.settings.PR_FORMAT = '16:9';

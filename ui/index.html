@@ -2252,53 +2252,60 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="p-5 border-t border-indigo-900/20 space-y-4">
-                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                  <!-- Ayarlar (Sol) -->
-                  <div class="lg:col-span-3 space-y-3">
-                    <div>
-                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Kaynak</label>
-                      <div class="grid grid-cols-2 gap-2">
-                        <template x-for="src in [{val:'',icon:'↑',name:'Global',desc:'Varsayılan'},{val:'pexels',icon:'🎞',name:'Pexels',desc:'Stok Video'},{val:'pixabay',icon:'📷',name:'Pixabay',desc:'Stok Görsel'},{val:'zimage',icon:'🤖',name:'ZImage',desc:'AI Görsel'}]" :key="src.val">
-                          <button @click="settings.YT_VISUALS_PROVIDER=src.val; triggerAutoSave()"
-                            class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
-                            :class="(settings.YT_VISUALS_PROVIDER||'')===src.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
-                            <span class="text-base" x-text="src.icon"></span>
-                            <div>
-                              <div class="text-[10px] font-black text-white" x-text="src.name"></div>
-                              <div class="text-[8px] text-slate-500" x-text="src.desc"></div>
-                            </div>
-                          </button>
-                        </template>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Composer</label>
-                      <div class="grid grid-cols-2 gap-2">
-                        <template x-for="cmp in [{val:'',icon:'↑',name:'Global'},{val:'moviepy',icon:'🐍',name:'MoviePy'},{val:'remotion',icon:'⚛️',name:'Remotion'}]" :key="cmp.val">
-                          <button @click="settings.YT_COMPOSER_PROVIDER=cmp.val; triggerAutoSave()"
-                            class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all"
-                            :class="(settings.YT_COMPOSER_PROVIDER||'')===cmp.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
-                            <span class="text-lg" x-text="cmp.icon"></span>
-                            <span class="text-[10px] font-black text-white" x-text="cmp.name"></span>
-                          </button>
-                        </template>
-                      </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Kaynak</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="src in [{val:'',icon:'↑',name:'Global',desc:'Varsayılan'},{val:'pexels',icon:'🎞',name:'Pexels',desc:'Stok Video'},{val:'pixabay',icon:'📷',name:'Pixabay',desc:'Stok Görsel'},{val:'zimage',icon:'🤖',name:'ZImage',desc:'AI Görsel'}]" :key="src.val">
+                        <button @click="settings.YT_VISUALS_PROVIDER=src.val; triggerAutoSave()"
+                          class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.YT_VISUALS_PROVIDER||'')===src.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-base" x-text="src.icon"></span>
+                          <div>
+                            <div class="text-[10px] font-black text-white" x-text="src.name"></div>
+                            <div class="text-[8px] text-slate-500" x-text="src.desc"></div>
+                          </div>
+                        </button>
+                      </template>
                     </div>
                   </div>
-                  <!-- Preview (Sağ) -->
-                  <div class="lg:col-span-2">
-                    <div class="bg-slate-950 border border-indigo-900/20 rounded-xl p-3">
-                      <div class="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Önizleme</div>
-                      <div class="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 opacity-20">
-                          <div class="absolute top-2 left-2 px-2 py-0.5 bg-indigo-600/80 rounded text-[8px] font-bold text-white" x-text="(settings.YT_VISUALS_PROVIDER||settings.VISUALS_PROVIDER||'pexels').toUpperCase()"></div>
-                          <div class="absolute bottom-2 right-2 px-2 py-0.5 bg-violet-600/80 rounded text-[8px] font-bold text-white" x-text="(settings.YT_COMPOSER_PROVIDER||settings.COMPOSER_PROVIDER||'moviepy').toUpperCase()"></div>
-                        </div>
-                        <div class="text-[10px] text-slate-600 text-center">
-                          <div class="text-2xl mb-1">🎬</div>
-                          <div>YouTube Video</div>
-                        </div>
-                      </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Composer</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="cmp in [{val:'',icon:'↑',name:'Global'},{val:'moviepy',icon:'🐍',name:'MoviePy'},{val:'remotion',icon:'⚛️',name:'Remotion'}]" :key="cmp.val">
+                        <button @click="settings.YT_COMPOSER_PROVIDER=cmp.val; triggerAutoSave()"
+                          class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.YT_COMPOSER_PROVIDER||'')===cmp.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-lg" x-text="cmp.icon"></span>
+                          <span class="text-[10px] font-black text-white" x-text="cmp.name"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Aspect Ratio</label>
+                    <div class="grid grid-cols-4 gap-2">
+                      <template x-for="ar in [{val:'',icon:'↑',label:'Global'},{val:'16:9',icon:'🖥',label:'16:9'},{val:'9:16',icon:'📱',label:'9:16'},{val:'1:1',icon:'⬜',label:'1:1'}]" :key="ar.val">
+                        <button @click="settings.YT_ZIMAGE_ASPECT_RATIO=ar.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.YT_ZIMAGE_ASPECT_RATIO||'')===ar.val ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="ar.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="ar.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Video Efekt</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="fx in [{val:'',icon:'↑',label:'Global'},{val:'none',icon:'⬛',label:'Yok'},{val:'vignette',icon:'🔲',label:'Vignette'},{val:'warm',icon:'🌅',label:'Sıcak'},{val:'cool',icon:'❄️',label:'Soğuk'},{val:'cinematic',icon:'🎬',label:'Sinema'}]" :key="fx.val">
+                        <button @click="settings.YT_REMOTION_VIDEO_EFFECT=fx.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.YT_REMOTION_VIDEO_EFFECT||'')===fx.val ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="fx.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="fx.label"></span>
+                        </button>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -2318,70 +2325,98 @@
                 <svg :class="open?'rotate-180':''" class="w-4 h-4 text-red-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
               <div x-show="open" class="p-5 border-t border-red-900/20 space-y-4">
-                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                  <!-- Ayarlar (Sol) -->
-                  <div class="lg:col-span-3 space-y-3">
-                    <div>
-                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Stil</label>
-                      <div class="grid grid-cols-2 gap-2">
-                        <template x-for="style in [{val:'breaking',icon:'🚨',name:'Breaking',desc:'Son Dakika',color:'bg-red-900/20 border-red-700/40'},{val:'tech',icon:'💻',name:'Tech',desc:'Teknoloji',color:'bg-blue-900/20 border-blue-700/40'},{val:'finance',icon:'💰',name:'Finance',desc:'Ekonomi',color:'bg-emerald-900/20 border-emerald-700/40'},{val:'dark',icon:'🌑',name:'Dark',desc:'Minimal',color:'bg-slate-900/40 border-slate-700/40'}]" :key:"style.val">
-                          <button @click="settings.BULLETIN_STYLE=style.val; triggerAutoSave()"
-                            class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
-                            :class="(settings.BULLETIN_STYLE||'breaking')===style.val ? 'bg-red-950/50 border-red-500/60 shadow-md' : style.color+' hover:border-slate-600'">
-                            <span class="text-lg" x-text="style.icon"></span>
-                            <div>
-                              <div class="text-[10px] font-black text-white" x-text="style.name"></div>
-                              <div class="text-[8px] text-slate-500" x-text="style.desc"></div>
-                            </div>
-                          </button>
-                        </template>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Metin Teslim Modu</label>
-                      <div class="grid grid-cols-3 gap-2">
-                        <template x-for="mode in [{val:'per_scene',icon:'🎬',label:'Sahne'},{val:'stream',icon:'⚡',label:'Akışkan'},{val:'word',icon:'🎤',label:'Karaoke'}]" :key="mode.val">
-                          <button @click="settings.bulletinTextMode=mode.val; triggerAutoSave()"
-                            class="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
-                            :class="(settings.bulletinTextMode||'per_scene')===mode.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
-                            <span class="text-base" x-text="mode.icon"></span>
-                            <span class="text-[9px] font-bold" x-text="mode.label"></span>
-                          </button>
-                        </template>
-                      </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Stil</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="style in [{val:'breaking',icon:'🚨',name:'Breaking',desc:'Son Dakika',color:'bg-red-900/20 border-red-700/40'},{val:'tech',icon:'💻',name:'Tech',desc:'Teknoloji',color:'bg-blue-900/20 border-blue-700/40'},{val:'finance',icon:'💰',name:'Finance',desc:'Ekonomi',color:'bg-emerald-900/20 border-emerald-700/40'},{val:'dark',icon:'🌑',name:'Dark',desc:'Minimal',color:'bg-slate-900/40 border-slate-700/40'}]" :key="style.val">
+                        <button @click="settings.BULLETIN_STYLE=style.val; triggerAutoSave()"
+                          class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.BULLETIN_STYLE||'breaking')===style.val ? 'bg-red-950/50 border-red-500/60 shadow-md' : style.color+' hover:border-slate-600'">
+                          <span class="text-lg" x-text="style.icon"></span>
+                          <div>
+                            <div class="text-[10px] font-black text-white" x-text="style.name"></div>
+                            <div class="text-[8px] text-slate-500" x-text="style.desc"></div>
+                          </div>
+                        </button>
+                      </template>
                     </div>
                   </div>
-                  <!-- Preview (Sağ) -->
-                  <div class="lg:col-span-2">
-                    <div class="bg-slate-950 border border-red-900/20 rounded-xl p-3">
-                      <div class="text-[9px] font-bold text-red-400 uppercase tracking-wider mb-2">Stil Önizleme</div>
-                      <div class="aspect-video rounded-lg flex items-center justify-center relative overflow-hidden"
-                        :class="{
-                          'bg-gradient-to-br from-red-950 to-red-900': (settings.BULLETIN_STYLE||'breaking')==='breaking',
-                          'bg-gradient-to-br from-blue-950 to-blue-900': (settings.BULLETIN_STYLE||'breaking')==='tech',
-                          'bg-gradient-to-br from-emerald-950 to-emerald-900': (settings.BULLETIN_STYLE||'breaking')==='finance',
-                          'bg-gradient-to-br from-slate-950 to-slate-900': (settings.BULLETIN_STYLE||'breaking')==='dark'
-                        }">
-                        <!-- Simüle Lower Third -->
-                        <div class="absolute bottom-0 left-0 right-0 px-3 py-2 bg-black/60 backdrop-blur-sm border-t"
-                          :class="{
-                            'border-red-500': (settings.BULLETIN_STYLE||'breaking')==='breaking',
-                            'border-blue-500': (settings.BULLETIN_STYLE||'breaking')==='tech',
-                            'border-emerald-500': (settings.BULLETIN_STYLE||'breaking')==='finance',
-                            'border-slate-500': (settings.BULLETIN_STYLE||'breaking')==='dark'
-                          }">
-                          <div class="text-[8px] font-bold text-white mb-0.5" x-text="(settings.BULLETIN_STYLE||'breaking').toUpperCase()+' NEWS'"></div>
-                          <div class="text-[7px] text-slate-300">Örnek haber başlığı burada görünür</div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Metin Teslim Modu</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="mode in [{val:'per_scene',icon:'🎬',label:'Sahne'},{val:'stream',icon:'⚡',label:'Akışkan'},{val:'word',icon:'🎤',label:'Karaoke'}]" :key="mode.val">
+                        <button @click="settings.bulletinTextMode=mode.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
+                          :class="(settings.bulletinTextMode||'per_scene')===mode.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-base" x-text="mode.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="mode.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Aspect Ratio</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="ar in [{val:'16:9',icon:'🖥',label:'16:9'},{val:'9:16',icon:'📱',label:'9:16'},{val:'1:1',icon:'⬜',label:'1:1'}]" :key="ar.val">
+                        <button @click="settings.BULLETIN_FORMAT=ar.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.BULLETIN_FORMAT||'16:9')===ar.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="ar.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="ar.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Video Efekt</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="fx in [{val:'none',icon:'⬛',label:'Yok'},{val:'vignette',icon:'🔲',label:'Vignette'},{val:'warm',icon:'🌅',label:'Sıcak'},{val:'cool',icon:'❄️',label:'Soğuk'},{val:'cinematic',icon:'🎬',label:'Sinema'}]" :key="fx.val">
+                        <button @click="settings.BULLETIN_VIDEO_EFFECT=fx.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.BULLETIN_VIDEO_EFFECT||'none')===fx.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="fx.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="fx.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <!-- Kategori-Stil Eşleştirme -->
+                <div class="pt-3 border-t border-red-900/20">
+                  <div class="text-[11px] font-black text-red-300/60 uppercase tracking-widest mb-3">Kategori → Stil Eşleştirme</div>
+                  <div class="text-[9px] text-slate-500 mb-3">Her haber kategorisi için varsayılan görsel stil tanımlayın. Boş bırakılırsa "breaking" kullanılır.</div>
+                  <div class="grid grid-cols-1 gap-2">
+                    <template x-for="catItem in (settings.BULLETIN_CATEGORY_MAPPING ? JSON.parse(settings.BULLETIN_CATEGORY_MAPPING || '{}') : {})" :key="catItem">
+                      <!-- Dynamic display if mapping exists -->
+                    </template>
+                    <!-- Static editable category mapping -->
+                    <div class="space-y-2" x-data="{
+                      catMap: {},
+                      catStyles: ['breaking','tech','corporate','sport','finance','weather','science','entertainment','dark'],
+                      init() {
+                        try { this.catMap = JSON.parse($store?.settings?.BULLETIN_CATEGORY_MAPPING || '{}'); } catch(e) { this.catMap = {}; }
+                      },
+                      addCat() { if(!this.newCat) return; this.catMap[this.newCat.toLowerCase()] = 'breaking'; this.newCat=''; this.save(); },
+                      removeCat(k) { delete this.catMap[k]; this.catMap = {...this.catMap}; this.save(); },
+                      save() { settings.BULLETIN_CATEGORY_MAPPING = JSON.stringify(this.catMap); triggerAutoSave(); },
+                      newCat: ''
+                    }">
+                      <template x-for="(style, cat) in catMap" :key="cat">
+                        <div class="flex items-center gap-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl">
+                          <span class="text-[10px] font-black text-red-300 flex-1 uppercase" x-text="cat"></span>
+                          <select :value="style" @change="catMap[cat]=$event.target.value; save()"
+                            class="bg-slate-900 border border-red-900/30 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:border-red-500">
+                            <template x-for="s in catStyles" :key="s">
+                              <option :value="s" :selected="style===s" x-text="s.charAt(0).toUpperCase()+s.slice(1)"></option>
+                            </template>
+                          </select>
+                          <button @click="removeCat(cat)" class="text-[9px] px-2 py-1 bg-red-900/30 hover:bg-red-800/50 text-red-400 rounded-lg transition-colors">✕</button>
                         </div>
-                        <!-- Style Badge -->
-                        <div class="absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold text-white"
-                          :class="{
-                            'bg-red-600/80': (settings.BULLETIN_STYLE||'breaking')==='breaking',
-                            'bg-blue-600/80': (settings.BULLETIN_STYLE||'breaking')==='tech',
-                            'bg-emerald-600/80': (settings.BULLETIN_STYLE||'breaking')==='finance',
-                            'bg-slate-600/80': (settings.BULLETIN_STYLE||'breaking')==='dark'
-                          }"
-                          x-text="(settings.BULLETIN_STYLE||'breaking').toUpperCase()"></div>
+                      </template>
+                      <div class="flex gap-2">
+                        <input x-model="newCat" @keydown.enter="addCat()" placeholder="Kategori adı (ör: teknoloji)" class="flex-1 bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
+                        <button @click="addCat()" class="px-3 py-2 bg-red-900/40 hover:bg-red-800/60 border border-red-700/40 text-red-300 text-xs font-bold rounded-xl transition-all">+</button>
                       </div>
                     </div>
                   </div>
@@ -2672,6 +2707,7 @@
               <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </div>
             <div x-show="open" class="mt-6 space-y-4">
+
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('subtitle_provider_label')"></label>
@@ -2688,6 +2724,98 @@
                     <option value="minimalist">Minimalist</option>
                     <option value="neo-minimal">Neo-Minimal</option>
                   </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Section 3: Master Prompt Yönetimi -->
+          <div x-data="{open:false, activePrompt:'yt'}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/10">
+            <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center text-indigo-400">📝</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs">Master Prompt Yönetimi</span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" class="mt-6 space-y-4">
+              <!-- Modül Sekme Seçici -->
+              <div class="flex gap-1 p-1 bg-slate-950/60 rounded-xl border border-slate-800 w-fit">
+                <template x-for="mod in [{id:'yt',icon:'📽',label:'YT Video',color:'indigo'},{id:'bulletin',icon:'📺',label:'Bülten',color:'red'},{id:'pr',icon:'🛒',label:'Ürün İnceleme',color:'amber'},{id:'social',icon:'📱',label:'Sosyal Meta',color:'violet'}]" :key="mod.id">
+                  <button @click="activePrompt=mod.id"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    :class="activePrompt===mod.id ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+                    <span x-text="mod.icon"></span>
+                    <span x-text="mod.label"></span>
+                  </button>
+                </template>
+              </div>
+
+              <!-- YT Video Master Prompt -->
+              <div x-show="activePrompt==='yt'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">YouTube Video — Senaryo Master Promptu</label>
+                  <button @click="settings.YT_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                </div>
+                <textarea x-model="settings.YT_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-all resize-none font-mono"
+                  placeholder="AI'nın senaryo oluştururken izleyeceği ana talimatlar... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.YT_MASTER_PROMPT='Türkçe, akıcı ve bilgilendirici bir ton kullan. Her sahne 15-20 saniye olsun. Görsel açıklamalar somut ve canlı olsun.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/40 text-indigo-300 rounded-lg transition-all">📋 Türkçe Standart</button>
+                  <button @click="settings.YT_MASTER_PROMPT='Write in English with an engaging, educational tone. Each scene should be 15-20 seconds. Use vivid, concrete visual descriptions.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/40 text-indigo-300 rounded-lg transition-all">📋 English Standard</button>
+                </div>
+              </div>
+
+              <!-- Bülten Master Prompt -->
+              <div x-show="activePrompt==='bulletin'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Haber Bülteni — Haber Özet Promptu</label>
+                  <button @click="settings.BULLETIN_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                </div>
+                <textarea x-model="settings.BULLETIN_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-red-500 transition-all resize-none font-mono"
+                  placeholder="Haberlerin nasıl özetleneceğini belirtin... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.BULLETIN_MASTER_PROMPT='Haberleri tarafsız, kısa ve net özetle. Başlık max 10 kelime, özet max 30 kelime. Canlı yayın tonu kullan.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 text-red-300 rounded-lg transition-all">📋 Haber Ajansı</button>
+                  <button @click="settings.BULLETIN_MASTER_PROMPT='Summarize news in neutral broadcast style. Title max 8 words, summary max 25 words. Professional tone.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 text-red-300 rounded-lg transition-all">📋 Broadcast EN</button>
+                </div>
+              </div>
+
+              <!-- Ürün İnceleme Master Prompt -->
+              <div x-show="activePrompt==='pr'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ürün İnceleme — İnceleme Tonu Promptu</label>
+                  <button @click="settings.PR_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                </div>
+                <textarea x-model="settings.PR_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 transition-all resize-none font-mono"
+                  placeholder="Ürün özelliklerinin nasıl vurgulanacağını belirtin... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.PR_MASTER_PROMPT='Ürünün güçlü yönlerini ön plana çıkar. Fiyat-performans dengesini vurgula. İzleyiciyi satın almaya teşvik et.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/40 text-amber-300 rounded-lg transition-all">📋 Satış Odaklı</button>
+                  <button @click="settings.PR_MASTER_PROMPT='Ürünü objektif değerlendir. Artıları ve eksileri dengeli şekilde sun. Teknik detayları sade dille açıkla.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/40 text-amber-300 rounded-lg transition-all">📋 Tarafsız İnceleme</button>
+                </div>
+              </div>
+
+              <!-- Sosyal Meta Master Prompt -->
+              <div x-show="activePrompt==='social'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sosyal Medya Meta — İçerik Promptu</label>
+                  <button @click="settings.SOCIAL_META_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                </div>
+                <textarea x-model="settings.SOCIAL_META_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-violet-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500 transition-all resize-none font-mono"
+                  placeholder="Sosyal medya başlık/açıklama/etiket nasıl oluşturulsun... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.SOCIAL_META_MASTER_PROMPT='YouTube SEO için optimize başlık ve açıklama oluştur. Arama trafığini artıracak anahtar kelimeler kullan. Max 5 hashtag ekle.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 YouTube SEO</button>
+                  <button @click="settings.SOCIAL_META_MASTER_PROMPT='Create engaging social media metadata. Compelling title under 60 chars, SEO description under 150 chars, 10 relevant hashtags.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 Social EN</button>
                 </div>
               </div>
             </div>

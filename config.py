@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     # Gemini direct API (for product review autofill, etc.)
     gemini_api_key: str = ""
+    youtube_api_key: str = ""           # YouTube Data API v3 key for AntiGravity competitor scanning
 
     # Script generation
     target_audience: str = ""  # e.g. "beginner YouTubers under 1k subscribers who want to grow"

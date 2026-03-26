@@ -22,6 +22,7 @@ from src.api.routes.product import router as product_router
 from src.api.routes.system import router as system_router
 from src.api.routes.social import router as social_router
 from src.api.routes.stats import router as stats_router
+from src.api.routes.antigravity import router as antigravity_router
 from src.core.queue import queue_manager
 from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
@@ -102,6 +103,7 @@ app.include_router(product_router)
 app.include_router(system_router)
 app.include_router(social_router)
 app.include_router(stats_router)
+app.include_router(antigravity_router)
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")

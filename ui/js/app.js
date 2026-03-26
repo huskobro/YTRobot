@@ -118,6 +118,14 @@ function app() {
     errorDetails: [],
     socialLog: [],
     _chartInstance: null,
+    antigravityData: null,
+    antigravityLoading: false,
+    antigravityScanning: {},
+    agActiveChannel: null,
+    agStatusFilter: 'all',
+    agNewChannel: { id: '', name: '', language: 'Turkish', dna: 'Documentary', pull_count: 10, competitors: [] },
+    agNewCompetitorId: '',
+    agNewCompetitorName: '',
     soundEnabled: localStorage.getItem('ytrobot-sound') !== 'false',
     // ── Toast Bildirim Sistemi ──
     toasts: [],
@@ -412,6 +420,80 @@ function app() {
         const data = await this.apiFetch('/api/stats/social-log');
         this.socialLog = data.events || [];
       } catch(e) { console.warn('[social] log error:', e); }
+    },
+
+    async loadAntigravity() {
+      this.antigravityLoading = true;
+      try { this.antigravityData = await this.apiFetch('/api/antigravity'); }
+      catch(e) { console.error('[ag] load error:', e); }
+      finally { this.antigravityLoading = false; }
+    },
+
+    async saveAgChannel() {
+      if (!this.agNewChannel.id || !this.agNewChannel.name) return;
+      try {
+        await this.apiFetch('/api/antigravity/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.agNewChannel),
+        });
+        await this.loadAntigravity();
+        this.agNewChannel = { id: '', name: '', language: 'Turkish', dna: 'Documentary', pull_count: 10, competitors: [] };
+      } catch(e) { console.error('[ag] save channel error:', e); }
+    },
+
+    async deleteAgChannel(id) {
+      try {
+        await this.apiFetch(`/api/antigravity/channels/${id}`, { method: 'DELETE' });
+        await this.loadAntigravity();
+        if (this.agActiveChannel?.id === id) this.agActiveChannel = null;
+      } catch(e) { console.error('[ag] delete channel error:', e); }
+    },
+
+    async scanAgChannel(channelId) {
+      this.antigravityScanning[channelId] = true;
+      try {
+        await this.apiFetch(`/api/antigravity/channels/${channelId}/scan`, { method: 'POST' });
+        await this.loadAntigravity();
+      } catch(e) { console.error('[ag] scan error:', e); }
+      finally { delete this.antigravityScanning[channelId]; }
+    },
+
+    async updateAgTitle(id, updates) {
+      try {
+        await this.apiFetch(`/api/antigravity/titles/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+        await this.loadAntigravity();
+      } catch(e) { console.error('[ag] update title error:', e); }
+    },
+
+    async deleteAgTitle(id) {
+      try {
+        await this.apiFetch(`/api/antigravity/titles/${id}`, { method: 'DELETE' });
+        await this.loadAntigravity();
+      } catch(e) { console.error('[ag] delete title error:', e); }
+    },
+
+    agSendToQueue(entry) {
+      this.view = 'new-run';
+      this.wizardStep = 2;
+      this.videoModule = 'normal';
+      this.$nextTick(() => { this.newTopic = entry.rewritten_title || entry.original_title; });
+      this.updateAgTitle(entry.id, { status: 'in_queue' });
+    },
+
+    get agFilteredTitles() {
+      if (!this.antigravityData?.title_pool) return [];
+      const pool = this.antigravityData.title_pool;
+      const filtered = this.agStatusFilter === 'all'
+        ? pool
+        : pool.filter(t => t.status === this.agStatusFilter);
+      if (this.agActiveChannel)
+        return filtered.filter(t => t.channel_id === this.agActiveChannel.id);
+      return filtered.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
     },
 
     downloadStatsCsv() {

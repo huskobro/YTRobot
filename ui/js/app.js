@@ -19,7 +19,11 @@ function app() {
       KEN_BURNS_DIRECTION: 'center', KEN_BURNS_INTENSITY: 'normal',
       VIDEO_EFFECT: 'none', ASPECT_RATIO: '16:9', OUTPUT_QUALITY: '1080p',
       KARAOKE_ENABLED: true,
-      AI_BROLL_SENSITIVITY: 5
+      AI_BROLL_SENSITIVITY: 5,
+      SUBTITLE_PROVIDER: 'remotion', PYCAPS_STYLE: 'hype',
+      SPESHAUDIO_LANGUAGE: '', SPESHAUDIO_STABILITY: 0.3, SPESHAUDIO_SIMILARITY_BOOST: 0.5, SPESHAUDIO_STYLE: 0.75,
+      QWEN3_SPEAKER: 'Vivian',
+      ZIMAGE_ASPECT_RATIO: '16:9'
     }, 
     prompts: {}, promptDefaults: {},
     newTopic: '', newScriptFile: '', notes: '', logLines: [],

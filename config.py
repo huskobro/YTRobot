@@ -181,6 +181,14 @@ class Settings(BaseSettings):
     pr_currency: str = "TL"
     pr_cta_text: str = "Linke tıkla!"
 
+    # Social Media Publishing
+    autopublish_youtube: bool = False
+    yt_privacy_status: str = "private"      # private | unlisted | public
+    yt_category_id: str = "22"              # YouTube category ID
+    autopublish_reels: bool = False
+    share_on_instagram: bool = False
+    share_on_tiktok: bool = False
+
     # Social Media Metadata Tool
     social_meta_enabled_yt_video: bool = False
     social_meta_enabled_bulletin: bool = False

@@ -13,3 +13,28 @@
 .prev-hype { animation: prev-slide-up 0.5s ease 3; }
 .prev-explosive { animation: prev-slide-left 0.5s ease 3; }
 .prev-vibrant { animation: prev-pop 0.6s ease 3; }
+
+/* Wizard Stepper Styles */
+.step-indicator-container { position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+.step-indicator-line { position: absolute; top: 1.25rem; left: 0; right: 0; height: 3px; background: #1e293b; z-index: 0; border-radius: 99px; }
+.step-indicator-line-active { position: absolute; top: 1.25rem; left: 0; height: 3px; background: linear-gradient(to right, #6366f1, #ec4899); z-index: 0; border-radius: 99px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.step-item { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; width: 5rem; cursor: pointer; }
+.step-circle { width: 2.5rem; height: 2.5rem; border-radius: 1rem; background: #0f172a; border: 2px solid #1e293b; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #475569; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.step-item.active .step-circle { border-color: #6366f1; background: #1e1b4b; color: #fff; transform: scale(1.1); box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+.step-item.completed .step-circle { background: #064e3b; border-color: #10b981; color: #fff; }
+.step-label { margin-top: 0.75rem; font-size: 0.7rem; font-weight: 600; text-align: center; color: #475569; transition: color 0.3s; width: 100%; }
+.step-item.active .step-label { color: #fff; }
+.step-item.completed .step-label { color: #10b981; }
+
+/* Wizard Animations */
+.wizard-step { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.wizard-step-enter { opacity: 0; transform: translateX(30px); }
+.wizard-step-enter-end { opacity: 1; transform: translateX(0); }
+.wizard-step-leave { opacity: 1; transform: translateX(0); }
+.wizard-step-leave-end { opacity: 0; transform: translateX(-30px); }
+
+/* Glass Components */
+.glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 1.5rem; }
+.glass-button { backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.glass-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.2); }
+.glass-button:active:not(:disabled) { transform: translateY(0); }

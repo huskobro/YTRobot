@@ -81,9 +81,33 @@ function app() {
     showSaveModal: false,
     globalError: null,
     _errorTimeout: null,
+    wizardStep: 1,
+    wizardMaxSteps: 3,
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
+
+    // Wizard Navigation
+    nextStep() {
+      if (this.wizardStep < this.wizardMaxSteps) {
+        this.wizardStep++;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    },
+    prevStep() {
+      if (this.wizardStep > 1) {
+        this.wizardStep--;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    },
+    initWizard(module) {
+      this.videoModule = module;
+      this.wizardStep = 1;
+      // Define max steps per module
+      if (module === 'normal') this.wizardMaxSteps = 3;
+      else if (module === 'bulletin') this.wizardMaxSteps = 3;
+      else if (module === 'product_review') this.wizardMaxSteps = 3;
+    },
 
     showError(msg) {
       this.globalError = msg;

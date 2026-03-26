@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException
 from src.core.analytics import stats_manager
 from typing import Dict, Any
 
-router = APIRouter(prefix="/api/stats", tags=["analytics"])
+router = APIRouter(tags=["analytics"])
 
-@router.get("/")
+@router.get("/api/stats")
+@router.get("/stats")
 async def get_dashboard_stats() -> Dict[str, Any]:
     """Genel dashboard istatistiklerini döndürür."""
     try:

@@ -1532,7 +1532,7 @@
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Stability</label>
                     <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_STABILITY" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_STABILITY.toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="parseFloat(settings.PR_TTS_STABILITY||0.3).toFixed(2)"></span>
                       <button @click="settings.PR_TTS_STABILITY = settings.SPESHAUDIO_STABILITY || 0.3; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>
@@ -1540,7 +1540,7 @@
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Similarity Boost</label>
                     <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_SIMILARITY" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_SIMILARITY.toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="parseFloat(settings.PR_TTS_SIMILARITY||0.5).toFixed(2)"></span>
                       <button @click="settings.PR_TTS_SIMILARITY = settings.SPESHAUDIO_SIMILARITY_BOOST || 0.5; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>
@@ -1548,7 +1548,7 @@
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Style</label>
                     <div class="flex items-center gap-2">
                       <input type="range" x-model="settings.PR_TTS_STYLE" min="0" max="1" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="settings.PR_TTS_STYLE.toFixed(2)"></span>
+                      <span class="text-sm font-mono text-slate-300 w-12 text-right" x-text="parseFloat(settings.PR_TTS_STYLE||0.75).toFixed(2)"></span>
                       <button @click="settings.PR_TTS_STYLE = settings.SPESHAUDIO_STYLE || 0.75; triggerAutoSave()" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors whitespace-nowrap">Global</button>
                     </div>
                   </div>

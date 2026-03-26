@@ -42,10 +42,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 import whisper  # type: ignore
+import requests
 
 from config import settings
 from pipeline.tts import _load_provider  # reuse provider factory
 from providers.tts.base import clean_for_tts
+from pipeline.visuals.broll import broll_manager
 
 
 # ── Whisper (singleton, loaded once) ─────────────────────────────────────────

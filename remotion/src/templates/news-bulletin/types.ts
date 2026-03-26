@@ -93,6 +93,8 @@ export interface BulletinProps {
   showSource?: boolean;
   /** Show published date on each news item */
   showDate?: boolean;
+  /** Video language (tr, en) — used for localized on-screen text */
+  lang?: string;
 }
 
 export const defaultBulletinProps: BulletinProps = {

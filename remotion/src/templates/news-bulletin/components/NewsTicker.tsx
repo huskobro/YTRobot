@@ -1,9 +1,11 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { TickerItem } from "../types";
+import { getCommonLabel } from "../utils/localization";
 
 interface Props {
   items: TickerItem[];
+  lang?: string;
   style?:
     | "breaking"
     | "tech"
@@ -32,10 +34,12 @@ const TICKER_HEIGHT = 64;
 const CHAR_WIDTH = 18; // approximate px per char at 28px Montserrat
 const SEPARATOR = "   ◆   ";
 
-export const NewsTicker: React.FC<Props> = ({ items, style = "breaking" }) => {
+export const NewsTicker: React.FC<Props> = ({ items, lang = "tr", style = "breaking" }) => {
   const frame = useCurrentFrame();
   const { width, durationInFrames } = useVideoConfig();
   const accent = ACCENT[style];
+
+  if (!items || items.length === 0) return null;
 
   // Build a single repeated string long enough to scroll smoothly
   const rawText = items.map((t) => t.text).join(SEPARATOR) + SEPARATOR;
@@ -102,7 +106,7 @@ export const NewsTicker: React.FC<Props> = ({ items, style = "breaking" }) => {
               fontWeight: 900,
             }}
           >
-            HABERLER
+            {getCommonLabel("news", lang)}
           </span>
         </div>
 

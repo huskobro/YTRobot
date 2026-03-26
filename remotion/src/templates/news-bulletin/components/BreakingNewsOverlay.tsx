@@ -6,9 +6,11 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { getLabel } from "../utils/localization";
 
 interface Props {
   networkName: string;
+  lang?: string;
   style?:
     | "breaking"
     | "tech"
@@ -21,25 +23,27 @@ interface Props {
     | "dark";
 }
 
-const LABELS = {
-  breaking: { badge: "SON DAKİKA", color: "#DC2626", darkColor: "#8B0000" },
-  tech: { badge: "TEKNOLOJİ", color: "#00E5FF", darkColor: "#0088AA" },
-  corporate: { badge: "KURUMSAL", color: "#2563EB", darkColor: "#0D3A8E" },
-  sport: { badge: "SPOR HABER", color: "#10B981", darkColor: "#065F46" },
-  finance: { badge: "EKONOMİ", color: "#F59E0B", darkColor: "#92400E" },
-  weather: { badge: "HAVA DURUMU", color: "#38BDF8", darkColor: "#075985" },
-  science: { badge: "BİLİM/TEK", color: "#8B5CF6", darkColor: "#5B21B6" },
-  entertainment: { badge: "MAGAZİN", color: "#EC4899", darkColor: "#9D174D" },
-  dark: { badge: "GÜNDEM", color: "#94A3B8", darkColor: "#334155" },
+const COLORS = {
+  breaking: { color: "#DC2626", darkColor: "#8B0000" },
+  tech: { color: "#00E5FF", darkColor: "#0088AA" },
+  corporate: { color: "#2563EB", darkColor: "#0D3A8E" },
+  sport: { color: "#10B981", darkColor: "#065F46" },
+  finance: { color: "#F59E0B", darkColor: "#92400E" },
+  weather: { color: "#38BDF8", darkColor: "#075985" },
+  science: { color: "#8B5CF6", darkColor: "#5B21B6" },
+  entertainment: { color: "#EC4899", darkColor: "#9D174D" },
+  dark: { color: "#94A3B8", darkColor: "#334155" },
 };
 
 export const BreakingNewsOverlay: React.FC<Props> = ({
   networkName,
+  lang = "tr",
   style = "breaking",
 }) => {
   const frame = useCurrentFrame();
   const { fps, width } = useVideoConfig();
-  const label = LABELS[style];
+  const colors = COLORS[style as keyof typeof COLORS] || COLORS.breaking;
+  const labelText = getLabel(style, lang);
 
   // Badge slides in from left
   const badgeProgress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
@@ -85,14 +89,14 @@ export const BreakingNewsOverlay: React.FC<Props> = ({
           style={{
             transform: `translateX(${badgeX}px)`,
             opacity: flashOpacity,
-            background: `linear-gradient(135deg, ${label.color} 0%, ${label.darkColor} 100%)`,
+            background: `linear-gradient(135deg, ${colors.color} 0%, ${colors.darkColor} 100%)`,
             paddingLeft: 60,
             paddingRight: 40,
             height: "100%",
             display: "flex",
             alignItems: "center",
             clipPath: "polygon(0 0, calc(100% - 30px) 0, 100% 50%, calc(100% - 30px) 100%, 0 100%)",
-            boxShadow: `0 0 40px ${label.color}88`,
+            boxShadow: `0 0 40px ${colors.color}88`,
           }}
         >
           <span
@@ -105,7 +109,7 @@ export const BreakingNewsOverlay: React.FC<Props> = ({
               textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
             }}
           >
-            {label.badge}
+            {labelText}
           </span>
         </div>
 

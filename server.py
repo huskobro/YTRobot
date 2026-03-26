@@ -738,6 +738,7 @@ class BulletinRenderReq(BaseModel):
     show_item_intro: bool = False     # show 2s branded intro before each item
     category_styles: dict = {}        # per-category style overrides from UI (per_category mode)
     item_styles: dict = {}            # per-item style overrides from UI, keyed by item URL/id
+    lang: str = "tr"                 # video language (tr, en)
     text_delivery_mode: str = "per_scene"  # "per_scene" | "single_chunk" — narration split mode
     show_source: bool = True              # show source site name on items
     show_date: bool = True                # show published date on items
@@ -804,11 +805,18 @@ def start_bulletin_render(body: BulletinRenderReq):
         for item in item_list:
             cat = (item.get("category") or "").lower().strip()
             item_key = item.get("url") or item.get("source_url") or item.get("id") or item.get("title") or ""
-            # Style priority: item_styles[url] > item_styles[id] > category_styles[cat] > category_templates[cat] > auto-map(cat)
+            
+            # Style priority: 
+            # 1. item_styles (Manual override per item in render page)
+            # 2. category_styles (Manual override per category in render page)
+            # 3. category_templates (Global settings mapping)
+            # 4. _resolve_auto_style (Fuzzy matching fallback)
+            mapping_from_settings = body.category_templates.get(cat)
+            
             style_override = (
                 body.item_styles.get(item_key)
                 or body.category_styles.get(cat)
-                or (body.category_templates.get(cat) if body.category_templates else None)
+                or mapping_from_settings
                 or _resolve_auto_style(cat, body.style)
             )
             news_item = {
@@ -856,6 +864,7 @@ def start_bulletin_render(body: BulletinRenderReq):
             "textDeliveryMode": body.text_delivery_mode,
             "showSource": body.show_source,
             "showDate": body.show_date,
+            "lang": body.lang,
         }
 
     def _make_ticker(item_list: list) -> list:
@@ -1306,7 +1315,16 @@ def start_product_review_render(body: ProductReviewRenderReq):
                     pr_tts_stability = float(os.environ.get("PR_TTS_STABILITY", -1) or -1)
                     pr_tts_similarity = float(os.environ.get("PR_TTS_SIMILARITY", -1) or -1)
                     pr_tts_style = float(os.environ.get("PR_TTS_STYLE", -1) or -1)
-                    pr_openai_voice = os.environ.get("PR_OPENAI_TTS_VOICE") or getattr(cfg, "pr_openai_tts_voice", "")
+                    
+                    # Effective voice ID resolution for PR
+                    pr_v_id = None
+                    eff_prov = pr_tts_provider or cfg.tts_provider
+                    if eff_prov == "elevenlabs":
+                        pr_v_id = getattr(cfg, "pr_elevenlabs_voice_id", "") or getattr(cfg, "pr_tts_voice_id", "") or cfg.elevenlabs_voice_id
+                    elif eff_prov == "openai":
+                        pr_v_id = getattr(cfg, "pr_openai_tts_voice", "") or cfg.openai_tts_voice
+                    elif eff_prov == "speshaudio":
+                        pr_v_id = getattr(cfg, "pr_speshaudio_voice_id", "") or getattr(cfg, "pr_tts_voice_id", "") or cfg.speshaudio_voice_id
 
                     # Patch settings temporarily
                     _orig = {}
@@ -1314,13 +1332,17 @@ def start_product_review_render(body: ProductReviewRenderReq):
                         if val:
                             _orig[key] = getattr(cfg, key, None)
                             object.__setattr__(cfg, key, val)
-
+                    
+                    if pr_v_id:
+                        if eff_prov == "openai": _patch("openai_tts_voice", pr_v_id)
+                        elif eff_prov == "elevenlabs": _patch("elevenlabs_voice_id", pr_v_id)
+                        elif eff_prov == "speshaudio": _patch("speshaudio_voice_id", pr_v_id)
+                    
                     if pr_tts_speed > 0: _patch("tts_speed", pr_tts_speed)
                     if pr_tts_language: _patch("speshaudio_language", pr_tts_language)
                     if pr_tts_stability >= 0: _patch("speshaudio_stability", pr_tts_stability)
                     if pr_tts_similarity >= 0: _patch("speshaudio_similarity_boost", pr_tts_similarity)
                     if pr_tts_style >= 0: _patch("speshaudio_style", pr_tts_style)
-                    if pr_openai_voice: _patch("openai_tts_voice", pr_openai_voice)
 
                     try:
                         provider = _tts_load(pr_tts_provider if pr_tts_provider else None)

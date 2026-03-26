@@ -15,11 +15,12 @@ import { LowerThird } from "./components/LowerThird";
 import { NewsTicker } from "./components/NewsTicker";
 import { CategoryFlash16x9 } from "./components/CategoryFlash16x9";
 import { NewsItemIntro } from "./components/NewsItemIntro";
-import { CATEGORY_FLASH_DUR, CATEGORY_LABELS } from "./NewsBulletin9x16";
+import { CATEGORY_FLASH_DUR } from "./NewsBulletin9x16";
+import { getLabel, getCommonLabel } from "./utils/localization";
 
 // ── Sequence layout (at 60 fps) ─────────────────────────────────────────────
 // Frame 0–60:   Background + network bar fade in
-// Frame 20–80:  BreakingNewsOverlay (Son Dakika flash)
+// Frame 20–80:  BreakingNewsOverlay (Son Dakika flash) — ONLY IF STYLE IS BREAKING
 // Frame 90+:    Headlines cycle, each with its own duration
 // Ticker:       Always visible from frame 30 onward
 
@@ -49,6 +50,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
   showItemIntro = false,
   showSource = false,
   showDate = false,
+  lang = "tr",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -165,16 +167,18 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
                 letterSpacing: "0.12em",
               }}
             >
-              CANLI
+              {getCommonLabel("live", lang)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Layer 3: Breaking news overlay (early in the composition) */}
-      <Sequence from={OVERLAY_START} durationInFrames={OVERLAY_DUR}>
-        <BreakingNewsOverlay networkName={networkName} style={style} />
-      </Sequence>
+      {/* Layer 3: Breaking news overlay (early in the composition) — Only if style is breaking */}
+      {style === "breaking" && (
+        <Sequence from={OVERLAY_START} durationInFrames={OVERLAY_DUR}>
+          <BreakingNewsOverlay networkName={networkName} style={style} lang={lang} />
+        </Sequence>
+      )}
 
       {/* Layer 4: Sequential headlines (with optional category flash + item intro prefix) */}
       {sequenced.map(({ item, flashFrom, introFrom, contentFrom, idx }) => {
@@ -182,7 +186,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
           ? (item.styleOverride as keyof typeof ACCENT)
           : style;
         const itemAccent = ACCENT[itemStyle];
-        const itemLabel = CATEGORY_LABELS[itemStyle] ?? String(itemStyle).toUpperCase();
+        const itemLabel = getLabel(itemStyle, lang);
         return (
           <React.Fragment key={idx}>
             {showCategoryFlash && (
@@ -211,7 +215,7 @@ export const NewsBulletin: React.FC<BulletinProps> = ({
 
       {/* Layer 5: Ticker — visible from frame 30 onwards; follows active item style */}
       <Sequence from={30}>
-        <NewsTicker items={ticker} style={activeStyle} />
+        <NewsTicker items={ticker} style={activeStyle} lang={lang} />
       </Sequence>
     </AbsoluteFill>
   );

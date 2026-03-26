@@ -31,7 +31,18 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
     
     # Effective settings for YT module
     provider_name = settings.yt_tts_provider or settings.tts_provider
-    voice_id = settings.yt_tts_voice_id or None
+    
+    # Resolve effective voice ID based on provider
+    voice_id = None
+    if provider_name == "elevenlabs":
+        voice_id = settings.yt_elevenlabs_voice_id or settings.yt_tts_voice_id or settings.elevenlabs_voice_id
+    elif provider_name == "openai":
+        voice_id = settings.yt_openai_tts_voice or settings.openai_tts_voice
+    elif provider_name == "speshaudio":
+        voice_id = settings.yt_speshaudio_voice_id or settings.yt_tts_voice_id or settings.speshaudio_voice_id
+    else:
+        # Fallback for others (google, qwen3 handle theirs differently or use defaults)
+        voice_id = settings.yt_tts_voice_id or None
     
     provider = _load_provider(provider_name)
     if voice_id and hasattr(provider, "voice_id"):

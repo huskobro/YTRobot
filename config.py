@@ -46,7 +46,10 @@ class Settings(BaseSettings):
 
     # YT Video-specific TTS (optional; falls back to global TTS if empty/sentinel)
     yt_tts_provider: str = ""          # empty = use tts_provider
-    yt_tts_voice_id: str = ""          # empty = global voice
+    yt_tts_voice_id: str = ""          # deprecated: use provider-specific below
+    yt_elevenlabs_voice_id: str = "" 
+    yt_openai_tts_voice: str = ""
+    yt_speshaudio_voice_id: str = ""
     yt_tts_speed: float = 0.0          # 0.0 = use tts_speed
     yt_tts_language: str = ""          # empty = global language
     yt_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
@@ -79,7 +82,10 @@ class Settings(BaseSettings):
 
     # Bulletin-specific TTS (optional; falls back to global TTS if empty/sentinel)
     bulletin_tts_provider: str = ""          # empty = use tts_provider
-    bulletin_tts_voice_id: str = ""          # empty = provider default voice
+    bulletin_tts_voice_id: str = ""          # deprecated: use provider-specific below
+    bulletin_elevenlabs_voice_id: str = ""
+    bulletin_openai_tts_voice: str = ""
+    bulletin_speshaudio_voice_id: str = ""
     bulletin_tts_speed: float = 0.0          # 0.0 = use tts_speed
     bulletin_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability
     bulletin_tts_similarity_boost: float = -1.0
@@ -129,7 +135,10 @@ class Settings(BaseSettings):
 
     # Product Review module settings
     pr_tts_provider: str = ""          # empty = use tts_provider
-    pr_tts_voice_id: str = ""          # empty = provider default voice
+    pr_tts_voice_id: str = ""          # deprecated: use provider-specific below
+    pr_elevenlabs_voice_id: str = ""
+    pr_openai_tts_voice: str = ""
+    pr_speshaudio_voice_id: str = ""
     pr_tts_speed: float = 0.0          # 0.0 = use tts_speed
     pr_tts_language: str = ""          # empty = global provider default
     pr_tts_stability: float = -1.0     # -1.0 = use speshaudio_stability

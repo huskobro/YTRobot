@@ -63,9 +63,22 @@ def _get_whisper():
 
 def _get_bulletin_tts() -> dict:
     """Return effective TTS settings for bulletin, falling back to global settings."""
+    provider = settings.bulletin_tts_provider or settings.tts_provider
+    
+    # Resolve effective voice ID
+    voice_id = None
+    if provider == "elevenlabs":
+        voice_id = settings.bulletin_elevenlabs_voice_id or settings.bulletin_tts_voice_id or settings.elevenlabs_voice_id
+    elif provider == "openai":
+        voice_id = settings.bulletin_openai_tts_voice or settings.openai_tts_voice
+    elif provider == "speshaudio":
+        voice_id = settings.bulletin_speshaudio_voice_id or settings.bulletin_tts_voice_id or settings.speshaudio_voice_id
+    else:
+        voice_id = settings.bulletin_tts_voice_id or None
+
     return {
-        "provider": settings.bulletin_tts_provider or settings.tts_provider,
-        "voice_id": settings.bulletin_tts_voice_id or None,
+        "provider": provider,
+        "voice_id": voice_id,
         "speed": settings.bulletin_tts_speed if settings.bulletin_tts_speed > 0.0 else settings.tts_speed,
         "stability": settings.bulletin_tts_stability if settings.bulletin_tts_stability >= 0.0 else settings.speshaudio_stability,
         "similarity_boost": settings.bulletin_tts_similarity_boost if settings.bulletin_tts_similarity_boost >= 0.0 else settings.speshaudio_similarity_boost,
@@ -512,12 +525,23 @@ def run_bulletin(
                     entry["styleOverride"] = style_override
                 props_items.append(entry)
 
+            # Step 1.1: Determine effective language (Auto-detect if needed)
+            lang = bulletin_config.get("lang", "tr")
+            if not lang or lang == "auto":
+                # Combined text for detection
+                detect_text = " ".join(item.narration for item in bulletin_items[:3]).lower()
+                tr_chars = "ğışçöü"
+                has_tr = any(c in detect_text for c in tr_chars)
+                lang = "tr" if has_tr else "en"
+                print(f"[NewsBulletin] Auto-detected language: {lang}")
+
             props = {
                 "networkName": network_name,
                 "style": style,
                 "items": props_items,
                 "ticker": ticker,
                 "fps": fps,
+                "lang": lang,
                 "composition": bulletin_config.get("composition") or "NewsBulletin",
                 # New design props
                 "lowerThird": lower_third,

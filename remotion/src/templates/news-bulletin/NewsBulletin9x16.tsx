@@ -14,6 +14,7 @@ import { BulletinProps, NewsItem, SubtitleEntry } from "./types";
 import { StudioBackground } from "./components/StudioBackground";
 import { NewsTicker } from "./components/NewsTicker";
 import { NewsItemIntro } from "./components/NewsItemIntro";
+import { getLabel, getCommonLabel } from "./utils/localization";
 
 // ── 9:16 Vertical News Bulletin (1080×1920) ──────────────────────────────────
 //
@@ -724,18 +725,6 @@ const VerticalHeadlineCard: React.FC<CardProps> = ({ item, bulletinStyle = "brea
 
 export const CATEGORY_FLASH_DUR = 90; // 1.5s at 60fps
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  breaking: "SON DAKİKA",
-  tech: "TEKNOLOJİ",
-  corporate: "KURUMSAL",
-  sport: "SPOR",
-  finance: "FİNANS",
-  weather: "HAVA",
-  science: "BİLİM",
-  entertainment: "EĞLENCE",
-  dark: "GÜNDEM",
-};
-
 // ── Category flash banner — shown between headlines ───────────────────────────
 
 const CategoryFlash9x16: React.FC<{ label: string; accent: string }> = ({ label, accent }) => {
@@ -777,6 +766,7 @@ const CategoryFlash9x16: React.FC<{ label: string; accent: string }> = ({ label,
 
 const BreakingFlash9x16: React.FC<{
   networkName: string;
+  lang?: string;
   bulletinStyle?:
     | "breaking"
     | "tech"
@@ -787,11 +777,11 @@ const BreakingFlash9x16: React.FC<{
     | "science"
     | "entertainment"
     | "dark";
-}> = ({ networkName, bulletinStyle = "breaking" }) => {
+}> = ({ networkName, lang = "tr", bulletinStyle = "breaking" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const accent = ACCENT[bulletinStyle];
-  const categoryLabel = CATEGORY_LABELS[bulletinStyle] ?? "SON DAKİKA";
+  const categoryLabel = getLabel(bulletinStyle, lang);
 
   const progress = spring({ frame, fps, config: { damping: 14, stiffness: 200 } });
   const slideY = interpolate(progress, [0, 1], [-120, 0]);
@@ -833,6 +823,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
   showItemIntro = false,
   showSource = false,
   showDate = false,
+  lang = "tr",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -896,16 +887,18 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
               opacity: interpolate(Math.sin((frame / 30) * Math.PI), [-1, 1], [0.5, 1.0]),
             }} />
             <span style={{ color: "#FFFFFF", fontSize: 26, fontFamily: '"Montserrat",Arial,sans-serif', fontWeight: 700, letterSpacing: "0.12em" }}>
-              CANLI
+              {getCommonLabel("live", lang)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Son Dakika flash */}
-      <Sequence from={OVERLAY_START} durationInFrames={OVERLAY_DUR}>
-        <BreakingFlash9x16 networkName={networkName} bulletinStyle={style} />
-      </Sequence>
+      {/* Breaking Flash Overlay — Only if overall style is breaking */}
+      {style === "breaking" && (
+        <Sequence from={OVERLAY_START} durationInFrames={OVERLAY_DUR}>
+          <BreakingFlash9x16 networkName={networkName} bulletinStyle={style} lang={lang} />
+        </Sequence>
+      )}
 
       {/* Headlines (with optional category flash + item intro prefix) */}
       {sequenced.map(({ item, flashFrom, introFrom, contentFrom, idx }) => {
@@ -913,7 +906,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
           ? (item.styleOverride as keyof typeof ACCENT)
           : style;
         const itemAccent = ACCENT[itemStyle];
-        const itemLabel = CATEGORY_LABELS[itemStyle] ?? String(itemStyle).toUpperCase();
+        const itemLabel = getLabel(itemStyle, lang);
         return (
           <React.Fragment key={idx}>
             {showCategoryFlash && (
@@ -935,7 +928,7 @@ export const NewsBulletin9x16: React.FC<BulletinProps> = ({
 
       {/* Ticker — follows active item style */}
       <Sequence from={30}>
-        <NewsTicker items={ticker} style={activeStyle} />
+        <NewsTicker items={ticker} style={activeStyle} lang={lang} />
       </Sequence>
     </AbsoluteFill>
   );

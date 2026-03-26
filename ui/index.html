@@ -947,9 +947,37 @@
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-indigo-300/80 mb-1.5">Voice ID</label>
-                  <input type="text" x-model="settings.YT_TTS_VOICE_ID"
-                    class="w-full bg-slate-800 border border-indigo-800/50 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 font-mono"
-                    placeholder="(provider default)">
+                  
+                  <!-- ElevenLabs Voice ID -->
+                  <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'" class="flex gap-2">
+                    <input type="text" x-model="settings.YT_ELEVENLABS_VOICE_ID"
+                      class="flex-1 bg-slate-800 border border-indigo-800/50 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 font-mono"
+                      placeholder="(elevenlabs voice id)">
+                  </div>
+
+                  <!-- OpenAI Voice -->
+                  <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                    <select x-model="settings.YT_OPENAI_TTS_VOICE" class="w-full bg-slate-800 border border-indigo-800/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                      <option value="">(global default)</option>
+                      <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                      <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                      <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                    </select>
+                  </div>
+
+                  <!-- SpeshAudio Voice ID -->
+                  <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'">
+                    <input type="text" x-model="settings.YT_SPESHAUDIO_VOICE_ID"
+                      class="w-full bg-slate-800 border border-indigo-800/50 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 font-mono"
+                      placeholder="(speshaudio voice id)">
+                  </div>
+
+                  <!-- Fallback/Generic (e.g. Google or Qwen3 uses its own specific toggles) -->
+                  <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                    <input type="text" x-model="settings.YT_TTS_VOICE_ID"
+                      class="w-full bg-slate-800 border border-indigo-800/50 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 font-mono"
+                      placeholder="(provider default)">
+                  </div>
                 </div>
                 <div>
                   <div class="flex justify-between items-center mb-1">
@@ -1076,21 +1104,50 @@
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
+                  
                   <div class="flex flex-col gap-2">
-                    <div class="flex gap-2">
-                      <select x-model="settings.BULLETIN_TTS_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
-                        <option value="" x-text="t('bulletin_tts_default')"></option>
-                        <template x-for="v in bulletinVoicesList" :key="v.voice_id||v.id">
-                          <option :value="v.voice_id||v.id" x-text="v.name"></option>
-                        </template>
-                      </select>
-                      <button @click="fetchBulletinVoices()" :disabled="bulletinVoicesLoading"
-                              class="shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all"
-                              x-text="bulletinVoicesLoading ? '...' : t('bulletin_fetch_voices')"></button>
+                    <!-- ElevenLabs -->
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'" class="space-y-2">
+                      <div class="flex gap-2">
+                        <select x-model="settings.BULLETIN_ELEVENLABS_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                          <option value="">(global/default)</option>
+                          <template x-for="v in voicesList.filter(x=>voicesProvider==='elevenlabs')" :key="v.id">
+                            <option :value="v.id" x-text="v.name"></option>
+                          </template>
+                        </select>
+                      </div>
+                      <input type="text" x-model="settings.BULLETIN_ELEVENLABS_VOICE_ID" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 font-mono" placeholder="ElevenLabs ID..." />
                     </div>
-                    <input type="text" x-model="settings.BULLETIN_TTS_VOICE_ID"
-                           class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:border-red-500"
-                           :placeholder="t('bulletin_tts_manual_voice_ph') || 'Manuel Ses ID...'" />
+
+                    <!-- OpenAI -->
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                      <select x-model="settings.BULLETIN_OPENAI_TTS_VOICE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                        <option value="">(global default)</option>
+                        <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                        <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                        <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                      </select>
+                    </div>
+
+                    <!-- SpeshAudio -->
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="space-y-2">
+                      <div class="flex gap-2">
+                        <select x-model="settings.BULLETIN_SPESHAUDIO_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                          <option value="">(global/default)</option>
+                          <template x-for="v in voicesList.filter(x=>voicesProvider==='speshaudio')" :key="v.id">
+                            <option :value="v.id" x-text="v.name"></option>
+                          </template>
+                        </select>
+                      </div>
+                      <input type="text" x-model="settings.BULLETIN_SPESHAUDIO_VOICE_ID" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 font-mono" placeholder="SpeshAudio ID..." />
+                    </div>
+
+                    <!-- Fallback / Manual Generic -->
+                    <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                      <input type="text" x-model="settings.BULLETIN_TTS_VOICE_ID"
+                             class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:border-red-500"
+                             :placeholder="t('bulletin_tts_manual_voice_ph') || 'Manuel Ses ID...'" />
+                    </div>
                   </div>
                   <div x-show="bulletinVoicesFetchError" class="mt-1 text-xs text-red-400" x-text="bulletinVoicesFetchError"></div>
                 </div>
@@ -1228,28 +1285,55 @@
                   </select>
                   <span x-show="settings.PR_TTS_PROVIDER && settings.PR_TTS_PROVIDER !== ''" class="inline-block mt-1 text-xs px-2 py-0.5 bg-amber-900/40 text-amber-300 rounded-full">✓ Override Aktif</span>
                 </div>
-                <div x-show="settings.PR_TTS_PROVIDER==='openai'">
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">OpenAI Ses</label>
-                  <select x-model="settings.PR_OPENAI_TTS_VOICE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
-                    <option value="">(Global voice kullan)</option>
-                    <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
-                    <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
-                    <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
-                  </select>
-                </div>
                 <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Hız (0 = global)</label>
-                  <div class="flex items-center gap-3">
-                    <input type="range" x-model="settings.PR_TTS_SPEED" min="0" max="2.0" step="0.05" class="flex-1 accent-amber-500 cursor-pointer" />
-                    <span class="text-sm font-mono text-slate-300 w-16 text-right" x-text="settings.PR_TTS_SPEED==0?'(global)':parseFloat(settings.PR_TTS_SPEED).toFixed(2)"></span>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('voice_id')"></label>
+                  
+                  <div class="flex flex-col gap-2">
+                    <!-- ElevenLabs -->
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'" class="space-y-2">
+                      <div class="flex gap-2">
+                        <select x-model="settings.PR_ELEVENLABS_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
+                          <option value="">(global/default)</option>
+                          <template x-for="v in voicesList.filter(x=>voicesProvider==='elevenlabs')" :key="v.id">
+                            <option :value="v.id" x-text="v.name"></option>
+                          </template>
+                        </select>
+                      </div>
+                      <input type="text" x-model="settings.PR_ELEVENLABS_VOICE_ID" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 font-mono" placeholder="ElevenLabs ID..." />
+                    </div>
+
+                    <!-- OpenAI -->
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                      <select x-model="settings.PR_OPENAI_TTS_VOICE" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
+                        <option value="">(global default)</option>
+                        <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                        <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                        <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                      </select>
+                    </div>
+
+                    <!-- SpeshAudio -->
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="space-y-2">
+                      <div class="flex gap-2">
+                        <select x-model="settings.PR_SPESHAUDIO_VOICE_ID" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
+                          <option value="">(global/default)</option>
+                          <template x-for="v in voicesList.filter(x=>voicesProvider==='speshaudio')" :key="v.id">
+                            <option :value="v.id" x-text="v.name"></option>
+                          </template>
+                        </select>
+                      </div>
+                      <input type="text" x-model="settings.PR_SPESHAUDIO_VOICE_ID" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 font-mono" placeholder="SpeshAudio ID..." />
+                    </div>
+
+                    <!-- Fallback / Manual Generic -->
+                    <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                      <input type="text" x-model="settings.PR_TTS_VOICE_ID"
+                             class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono focus:border-amber-500"
+                             placeholder="Manuel Ses ID..." />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 mb-1.5">Dil Kodu</label>
-                  <input type="text" x-model="settings.PR_TTS_LANGUAGE"
-                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 font-mono"
-                    placeholder="tr">
-                </div>
+
                 <div x-show="settings.PR_TTS_PROVIDER==='speshaudio'||settings.PR_TTS_PROVIDER==='elevenlabs'" class="space-y-3 pt-1 border-t border-slate-700/50">
                   <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">SpesAudio / ElevenLabs</div>
                   <div>
@@ -2954,7 +3038,17 @@
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4" x-init="initRenderStyles()">
             <!-- ① RENDER MODU SEÇICI -->
             <div class="mb-4">
-              <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Render Modu</div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Render Modu</div>
+                <!-- Style Override Switch -->
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <span class="text-[10px] font-bold text-slate-500 group-hover:text-red-400 transition-colors">Yalnızca Özel Stil Kullan</span>
+                  <div class="relative inline-block w-8 h-4 shrink-0">
+                    <input type="checkbox" x-model="bulletinOverrideStyles" class="sr-only peer" />
+                    <div class="w-full h-full bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                  </div>
+                </label>
+              </div>
               <div class="grid grid-cols-3 gap-2">
                 <div @click="bulletinRenderMode='combined'; initRenderStyles()"
                      class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
@@ -3010,6 +3104,14 @@
                   <option value="60">60 fps</option>
                 </select>
               </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">Video Dili</label>
+                <select x-model="bulletinRenderCfg.lang" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                  <option value="auto">Otomatik</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
             </div>
 
             <!-- ③ MOD'A ÖZEL PANEL -->
@@ -3041,7 +3143,7 @@
             </div>
 
             <!-- Per-category: her kategori için stil seçici -->
-            <div x-show="bulletinRenderMode==='per_category'" x-transition class="mb-4">
+            <div x-show="bulletinRenderMode==='per_category' && bulletinOverrideStyles" x-transition class="mb-4">
               <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Kategori Stilleri</div>
               <div x-show="getSelectedCategories().length === 0" class="text-[10px] text-slate-500 italic">Haber seçin</div>
               <div class="space-y-2">
@@ -3071,7 +3173,7 @@
             </div>
 
             <!-- Per-item: her haber için stil seçici -->
-            <div x-show="bulletinRenderMode==='per_item'" x-transition class="mb-4">
+            <div x-show="bulletinRenderMode==='per_item' && bulletinOverrideStyles" x-transition class="mb-4">
               <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Haber Stilleri</div>
               <div x-show="getSelectedItems().length === 0" class="text-[10px] text-slate-500 italic">Haber seçin</div>
               <div class="space-y-1.5 max-h-48 overflow-y-auto">
@@ -4420,11 +4522,12 @@ function app() {
     draftData: null, draftLoading: false, draftError: '',
     draftMaxItems: '3', draftLangOverride: '',
     openDraftCats: {},
-    bulletinRenderCfg: { network_name: 'YTRobot Haber', style: 'breaking', fps: 60, format: '16:9' },
+    bulletinRenderCfg: { network_name: 'YTRobot Haber', style: 'breaking', fps: 60, format: '16:9', lang: 'auto' },
     bulletinRendering: false, bulletinJobId: null, bulletinJobStatus: '', bulletinJobError: '',
     bulletinProgress: 0, bulletinStepLabel: '', bulletinElapsed: 0, bulletinEta: null,
     bulletinPaused: false,
     bulletinRenderMode: 'combined',
+    bulletinOverrideStyles: false,
     bulletinShowCategoryFlash: false,
     bulletinShowItemIntro: false,
     bulletinTextMode: 'per_scene',   // 'per_scene' | 'single_chunk'
@@ -5199,11 +5302,12 @@ function app() {
             preset_name: this.bulletinActivePreset,
             category_templates: this.categoryTemplates,
             render_mode: this.bulletinRenderMode,
+            lang: this.bulletinRenderCfg.lang,
             show_category_flash: this.bulletinShowCategoryFlash,
             show_item_intro: this.bulletinShowItemIntro,
             text_delivery_mode: this.bulletinTextMode,
-            category_styles: this.bulletinCategoryStyles,
-            item_styles: this.bulletinItemStyles,
+            category_styles: this.bulletinOverrideStyles ? this.bulletinCategoryStyles : {},
+            item_styles: this.bulletinOverrideStyles ? this.bulletinItemStyles : {},
             // Design settings
             lower_third_enabled: this.settings.BULLETIN_LOWER_THIRD_ENABLED === 'true',
             lower_third_text: this.settings.BULLETIN_LOWER_THIRD_TEXT,

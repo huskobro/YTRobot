@@ -190,6 +190,13 @@ class Settings(BaseSettings):
     share_on_instagram: bool = False
     share_on_tiktok: bool = False
 
+    # Webhook Notifications
+    webhook_enabled: bool = False
+    webhook_url: str = ""              # Slack/Discord/custom HTTP endpoint
+    webhook_on_complete: bool = True
+    webhook_on_failure: bool = True
+    webhook_mention: str = ""          # e.g. "@channel" or Discord user ID
+
     # Social Media Metadata Tool
     social_meta_enabled_yt_video: bool = False
     social_meta_enabled_bulletin: bool = False

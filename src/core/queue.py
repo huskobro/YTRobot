@@ -157,6 +157,29 @@ class QueueManager:
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 
+                    # Webhook notification
+                    try:
+                        from config import settings
+                        from src.api.routes.webhook import dispatch_webhook
+                        if getattr(settings, "webhook_enabled", False) and getattr(settings, "webhook_url", ""):
+                            if getattr(settings, "webhook_on_complete", True) and job.status == "completed":
+                                dispatch_webhook(
+                                    settings.webhook_url,
+                                    {"status": job.status, "module": job.type,
+                                     "session_id": job.id,
+                                     "duration": job.finished_at - (job.started_at or job.created_at)},
+                                    mention=getattr(settings, "webhook_mention", ""),
+                                )
+                            elif getattr(settings, "webhook_on_failure", True) and job.status == "failed":
+                                dispatch_webhook(
+                                    settings.webhook_url,
+                                    {"status": job.status, "module": job.type,
+                                     "session_id": job.id, "error": job.error or ""},
+                                    mention=getattr(settings, "webhook_mention", ""),
+                                )
+                    except Exception as wh_err:
+                        logger.warning(f"Webhook dispatch error: {wh_err}")
+
                 except asyncio.TimeoutError:
                     job.status = JobStatus.FAILED
                     job.error = f"Zaman asimi ({self.JOB_TIMEOUT // 60} dakika)"

@@ -801,6 +801,11 @@ function app() {
       if (this.settings.PR_MASTER_PROMPT === undefined) this.settings.PR_MASTER_PROMPT = '';
       if (this.settings.PR_AI_LANGUAGE === undefined) this.settings.PR_AI_LANGUAGE = '';
       if (this.settings.PR_AUTO_GENERATE_TTS === undefined) this.settings.PR_AUTO_GENERATE_TTS = true;
+      if (this.settings.WEBHOOK_URL === undefined) this.settings.WEBHOOK_URL = '';
+      if (this.settings.WEBHOOK_MENTION === undefined) this.settings.WEBHOOK_MENTION = '';
+      if (this.settings.WEBHOOK_ENABLED === undefined) this.settings.WEBHOOK_ENABLED = false;
+      if (this.settings.WEBHOOK_ON_COMPLETE === undefined) this.settings.WEBHOOK_ON_COMPLETE = true;
+      if (this.settings.WEBHOOK_ON_FAILURE === undefined) this.settings.WEBHOOK_ON_FAILURE = true;
       // Provider-bazli ses ayarlari varsayilanlari
       if (this.settings.YT_ELEVENLABS_VOICE_ID === undefined) this.settings.YT_ELEVENLABS_VOICE_ID = '';
       if (this.settings.YT_OPENAI_TTS_VOICE === undefined) this.settings.YT_OPENAI_TTS_VOICE = '';
@@ -1149,6 +1154,21 @@ function app() {
       } catch (e) {
         keyTests[provider] = 'error';
         keyTests[provider + '_msg'] = e.message;
+      }
+    },
+
+    async testWebhook() {
+      const url = this.settings.WEBHOOK_URL;
+      if (!url) { this.showNotification && this.showNotification('Webhook URL girilmedi', 'error'); return; }
+      try {
+        const data = await this.apiFetch('/api/webhook/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        this.showNotification && this.showNotification(data.message || 'Webhook gönderildi', 'success');
+      } catch(e) {
+        this.showNotification && this.showNotification('Webhook hatası: ' + e.message, 'error');
       }
     },
 

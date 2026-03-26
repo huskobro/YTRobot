@@ -3111,6 +3111,47 @@
               </div>
             </div>
           </div>
+          <!-- Webhook Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Webhook Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Slack/Discord/özel URL'e render bildirimleri gönder</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.WEBHOOK_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.WEBHOOK_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Webhook URL</label>
+                <input x-model="settings.WEBHOOK_URL" type="text"
+                  placeholder="https://hooks.slack.com/... veya Discord webhook"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mention (isteğe bağlı)</label>
+                <input x-model="settings.WEBHOOK_MENTION" type="text"
+                  placeholder="@channel veya Discord User ID"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500" />
+              </div>
+              <div class="flex gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" x-model="settings.WEBHOOK_ON_COMPLETE" class="accent-violet-500 w-4 h-4">
+                  <span class="text-xs text-slate-300">Tamamlandığında</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" x-model="settings.WEBHOOK_ON_FAILURE" class="accent-violet-500 w-4 h-4">
+                  <span class="text-xs text-slate-300">Başarısız olunca</span>
+                </label>
+              </div>
+              <button @click="testWebhook()"
+                class="px-4 py-2 bg-violet-800 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all">
+                🔔 Test Bildirimi Gönder
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- ══ SOCIAL META TAB ══════════════════════════════════════════ -->

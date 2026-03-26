@@ -2768,8 +2768,8 @@
               </div>
 
               <!-- Modül Sekme Seçici -->
-              <div class="flex gap-1 p-1 bg-slate-950/60 rounded-xl border border-slate-800 w-fit">
-                <template x-for="mod in [{id:'yt',icon:'📽',label:'YT Video',color:'indigo'},{id:'bulletin',icon:'📺',label:'Bülten',color:'red'},{id:'pr',icon:'🛒',label:'Ürün İnceleme',color:'amber'},{id:'social',icon:'📱',label:'Sosyal Meta',color:'violet'}]" :key="mod.id">
+              <div class="flex gap-1 p-1 bg-slate-950/60 rounded-xl border border-slate-800 w-fit flex-wrap">
+                <template x-for="mod in [{id:'yt',icon:'📽',label:'YT Video'},{id:'bulletin',icon:'📺',label:'Bülten'},{id:'pr',icon:'🛒',label:'Ürün İnceleme'},{id:'social',icon:'📱',label:'Sosyal Meta'},{id:'tts',icon:'🎙',label:'TTS İşleme'}]" :key="mod.id">
                   <button @click="activePrompt=mod.id"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                     :class="activePrompt===mod.id ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
@@ -2860,6 +2860,64 @@
                     class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 YouTube SEO</button>
                   <button @click="settings.SOCIAL_META_MASTER_PROMPT='Create engaging social media metadata. Compelling title under 60 chars, SEO description under 150 chars, 10 relevant hashtags.'; triggerAutoSave()"
                     class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 Social EN</button>
+                </div>
+              </div>
+
+              <!-- TTS İşleme Promptları (Tüm Modüller) -->
+              <div x-show="activePrompt==='tts'" class="space-y-4">
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                  <p class="text-[10px] text-slate-400 leading-relaxed">Bu promptlar <strong class="text-slate-200">tüm modüllerde</strong> (YT Video, Bülten, Ürün İnceleme) ortak kullanılır. TTS sekmesindeki "Gelişmiş İşleme" checkbox'ları aktifleştirildiğinde devreye girer.</p>
+                </div>
+
+                <!-- TTS Vurgu Promptu -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">TTS Vurgu Promptu</div>
+                      <div class="text-[9px] text-slate-500">"TTS İyileştirme" checkbox'ı aktif olduğunda kullanılır</div>
+                    </div>
+                    <button @click="viewBuiltin('TTS Vurgu — Yerleşik Prompt', `You are a TTS voice coach. Your job is to make AI-generated narration sound HUMAN and natural when read by a text-to-speech voice.\n\nGiven a narration text, return it with these modifications ONLY:\n1. CAPITALIZE 1–2 key words per sentence that should be spoken with strong emphasis.\n   Pick the most emotionally or informationally important word.\n   Example: \"this changes everything\" → \"this changes EVERYTHING\"\n2. Add \"...\" before impactful statements to create a meaningful pause.\n   Example: \"And I finally got it. The secret was patience.\" →\n            \"And I finally got it. The secret... was patience.\"\n3. Add \"!\" for genuine excitement, urgency, or strong emphasis.\n   Only add where the speaker would naturally raise their voice with energy.\n4. Add commas where the speaker would naturally breathe or pause.\n5. Do NOT change any words, sentences, or meaning. Only add emphasis markers.\n6. Feel free to capitalize 2-4 important words per scene to ensure dynamic delivery.\n7. Do NOT use \"/\" (slash) at all — if you see one, replace it with \" or \".\n\nReturn ONLY the modified narration text. No explanation, no JSON, just the text.`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
+                </div>
+
+                <!-- Humanize + Enhance Promptu -->
+                <div class="space-y-2 pt-3 border-t border-slate-800">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">Humanize + TTS Vurgu (Birleşik)</div>
+                      <div class="text-[9px] text-slate-500">"Script İnsanlaştırma" + "TTS İyileştirme" birlikte aktif olduğunda kullanılır</div>
+                    </div>
+                    <button @click="viewBuiltin('Humanize + TTS — Yerleşik Birleşik Prompt', `You are a professional script editor AND TTS voice coach. In ONE pass, do both jobs:\n\nPART 1 — HUMANIZE (rewrite for natural speech):\n1. USE CONTRACTIONS everywhere: it\'s, you\'re, don\'t, I\'ve, that\'s, we\'re, I\'ll, won\'t\n2. BREAK long sentences. Mix rhythm: short punch. Then a longer one that breathes.\n3. REMOVE ALL AI-ISMS: \"delve into\", \"it\'s worth noting\", \"in conclusion\",\n   \"in today\'s world\", \"leverage\", \"furthermore\", \"navigate\", \"landscape\", \"game-changer\"\n4. ADD natural imperfections: rhetorical questions, mid-thought pauses (\"And honestly...\"),\n   hesitations (\"I mean, think about it.\")\n5. SPEAK TO ONE PERSON: \"you\" not \"viewers\" / \"everyone\" / \"we all\"\n6. KEEP all core information — only change the delivery\n\nPART 2 — TTS EMPHASIS (add voice markers):\n7. CAPITALIZE 1–2 key words per scene that need strong spoken emphasis.\n8. Add \"...\" before impactful statements for a meaningful pause.\n9. Add \"!\" for genuine excitement or strong emphasis. Use it freely when the emotion calls for it.\n10. Add commas where the speaker would naturally breathe.\n11. Feel free to capitalize 2-4 important words per scene for dynamic delivery.\n\nGLOBAL RULES:\n• NEVER use \"/\" (slash) — write \"or\" instead\n• Return ONLY the rewritten narration text. No explanation, no JSON, just the text.`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
+                </div>
+
+                <!-- Script Humanize (tek başına) Promptu -->
+                <div class="space-y-2 pt-3 border-t border-slate-800">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">Script İnsanlaştırma (Tek Başına)</div>
+                      <div class="text-[9px] text-slate-500">Sadece "Script İnsanlaştırma" aktif, TTS iyileştirme kapalı olduğunda kullanılır</div>
+                    </div>
+                    <button @click="viewBuiltin('Script Humanize — Yerleşik Prompt', `You are a professional script editor who turns AI-generated YouTube narration into text that sounds like a real person spontaneously talking — not reading.\n\nGiven a narration text, rewrite it following these rules STRICTLY:\n\n1. USE CONTRACTIONS everywhere: it\'s, you\'re, don\'t, I\'ve, that\'s, we\'re, I\'ll, won\'t\n2. BREAK long sentences. Mix rhythm: short punch. Then a longer one that breathes and\n   builds. Then short again.\n3. REMOVE ALL AI-ISMS — replace or cut any of: \"delve into\", \"it\'s worth noting\",\n   \"in conclusion\", \"in today\'s world\", \"leverage\", \"furthermore\", \"it\'s important to\",\n   \"navigate\", \"landscape\", \"game-changer\", \"at the end of the day\"\n4. ADD natural imperfections: rhetorical questions (\"You know what I mean?\"),\n   mid-thought pauses (\"And honestly...\"), hesitations (\"I mean, think about it.\")\n5. SPEAK TO ONE PERSON: \"you\" not \"viewers\" / \"everyone\" / \"we all\"\n6. KEEP all the core information and key points — only change the delivery\n7. PRESERVE existing TTS markers if present: CAPS emphasis, \"...\", \"!\"\n8. DO NOT add new TTS markers — that\'s a separate step\n9. NEVER use \"/\" (slash) — write \"or\" instead: \"clear or simple\", not \"clear/simple\"\n\nReturn ONLY the rewritten narration text. No explanation, no JSON, just the text.`)"
+                      class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
                 </div>
               </div>
             </div>

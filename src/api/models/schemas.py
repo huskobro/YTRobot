@@ -32,6 +32,18 @@ class BulletinDraftReq(BaseModel):
     preset_name: str
     limit: int = 5
 
+class SocialMetaReq(BaseModel):
+    # Eski uyumluluk alanlari (BulletinRenderReq ve ProductReviewRenderReq icin)
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+    # Yeni generate endpoint alanlari
+    module: Optional[str] = "yt_video"
+    context: Optional[Dict[str, Any]] = {}
+    fields: Optional[List[str]] = ["title", "description", "tags"]
+    master_prompt: Optional[str] = ""
+    lang: Optional[str] = "tr"
+
 class BulletinRenderReq(BaseModel):
     sid: str
     items: List[Dict[str, Any]]
@@ -56,8 +68,3 @@ class ProductReviewAutofillReq(BaseModel):
 class ProductReviewTTSReq(BaseModel):
     narration: str
     preset_name: Optional[str] = None
-
-class SocialMetaReq(BaseModel):
-    title: str
-    description: str
-    tags: List[str]

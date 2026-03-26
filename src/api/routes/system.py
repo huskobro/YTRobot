@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import urllib.request as urllib_req
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
@@ -7,6 +8,7 @@ from src.api.models.schemas import SettingsReq, PromptsReq, PresetReq
 from src.core.utils import _read_env, _write_env, _list_presets, PRESETS_DIR, PROMPTS_DIR
 
 router = APIRouter(prefix="/api", tags=["system"])
+logger = logging.getLogger("ytrobot.system")
 
 @router.get("/settings")
 def get_settings():
@@ -98,6 +100,94 @@ def test_api_key(provider: str):
             with urllib_req.urlopen(req) as response:
                 if response.status == 200: return ok("Spesh Audio")
                 else: return fail(f"HTTP {response.status}")
-        return ok(f"Provider {provider} ok (stub)")
+        return fail(f"Bilinmeyen provider: '{provider}'. Desteklenenler: kieai, openai, elevenlabs, speshaudio")
     except Exception as e:
         return fail(f"Hata: {str(e)}")
+
+@router.get("/voices")
+def get_voices(provider: str = "", api_key: str = ""):
+    """Secili TTS provider'dan ses listesi getirir."""
+    from config import Settings
+    cfg = Settings()
+
+    if not provider:
+        provider = os.environ.get("TTS_PROVIDER") or getattr(cfg, "tts_provider", "")
+
+    if provider == "openai":
+        return {"voices": [
+            {"id": "alloy", "name": "Alloy"},
+            {"id": "ash", "name": "Ash"},
+            {"id": "coral", "name": "Coral"},
+            {"id": "echo", "name": "Echo"},
+            {"id": "fable", "name": "Fable"},
+            {"id": "nova", "name": "Nova"},
+            {"id": "onyx", "name": "Onyx"},
+            {"id": "sage", "name": "Sage"},
+            {"id": "shimmer", "name": "Shimmer"},
+        ]}
+
+    if provider == "elevenlabs":
+        key = api_key or os.environ.get("ELEVENLABS_API_KEY") or getattr(cfg, "elevenlabs_api_key", "")
+        if not key:
+            raise HTTPException(400, "ElevenLabs API key gerekli")
+        try:
+            req = urllib_req.Request(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": key}
+            )
+            with urllib_req.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+            voices = [{"id": v["voice_id"], "name": v["name"]} for v in data.get("voices", [])]
+            return {"voices": voices}
+        except Exception as e:
+            logger.error(f"ElevenLabs voices fetch error: {e}")
+            raise HTTPException(502, f"ElevenLabs API hatasi: {str(e)}")
+
+    if provider == "speshaudio":
+        key = api_key or os.environ.get("SPESHAUDIO_API_KEY") or getattr(cfg, "speshaudio_api_key", "")
+        if not key:
+            raise HTTPException(400, "SpeshAudio API key gerekli")
+        try:
+            req = urllib_req.Request(
+                "https://api.spesh.ai/v1/voices",
+                headers={"Authorization": f"Bearer {key}"}
+            )
+            with urllib_req.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+            voices = [{"id": v.get("voice_id") or v.get("id"), "name": v["name"]} for v in data.get("voices", data if isinstance(data, list) else [])]
+            return {"voices": voices}
+        except Exception as e:
+            logger.error(f"SpeshAudio voices fetch error: {e}")
+            raise HTTPException(502, f"SpeshAudio API hatasi: {str(e)}")
+
+    # Bilinmeyen provider
+    raise HTTPException(400, f"Bilinmeyen TTS provider: {provider}. Desteklenenler: openai, elevenlabs, speshaudio")
+
+
+@router.post("/system/cleanup")
+def cleanup_system():
+    import shutil
+    from pathlib import Path
+    
+    counts = {"deleted": 0, "size": 0}
+    dirs_to_clean = [Path("tmp"), Path("assets/cache"), Path("assets/temp")]
+    
+    for d in dirs_to_clean:
+        if d.exists():
+            for f in d.glob("*"):
+                try:
+                    if f.is_file():
+                        counts["size"] += f.stat().st_size
+                        f.unlink()
+                        counts["deleted"] += 1
+                    elif f.is_dir():
+                        shutil.rmtree(f)
+                        counts["deleted"] += 1
+                except Exception as e:
+                    logger.warning(f"Cleanup failed for {f}: {e}")
+    
+    return {
+        "ok": True, 
+        "message": f"{counts['deleted']} dosya ve klasör temizlendi. {counts['size'] // 1024} KB alan açıldı.",
+        "stats": counts
+    }

@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import threading
 import time
 import secrets
@@ -19,6 +20,7 @@ from src.core.queue import queue_manager
 from src.core.cache import asset_cache
 
 router = APIRouter(prefix="/api/product-review", tags=["product-review"])
+logger = logging.getLogger("ytrobot.product")
 
 _product_review_jobs: dict = {}
 _product_review_jobs_lock = threading.Lock()
@@ -64,7 +66,8 @@ def _on_product_progress(rid: str, progress: int, step: str, step_label: str):
         if not job: return
         if progress == -1 and step == "_proc":
             try: job["_pid"] = int(step_label)
-            except: pass
+            except Exception as e:
+                logger.warning(f"Failed to parse PID '{step_label}': {e}")
             return
         job["progress"] = progress
         job["step"] = step
@@ -220,7 +223,8 @@ def _do_product_render_sync(rid: str, data: dict):
         cmd = ["npx", "remotion", "render", comp_id, str(raw_out.resolve()), f"--props={json.dumps(props)}", f"--concurrency={settings.remotion_concurrency}"]
         proc = subprocess.Popen(cmd, cwd=str(remotion_dir), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         try: _on_product_progress(rid, -1, "_proc", str(proc.pid))
-        except: pass
+        except Exception as e:
+            logger.warning(f"Failed to register PID for job {rid}: {e}")
         
         _l_pct = 10
         for line in proc.stdout:
@@ -294,7 +298,9 @@ def product_review_autofill(body: ProductReviewAutofillReq):
     try:
         req = urllib_req.Request(body.url, headers={"User-Agent": "Mozilla/5.0 (compatible; YTRobotBot/1.0)"})
         with urllib_req.urlopen(req, timeout=15) as resp: page_html = resp.read(120_000).decode("utf-8", errors="replace")
-    except: page_html = "(Fetch failed)"
+    except Exception as e:
+        logger.warning(f"Product page fetch failed for {body.url}: {e}")
+        page_html = "(Fetch failed)"
     text_content = re.sub(r"<[^>]+>", " ", page_html)
     text_content = re.sub(r"\s+", " ", text_content).strip()[:8000]
     

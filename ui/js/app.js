@@ -7,7 +7,19 @@ function app() {
     sessions: [], currentSession: null, 
     settings: {
       PR_TTS_STABILITY: 0.3, PR_TTS_SIMILARITY: 0.5, PR_TTS_STYLE: 0.75,
-      BULLETIN_LOWER_THIRD_ENABLED: 'true', BULLETIN_TICKER_ENABLED: 'true'
+      BULLETIN_LOWER_THIRD_ENABLED: 'true', BULLETIN_TICKER_ENABLED: 'true',
+      AI_BROLL_ENABLED: false, AI_BROLL_SENSITIVITY: 5,
+      AUTOPUBLISH_YOUTUBE: false, YT_PRIVACY_STATUS: 'private', YT_CATEGORY_ID: '22',
+      AUTOPUBLISH_REELS: false, SHARE_ON_INSTAGRAM: false, SHARE_ON_TIKTOK: false,
+      VISUALS_PROVIDER: 'pexels', COMPOSER_PROVIDER: 'moviepy', REMOTION_CONCURRENCY: 4,
+      REMOTION_SUBTITLE_HIGHLIGHT_COLOR: '#FFE600', REMOTION_SUBTITLE_FONT_WEIGHT: '900',
+      REMOTION_SUBTITLE_FONT: 'Bebas Neue', REMOTION_SUBTITLE_SIZE: '64px',
+      REMOTION_SUBTITLE_STROKE: '2px black', REMOTION_SUBTITLE_BG: 'none',
+      REMOTION_SUBTITLE_ANIMATION: 'hype', REMOTION_TRANSITION_DURATION: 10,
+      KEN_BURNS_DIRECTION: 'center', KEN_BURNS_INTENSITY: 'normal',
+      VIDEO_EFFECT: 'none', ASPECT_RATIO: '16:9', OUTPUT_QUALITY: '1080p',
+      KARAOKE_ENABLED: true,
+      AI_BROLL_SENSITIVITY: 5
     }, 
     prompts: {}, promptDefaults: {},
     newTopic: '', newScriptFile: '', notes: '', logLines: [],
@@ -35,9 +47,8 @@ function app() {
     bulletinPaused: false,
     bulletinRenderMode: 'combined',
     bulletinOverrideStyles: false,
-    bulletinShowCategoryFlash: false,
-    bulletinShowItemIntro: false,
     bulletinTextMode: 'per_scene',
+    bulletinShowCategoryFlash: false,
     bulletinCategoryStyles: {},
     bulletinItemStyles: {},
     bulletinCategoryOutputs: {},
@@ -56,10 +67,18 @@ function app() {
       pros: ['', '', ''], cons: ['', ''],
       score: 7, verdict: '', ctaText: 'Linke tıkla!',
       topComments: ['', '', ''],
+      audioUrl: '',
     },
     prRenderCfg: { style: 'modern', format: '16:9', channelName: 'YTRobot İnceleme', fps: '60' },
     prRendering: false, prJobId: null, prJobStatus: '', prJobError: '',
     prProgress: 0, prStepLabel: '', _prPoll: null,
+    // Wizard Extended Options
+    wizardTone: 'balanced',
+    wizardStyle: 'dynamic',
+    wizardPlatform: 'youtube',
+    wizardMood: 'informative',
+    wizardCaptions: 'karaoke',
+    wizardMusic: 'lofi',
     _sse: null, _timer: null,
     // Bulletin presets
     bulletinPresets: [],
@@ -81,21 +100,28 @@ function app() {
     showSaveModal: false,
     globalError: null,
     _errorTimeout: null,
+    analyticsData: null,
+    analyticsLoading: false,
+    soundEnabled: localStorage.getItem('ytrobot-sound') !== 'false',
+    // ── Toast Bildirim Sistemi ──
+    toasts: [],
+    _toastIdCounter: 0,
     wizardStep: 1,
     wizardMaxSteps: 3,
     showCommandPalette: false,
     commandQuery: '',
     selectedCommandIndex: 0,
     commands: [
-      { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', action: () => app.view = 'dashboard' },
-      { id: 'nav_new_run', title: 'New Video / Yeni Video Başlat', icon: '✨', action: () => app.view = 'new-run' },
-      { id: 'nav_settings', title: 'Settings / Ayarlar', icon: '⚙️', action: () => app.view = 'settings' },
-      { id: 'nav_api_keys', title: 'API Keys / Anahtarlar', icon: '🔑', action: () => app.view = 'api-keys' },
-      { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: () => app.view = 'bulletin' },
-      { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: () => app.view = 'product_review' },
-      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: () => app.view = 'social-meta' },
-      { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: () => app.loadSessions() },
-      { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: () => app.globalError = null }
+      { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', action: function() { this.view = 'dashboard'; } },
+      { id: 'nav_new_run', title: 'New Video / Yeni Video Başlat', icon: '✨', action: function() { this.view = 'new-run'; this.mode='topic'; this.runError=''; } },
+      { id: 'nav_settings', title: 'Settings / Ayarlar', icon: '⚙️', action: function() { this.loadSettings(); this.view = 'settings'; } },
+      { id: 'nav_api_keys', title: 'API Keys / Anahtarlar', icon: '🔑', action: function() { this.loadSettings(); this.view = 'api-keys'; } },
+      { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: function() { this.view = 'bulletin'; this.bulletinTab = 'sources'; this.loadBulletinSources(); } },
+      { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: function() { this.view = 'product-review'; } },
+      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: function() { this.loadSettings(); this.view = 'social-meta'; } },
+      { id: 'nav_analytics', title: 'Analytics / Analiz Paneli', icon: '📈', action: function() { this.view = 'analytics'; this.loadAnalytics(); } },
+      { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: function() { this.loadSessions(); } },
+      { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: function() { this.globalError = null; } }
     ],
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
@@ -122,7 +148,7 @@ function app() {
       // Define max steps per module
       if (module === 'normal') this.wizardMaxSteps = 3;
       else if (module === 'bulletin') this.wizardMaxSteps = 3;
-      else if (module === 'product_review') this.wizardMaxSteps = 3;
+      else if (module === 'product-review') this.wizardMaxSteps = 3;
     },
 
     // ── Command Palette Methods ──
@@ -180,9 +206,21 @@ function app() {
       }
     },
 
+    // ── Toast API ──
+    showToast(message, type = 'info', duration = 5000) {
+      const id = ++this._toastIdCounter;
+      this.toasts.push({ id, message, type });
+      if (duration > 0) setTimeout(() => this.dismissToast(id), duration);
+      return id;
+    },
+    dismissToast(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
+    showSuccess(msg, dur = 4000) { return this.showToast(msg, 'success', dur); },
+    showInfo(msg, dur = 5000) { return this.showToast(msg, 'info', dur); },
+    showWarning(msg, dur = 6000) { return this.showToast(msg, 'warning', dur); },
+
     showError(msg) {
       this.globalError = msg;
-      this.playSound('error');
+      this.showToast(msg, 'error', 8000);
       if (this._errorTimeout) clearTimeout(this._errorTimeout);
       this._errorTimeout = setTimeout(() => { this.globalError = null; }, 10000);
     },
@@ -222,50 +260,53 @@ function app() {
     pipelineSteps() { return this.t('pipeline_steps'); },
 
     // ── Sound UX Engine (Generative Web Audio) ──
+    toggleSound() {
+      this.soundEnabled = !this.soundEnabled;
+      localStorage.setItem('ytrobot-sound', this.soundEnabled ? 'true' : 'false');
+    },
     async playSound(type) {
-      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const ctx = this.audioCtx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      const now = ctx.currentTime;
-      
-      if (type === 'success') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.3); // C6
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.start(now);
-        osc.stop(now + 0.3);
-      } else if (type === 'error') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.2);
-      } else if (type === 'click') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
-        gain.gain.setValueAtTime(0.05, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.05);
-        osc.start(now);
-        osc.stop(now + 0.05);
-      } else if (type === 'pop') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
-      }
+      if (!this.soundEnabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+
+        if (type === 'success') {
+          // Yumusak onay — iki nota arpegio
+          osc.frequency.setValueAtTime(523, ctx.currentTime);      // C5
+          osc.frequency.setValueAtTime(784, ctx.currentTime + 0.1); // G5
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+          osc.type = 'sine';
+          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+        } else if (type === 'error') {
+          // Dikkat cekici ama rahatsiz etmeyen
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          osc.frequency.setValueAtTime(330, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+          osc.type = 'triangle';
+          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+        } else if (type === 'pop') {
+          // Hafif tiklama
+          osc.frequency.setValueAtTime(1200, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.04, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+          osc.type = 'sine';
+          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.08);
+        } else if (type === 'click') {
+          // Cok hafif tiklama
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = (Math.random() - 0.5) * 0.15 * Math.exp(-i / (ctx.sampleRate * 0.005));
+          const src = ctx.createBufferSource();
+          src.buffer = buf; src.connect(gain);
+          gain.gain.setValueAtTime(0.5, ctx.currentTime);
+          src.start(); return;
+        }
+      } catch (e) { /* Ses desteklenmiyor veya engellendi */ }
     },
 
     async init() {
@@ -293,7 +334,26 @@ function app() {
         console.error("Initialization error:", e);
       }
       
-      this._timer = setInterval(() => this.loadSessions(), 3000);
+      this._timer = setInterval(() => {
+        this.loadSessions();
+        if (this.view === 'analytics') this.loadAnalytics();
+      }, 3000);
+    },
+
+    async loadAnalytics() {
+      this.analyticsLoading = true;
+      try {
+        const raw = await this.apiFetch('/api/stats');
+        // Ensure numbers are safe for UI rendering (toFixed etc.)
+        this.analyticsData = {
+          ...raw,
+          render_success_rate: parseFloat(raw.render_success_rate || 0),
+          avg_render_time: parseFloat(raw.avg_render_time || 0),
+          total_sessions: parseInt(raw.total_sessions || 0),
+          active_workers: parseInt(raw.active_workers || 0)
+        };
+      } catch(e) { console.error("Analytics fetch error:", e); }
+      finally { this.analyticsLoading = false; }
     },
 
     loadBulletinPresets() {
@@ -493,6 +553,16 @@ function app() {
       if (this.settings.PR_MASTER_PROMPT === undefined) this.settings.PR_MASTER_PROMPT = '';
       if (this.settings.PR_AI_LANGUAGE === undefined) this.settings.PR_AI_LANGUAGE = '';
       if (this.settings.PR_AUTO_GENERATE_TTS === undefined) this.settings.PR_AUTO_GENERATE_TTS = true;
+      // Provider-bazli ses ayarlari varsayilanlari
+      if (this.settings.YT_ELEVENLABS_VOICE_ID === undefined) this.settings.YT_ELEVENLABS_VOICE_ID = '';
+      if (this.settings.YT_OPENAI_TTS_VOICE === undefined) this.settings.YT_OPENAI_TTS_VOICE = '';
+      if (this.settings.YT_SPESHAUDIO_VOICE_ID === undefined) this.settings.YT_SPESHAUDIO_VOICE_ID = '';
+      if (this.settings.BULLETIN_ELEVENLABS_VOICE_ID === undefined) this.settings.BULLETIN_ELEVENLABS_VOICE_ID = '';
+      if (this.settings.BULLETIN_OPENAI_TTS_VOICE === undefined) this.settings.BULLETIN_OPENAI_TTS_VOICE = '';
+      if (this.settings.BULLETIN_SPESHAUDIO_VOICE_ID === undefined) this.settings.BULLETIN_SPESHAUDIO_VOICE_ID = '';
+      if (this.settings.PR_ELEVENLABS_VOICE_ID === undefined) this.settings.PR_ELEVENLABS_VOICE_ID = '';
+      if (this.settings.PR_OPENAI_TTS_VOICE === undefined) this.settings.PR_OPENAI_TTS_VOICE = '';
+      if (this.settings.PR_SPESHAUDIO_VOICE_ID === undefined) this.settings.PR_SPESHAUDIO_VOICE_ID = '';
       // Sync PR render config from settings
       if (this.settings.PR_STYLE)        this.prRenderCfg.style = this.settings.PR_STYLE;
       if (this.settings.PR_FORMAT)       this.prRenderCfg.format = this.settings.PR_FORMAT;
@@ -520,6 +590,7 @@ function app() {
         body: JSON.stringify({ values: this.settings })
       });
       this.settingsSaved = true; this.settingsChanged = false;
+      this.showSuccess(this.t('settings_saved') || 'Ayarlar kaydedildi');
       setTimeout(() => this.settingsSaved = false, 3000);
     },
 
@@ -570,8 +641,10 @@ function app() {
     },
 
     async savePrompts() {
-      await this.apiFetch('/api/prompts', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompts: this.prompts }) });
-      this.promptsSaved = true; setTimeout(() => this.promptsSaved = false, 3000);
+      await this.apiFetch('/api/prompts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values: this.prompts }) });
+      this.promptsSaved = true;
+      this.showSuccess(this.t('prompts_saved') || 'Promptlar kaydedildi');
+      setTimeout(() => this.promptsSaved = false, 3000);
     },
 
     getCatColor(cat) {
@@ -1026,6 +1099,8 @@ function app() {
         this.bulletinElapsed = 0;
         this.bulletinEta = null;
         this.bulletinCategoryOutputs = {};
+        // Eski polling'i temizle (race condition önleme)
+        if (this._bulletinPoll) { clearInterval(this._bulletinPoll); this._bulletinPoll = null; }
         // Poll for status every 2s
         this._bulletinPoll = setInterval(async () => {
           try {
@@ -1179,6 +1254,8 @@ function app() {
         const { id } = await r.json();
         this.prJobId = id;
         this.prJobStatus = 'running';
+        // Eski polling'i temizle (race condition önleme)
+        if (this._prPoll) { clearInterval(this._prPoll); this._prPoll = null; }
         this._prPoll = setInterval(async () => {
           try {
             const sr = await fetch(`/api/product-review/status/${id}`);
@@ -1200,6 +1277,18 @@ function app() {
           } catch(e) {}
         }, 2000);
       } catch(e) { this.prRendering = false; }
+    },
+
+    async cleanupSystem() {
+      if (!confirm(this.t('cleanup_confirm_msg'))) return;
+      try {
+        const data = await this.apiFetch('/api/system/cleanup', { method: 'POST' });
+        if (data.status === 'success') {
+          alert(this.t('cleanup_success'));
+        }
+      } catch (e) {
+        console.error('Cleanup error:', e);
+      }
     },
   };
 }

@@ -1,6 +1,8 @@
 import uvicorn
 import asyncio
 import json
+import logging
+import logging.handlers
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
@@ -23,6 +25,42 @@ from src.api.routes.stats import router as stats_router
 from src.core.queue import queue_manager
 from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
+
+def _setup_logging():
+    """Yapilandirilmis logging kurulumu."""
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    formatter = logging.Formatter(
+        fmt="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    # Konsol handler
+    console = logging.StreamHandler()
+    console.setFormatter(formatter)
+    root.addHandler(console)
+
+    # Dosya handler (rotasyonlu, max 10MB, 5 yedek)
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "ytrobot.log",
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+    root.addHandler(file_handler)
+
+    # uvicorn loglarini sessizlestir (cok verbose)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
+
+_setup_logging()
+logger = logging.getLogger("ytrobot.server")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -90,7 +128,9 @@ async def stream_logs_endpoint(sid: str):
                 if s["status"] in ("completed", "failed", "stopped"):
                     yield f"data: {json.dumps('__DONE__')}\n\n"
                     break
-            except: break
+            except Exception as e:
+                logger.debug(f"Log stream for {sid} ended: {e}")
+                break
             await asyncio.sleep(0.5)
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -106,5 +146,5 @@ def serve_ui():
 if __name__ == "__main__":
     OUTPUT_DIR.mkdir(exist_ok=True)
     _cleanup_stale_sessions()
-    print("🎬 YTRobot v2.0 → http://localhost:8080")
-    uvicorn.run(app, host="0.0.0.0", port=8080, reload=False)
+    print("🎬 YTRobot v2.0 → http://localhost:5005")
+    uvicorn.run(app, host="0.0.0.0", port=5005, reload=False)

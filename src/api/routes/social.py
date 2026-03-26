@@ -1,11 +1,13 @@
 import os
 import json
 import re
+import logging
 import urllib.request as urllib_req
 from fastapi import APIRouter, HTTPException
 from src.api.models.schemas import SocialMetaReq
 
 router = APIRouter(prefix="/api/social-meta", tags=["social-meta"])
+logger = logging.getLogger("ytrobot.social")
 
 @router.post("/generate")
 def generate_social_meta(body: SocialMetaReq):
@@ -35,8 +37,9 @@ def generate_social_meta(body: SocialMetaReq):
             resp = client.chat.completions.create(model="gemini-2.5-flash", messages=[{"role":"system","content":system_prompt},{"role":"user","content":user_msg}], temperature=0.4)
             raw = re.sub(r"^```(?:json)?\s*", "", resp.choices[0].message.content.strip()); raw = re.sub(r"\s*```$", "", raw)
             result_json = json.loads(raw)
-        except: pass
-    
+        except Exception as e:
+            logger.error(f"KieAI social meta generation failed: {e}")
+
     if result_json is None:
         gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
         if gemini_key:
@@ -45,7 +48,8 @@ def generate_social_meta(body: SocialMetaReq):
                 payload = {"contents":[{"parts":[{"text":system_prompt+"\n\n"+user_msg}]}],"generationConfig":{"responseMimeType":"application/json","temperature":0.4}}
                 req = urllib_req.Request(g_url, data=json.dumps(payload).encode(), headers={"Content-Type":"application/json"}, method="POST")
                 with urllib_req.urlopen(req, timeout=30) as r: result_json = json.loads(json.loads(r.read())["candidates"][0]["content"]["parts"][0]["text"])
-            except: pass
+            except Exception as e:
+                logger.error(f"Gemini social meta generation failed: {e}")
             
     if result_json is None: raise HTTPException(500, "AI provider unavailable")
     for f in getattr(body, "fields", []):

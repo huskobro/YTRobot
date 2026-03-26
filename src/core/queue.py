@@ -4,7 +4,7 @@ import uuid
 import time
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List  # noqa: F401
 from src.core.utils import _write_session, _read_session
 
 logger = logging.getLogger("QueueManager")
@@ -27,29 +27,40 @@ class VideoJob:
         self.error: Optional[str] = None
 
 class QueueManager:
+    MAX_CONCURRENT = 2          # Esanli is limiti
+    JOB_TIMEOUT = 1800          # 30 dakika maksimum sure
+
     def __init__(self):
         self.queue: asyncio.Queue = asyncio.Queue()
         self.active_jobs: Dict[str, VideoJob] = {}
-        self._worker_task: Optional[asyncio.Task] = None
+        self._worker_tasks: List[asyncio.Task] = []
+        self._worker_task: Optional[asyncio.Task] = None  # uyumluluk icin
         self._running = False
+        self._running_count = 0  # Aktif is sayaci
 
     def start(self):
         if not self._running:
             self._running = True
-            self._worker_task = asyncio.create_task(self._worker_loop())
-            logger.info("  [Queue] Worker started.")
+            # MAX_CONCURRENT sayida worker worker basalt
+            for i in range(self.MAX_CONCURRENT):
+                task = asyncio.create_task(self._worker_loop(worker_id=i))
+                self._worker_tasks.append(task)
+            self._worker_task = self._worker_tasks[0]  # uyumluluk icin
+            logger.info(f"  [Queue] {self.MAX_CONCURRENT} workers started.")
 
     async def stop(self):
         self._running = False
-        if self._worker_task:
-            self._worker_task.cancel()
+        for task in self._worker_tasks:
+            task.cancel()
+        for task in self._worker_tasks:
             try:
-                await asyncio.wait_for(self._worker_task, timeout=2.0)
+                await asyncio.wait_for(task, timeout=2.0)
             except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
             except Exception as e:
                 logger.error(f"Error during worker stop: {e}")
-            logger.info("  [Queue] Worker stopped.")
+        self._worker_tasks.clear()
+        logger.info("  [Queue] All workers stopped.")
 
     async def add_job(self, job_type: str, data: dict, session_id: str) -> str:
         job = VideoJob(job_type, data, session_id)
@@ -74,22 +85,29 @@ class QueueManager:
             "progress": 0 
         }
 
-    async def _worker_loop(self):
+    async def _worker_loop(self, worker_id: int = 0):
         while self._running:
             try:
                 job = await self.queue.get()
                 job.status = JobStatus.RUNNING
                 job.started_at = time.time()
-                logger.info(f"  [Queue] Processing job: {job.id}")
-                
+                self._running_count += 1
+                logger.info(f"  [Queue] Worker-{worker_id} processing job: {job.id} (active: {self._running_count})")
+
                 # Session dosyasını güncelle
-                session = _read_session(job.id)
-                session["status"] = JobStatus.RUNNING
-                _write_session(job.id, session)
+                try:
+                    session = _read_session(job.id)
+                    session["status"] = JobStatus.RUNNING
+                    _write_session(job.id, session)
+                except Exception as e:
+                    logger.warning(f"  [Queue] Could not update session status for {job.id}: {e}")
 
                 try:
-                    # Pipeline'ı çalıştır
-                    await self._execute_job(job)
+                    # Pipeline'ı timeout ile çalıştır
+                    await asyncio.wait_for(
+                        self._execute_job(job),
+                        timeout=self.JOB_TIMEOUT
+                    )
                     job.status = JobStatus.COMPLETED
                     logger.info(f"  [Queue] Job completed: {job.id}")
                     
@@ -117,30 +135,50 @@ class QueueManager:
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 
+                except asyncio.TimeoutError:
+                    job.status = JobStatus.FAILED
+                    job.error = f"Zaman asimi ({self.JOB_TIMEOUT // 60} dakika)"
+                    job.finished_at = time.time()
+                    logger.error(f"  [Queue] Job timed out: {job.id} ({self.JOB_TIMEOUT}s)")
+                    try:
+                        session = _read_session(job.id)
+                        session["status"] = JobStatus.FAILED
+                        session["error"] = job.error
+                        _write_session(job.id, session)
+                    except Exception as se:
+                        logger.warning(f"  [Queue] Could not write timeout status for {job.id}: {se}")
+
                 except Exception as e:
                     job.status = JobStatus.FAILED
                     job.error = str(e)
                     job.finished_at = time.time()
                     logger.error(f"  [Queue] Job failed: {job.id} - {e}")
-                    
+
                     # Session'ı hata ile güncelle
-                    session = _read_session(job.id)
-                    session["status"] = JobStatus.FAILED
-                    session["error"] = str(e)
-                    _write_session(job.id, session)
-                    
+                    try:
+                        session = _read_session(job.id)
+                        session["status"] = JobStatus.FAILED
+                        session["error"] = str(e)
+                        _write_session(job.id, session)
+                    except Exception as se:
+                        logger.warning(f"  [Queue] Could not write failure status for {job.id}: {se}")
+
                     # Log failure to analytics
                     try:
                         from src.core.analytics import stats_manager
                         stats_manager.log_render(0, job.status, [], str(e))
-                    except: pass
-                
+                    except Exception as analytics_err:
+                        logger.warning(f"Analytics log failed: {analytics_err}")
+
+                finally:
+                    self._running_count -= 1
+
                 self.queue.task_done()
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"  [Queue] Worker loop error: {e}")
+                logger.error(f"  [Queue] Worker-{worker_id} loop error: {e}")
                 await asyncio.sleep(1)
 
     async def _execute_job(self, job: VideoJob):

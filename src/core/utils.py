@@ -1,10 +1,30 @@
 import os
 import json
 import shutil
+import tempfile
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException
+
+logger = logging.getLogger("ytrobot.utils")
+
+
+def _safe_write(path: Path, content: str, encoding: str = "utf-8"):
+    """Atomik dosya yazma — once gecici dosyaya yazar, sonra rename ile degistirir."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding=encoding) as f:
+            f.write(content)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 OUTPUT_DIR = Path("output")
 ENV_FILE = Path(".env")
@@ -44,7 +64,7 @@ def _read_session(sid: str) -> dict:
     return json.loads(p.read_text())
 
 def _write_session(sid: str, data: dict):
-    _session_json(sid).write_text(json.dumps(data, indent=2))
+    _safe_write(_session_json(sid), json.dumps(data, indent=2))
 
 def _all_sessions() -> list:
     sessions = []
@@ -68,7 +88,7 @@ def _load_bulletin_sources() -> list:
         return []
 
 def _save_bulletin_sources(sources: list):
-    BULLETIN_SOURCES_FILE.write_text(json.dumps(sources, ensure_ascii=False, indent=2), encoding="utf-8")
+    _safe_write(BULLETIN_SOURCES_FILE, json.dumps(sources, ensure_ascii=False, indent=2))
 
 def _load_bulletin_history() -> dict:
     if not BULLETIN_HISTORY_FILE.exists():
@@ -83,7 +103,7 @@ def _append_bulletin_history(preset_name: str, urls: list):
     existing = set(history.get(preset_name, []))
     existing.update(u for u in urls if u)
     history[preset_name] = list(existing)
-    BULLETIN_HISTORY_FILE.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    _safe_write(BULLETIN_HISTORY_FILE, json.dumps(history, ensure_ascii=False, indent=2))
 
 def _read_env() -> dict:
     if not ENV_FILE.exists():
@@ -97,8 +117,20 @@ def _read_env() -> dict:
     return out
 
 def _write_env(values: dict):
-    lines = [f"{k}={v}" for k, v in values.items()]
-    ENV_FILE.write_text("\n".join(lines) + "\n")
+    """
+    .env dosyasini guvenli sekilde yazar.
+    Bosluk veya ozel karakter iceren degerler tikli tirnak icine alinir.
+    """
+    lines = []
+    for k, v in values.items():
+        v_str = str(v) if v is not None else ""
+        # Deger bosluk, tikli tirnak, #, = veya yeni satir iceriyorsa tirnak kullan
+        if any(c in v_str for c in (' ', '"', "'", '#', '\n', '\r', '=')):
+            escaped = v_str.replace("'", "\\'")
+            lines.append(f"{k}='{escaped}'")
+        else:
+            lines.append(f"{k}={v_str}")
+    _safe_write(ENV_FILE, "\n".join(lines) + "\n")
 
 def _cleanup_stale_sessions():
     """Mark any sessions that were 'running'/'queued' at server start as failed."""

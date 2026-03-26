@@ -115,6 +115,25 @@ class QueueManager:
                     _write_session(job.id, session)
                 
                 job.finished_at = time.time()
+                
+                # --- Faz 5: Analytics Log ---
+                try:
+                    from src.core.analytics import stats_manager
+                    duration = job.finished_at - (job.started_at or job.created_at)
+                    platforms = []
+                    if job.data.get("publish_youtube"): platforms.append("youtube")
+                    if job.data.get("publish_instagram"): platforms.append("instagram")
+                    
+                    stats_manager.log_render(
+                        duration=duration,
+                        status=job.status,
+                        platforms=platforms,
+                        error=job.error
+                    )
+                    print(f"  [Queue] Analytics logged for {job.id} ({job.status})")
+                except Exception as ae:
+                    print(f"  [Queue] Analytics logging failed: {ae}")
+
                 self.queue.task_done()
                 
             except asyncio.CancelledError:

@@ -4,6 +4,7 @@ from config import settings
 from pipeline.script import Scene
 from providers.visuals.base import BaseVisualsProvider
 from pipeline.visuals.broll import broll_manager
+import requests
 
 
 def _load_provider() -> BaseVisualsProvider:

@@ -812,6 +812,27 @@
                 <input x-model="newScriptFile" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 placeholder-slate-700 transition-all text-sm" :placeholder="t('script_placeholder')" />
               </div>
 
+              <div x-show="videoModule==='normal'" class="mt-4">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">İçerik Kategorisi</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <template x-for="[val, label, icon] in [
+                    ['general','Genel','🎬'],
+                    ['true_crime','Gerçek Suç','🔍'],
+                    ['science_tech','Bilim & Teknoloji','🔬'],
+                    ['history_mystery','Tarih & Gizem','🏛'],
+                    ['motivation','Motivasyon','💪'],
+                    ['documentary','Belgesel','📽']
+                  ]" :key="val">
+                    <button @click="wizardCategory=val"
+                      class="p-2.5 rounded-xl border text-center transition-all text-xs"
+                      :class="wizardCategory===val ? 'border-indigo-500 bg-indigo-900/30 text-white' : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-600'">
+                      <div x-text="icon" class="text-lg mb-0.5"></div>
+                      <div x-text="label" class="text-[10px] font-bold"></div>
+                    </button>
+                  </template>
+                </div>
+              </div>
+
               <div x-show="presets.length > 0">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('preset_run_label')"></label>
                 <select x-model="selectedPreset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none transition-all">

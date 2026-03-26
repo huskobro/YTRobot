@@ -82,6 +82,7 @@ function app() {
     batchSubmitting: false,
     batchSubmitResult: null,
     batchError: '',
+    wizardCategory: 'general',
     wizardQuality: 'standard',
     wizardPlatform: 'youtube_16_9',
     wizardSubtitleStyle: 'hype',
@@ -728,6 +729,7 @@ function app() {
           platform: this.wizardPlatform,
           subtitle_style: this.wizardSubtitleStyle,
         };
+        body.content_category = this.wizardCategory;
       }
       this.submitting = true;
       try {

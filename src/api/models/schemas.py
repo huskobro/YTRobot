@@ -11,6 +11,7 @@ class RunReq(BaseModel):
     script_file: Optional[str] = None
     preset_name: Optional[str] = None
     wizard_config: Optional[WizardConfig] = None
+    content_category: Optional[str] = "general"
 
 class NoteReq(BaseModel):
     notes: str

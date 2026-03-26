@@ -14,6 +14,35 @@ from pathlib import Path
 from config import settings  # type: ignore  # pyre-ignore[missing-module-attribute]
 
 
+CATEGORY_INSTRUCTIONS = {
+    "true_crime": (
+        "Structure: Hook with shocking revelation → build tension → reveal backstory → "
+        "escalate to climax → psychological analysis → lesson. "
+        "Use suspenseful language, present tense for dramatic moments."
+    ),
+    "science_tech": (
+        "Structure: Mind-blowing fact → explain mechanism → real-world implications → "
+        "future possibilities → call to curiosity. "
+        "Use analogies and avoid jargon."
+    ),
+    "history_mystery": (
+        "Structure: Set the historical scene → introduce the mystery/conflict → "
+        "present evidence → explore theories → reveal truth or lasting question."
+    ),
+    "motivation": (
+        "Structure: Relatable struggle → inspiring story → key principles extracted → "
+        "actionable steps → powerful closing vision. "
+        "Use second-person 'you' to engage directly."
+    ),
+    "documentary": (
+        "Structure: Establish setting and stakes → introduce subjects → build narrative arc → "
+        "climax → reflection. "
+        "Objective tone with vivid scene descriptions."
+    ),
+    "general": "",
+}
+
+
 @dataclass
 class Scene:
     narration: str
@@ -106,14 +135,18 @@ def _load_custom_prompt(name: str) -> str | None:
     return p.read_text(encoding="utf-8").strip() if p.exists() else None
 
 
-def _build_script_prompt() -> str:
+def _build_script_prompt(content_category: str = "general") -> str:
     audience = settings.target_audience.strip()
     if audience:
         audience_block = f"Target audience: {audience}"
     else:
         audience_block = "General audience — assume curious, motivated viewers who want to improve their skills."
     template = _load_custom_prompt("script_system") or _SCRIPT_SYSTEM_PROMPT_TEMPLATE
-    return template.format(audience=audience_block)
+    system_prompt = template.format(audience=audience_block)
+    category_note = CATEGORY_INSTRUCTIONS.get(content_category or "general", "")
+    if category_note:
+        system_prompt += f"\n\nContent Category Guidelines:\n{category_note}"
+    return system_prompt
 
 
 def _chat(system: str, user: str) -> str:
@@ -252,8 +285,8 @@ def _fix_scene(s: dict) -> dict:
     return {k: v for k, v in s.items() if k in valid}
 
 
-def generate_from_topic(topic: str) -> list[Scene]:
-    prompt = _build_script_prompt()
+def generate_from_topic(topic: str, content_category: str = "general") -> list[Scene]:
+    prompt = _build_script_prompt(content_category=content_category)
     raw = _chat(prompt, f"Topic: {topic}")
     data = json.loads(raw)
     scenes_data = (

@@ -70,7 +70,8 @@ async def start_run(req: RunReq):
     await queue_manager.add_job("yt_video", {
         "topic": req.topic,
         "script_file": req.script_file,
-        "preset_env": preset_env
+        "preset_env": preset_env,
+        "content_category": req.content_category or "general",
     }, sid)
     
     return {"session_id": sid, "status": "queued"}
@@ -81,7 +82,10 @@ async def run_pipeline_task(sid: str, data: dict, job_type: str):
     topic = data.get("topic")
     script_file = data.get("script_file")
     preset_env = data.get("preset_env", {})
-    
+    content_category = data.get("content_category", "general")
+    if content_category and content_category != "general":
+        preset_env = {**preset_env, "CONTENT_CATEGORY": content_category}
+
     await asyncio.to_thread(_run, sid, topic, script_file, preset_env)
 
 @router.post("/sessions/{sid}/stop")

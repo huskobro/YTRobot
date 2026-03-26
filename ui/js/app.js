@@ -117,6 +117,7 @@ function app() {
     queueStatus: null,
     errorDetails: [],
     socialLog: [],
+    thumbnailGenerating: false,
     _chartInstance: null,
     antigravityData: null,
     antigravityLoading: false,
@@ -494,6 +495,24 @@ function app() {
       if (this.agActiveChannel)
         return filtered.filter(t => t.channel_id === this.agActiveChannel.id);
       return filtered.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
+    },
+
+    async generateThumbnail(session) {
+      const concept = session.metadata?.thumbnail_concept;
+      if (!concept) return;
+      this.thumbnailGenerating = true;
+      try {
+        const data = await this.apiFetch('/api/thumbnail/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: concept, session_id: session.id }),
+        });
+        session._thumbnail_url = data.url + '?t=' + Date.now();
+      } catch(e) {
+        console.error('[thumbnail] generation error:', e);
+      } finally {
+        this.thumbnailGenerating = false;
+      }
     },
 
     downloadStatsCsv() {

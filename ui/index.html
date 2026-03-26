@@ -114,32 +114,32 @@
     </div>
 
     <nav class="flex-1 px-3 py-4 space-y-1">
-      <button @click="view='dashboard'"
+      <button @click="view='dashboard';playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📊</span> <span x-text="t('nav_dashboard')"></span>
       </button>
-      <button @click="view='new-run';mode='topic';runError=''"
+      <button @click="view='new-run';mode='topic';runError='';playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='new-run'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>✨</span> <span x-text="t('nav_new_video')"></span>
       </button>
-      <button @click="loadSettings();view='settings'"
+      <button @click="loadSettings();view='settings';playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>⚙️</span> <span x-text="t('nav_settings')"></span>
       </button>
-      <button @click="loadSettings();view='api-keys'"
+      <button @click="loadSettings();view='api-keys';playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='api-keys'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>🔑</span> <span x-text="t('nav_api_keys')"></span>
       </button>
-      <button @click="view='bulletin';bulletinTab='sources';loadBulletinSources();"
+      <button @click="view='bulletin';bulletinTab='sources';loadBulletinSources();playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='bulletin'?'bg-red-700 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📺</span> <span x-text="t('nav_bulletin')"></span>
       </button>
-      <button @click="view='product-review'"
+      <button @click="view='product-review';playSound('click')"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='product-review'?'bg-amber-600 text-white shadow-md shadow-amber-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>🛒</span> <span x-text="t('nav_product_review')"></span>

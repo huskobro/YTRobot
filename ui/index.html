@@ -1455,24 +1455,25 @@
                   <input x-model="settings.YT_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="Model ID..." />
                   <textarea x-show="(settings.YT_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE)!=='clone'" x-model="settings.YT_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500" placeholder="Instruct..."></textarea>
                 </div>
-                <!-- Gelişmiş Ayarlar -->
-                <div class="pt-3 border-t border-indigo-900/20">
-                  <div class="flex gap-2 flex-wrap">
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/30 rounded-xl bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.YT_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-indigo-500 rounded" />
-                      <span class="text-[10px] text-indigo-300/90 font-bold">TTS İyileştirme</span>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-indigo-900/20">
+                  <div class="text-[11px] font-black text-indigo-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">TTS İyileştirme</span>
                     </label>
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/30 rounded-xl bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.YT_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-indigo-500 rounded" />
-                      <span class="text-[10px] text-indigo-300/90 font-bold">Script İnsanlaştırma</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Script İnsanlaştırma</span>
                     </label>
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/30 rounded-xl bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.YT_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-indigo-500 rounded" />
-                      <span class="text-[10px] text-indigo-300/90 font-bold">Sessizlik Temizle</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Sessizlik Temizle</span>
                     </label>
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-indigo-800/30 rounded-xl bg-indigo-950/10 cursor-pointer hover:bg-indigo-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.YT_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-indigo-500 rounded" />
-                      <span class="text-[10px] text-indigo-300/90 font-bold">Apostrof Temizle</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Apostrof Temizle</span>
                     </label>
                   </div>
                 </div>
@@ -1579,16 +1580,25 @@
                   <input x-model="settings.BULLETIN_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-red-500" placeholder="Model ID..." />
                   <textarea x-show="(settings.BULLETIN_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE)!=='clone'" x-model="settings.BULLETIN_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-red-500" placeholder="Instruct..."></textarea>
                 </div>
-                <!-- Gelişmiş -->
-                <div class="pt-3 border-t border-red-900/20">
-                  <div class="flex gap-2 flex-wrap">
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/30 rounded-xl bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.BULLETIN_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-red-500 rounded" />
-                      <span class="text-[10px] text-red-300/90 font-bold">TTS İyileştirme</span>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-red-900/20">
+                  <div class="text-[11px] font-black text-red-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">TTS İyileştirme</span>
                     </label>
-                    <label class="flex items-center gap-1.5 px-3 py-2 border border-red-800/30 rounded-xl bg-red-950/10 cursor-pointer hover:bg-red-900/20 transition-colors">
-                      <input type="checkbox" x-model="settings.BULLETIN_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-3.5 h-3.5 accent-red-500 rounded" />
-                      <span class="text-[10px] text-red-300/90 font-bold">İnsanlaştırma</span>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Apostrof Temizle</span>
                     </label>
                   </div>
                 </div>

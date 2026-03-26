@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ytrobot:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/remotion/node_modules # Don't overwrite local node_modules with host ones
+      - /app/.venv # Don't overwrite local venv
+    env_file:
+      - .env
+    restart: always

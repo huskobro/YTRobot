@@ -1,0 +1,15 @@
+[x-cloak] { display: none !important; }
+.log-line { font-family: 'Cascadia Code','Fira Code','Courier New',monospace; font-size: 12px; line-height: 1.6; }
+@keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.animate-spin-slow { animation: spin-slow 1.2s linear infinite; display:inline-block; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#475569; }
+/* Preview card animations */
+@keyframes prev-slide-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes prev-slide-left { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+@keyframes prev-pop { 0%{transform:scale(1)} 50%{transform:scale(1.14)} 100%{transform:scale(1)} }
+.prev-hype { animation: prev-slide-up 0.5s ease 3; }
+.prev-explosive { animation: prev-slide-left 0.5s ease 3; }
+.prev-vibrant { animation: prev-pop 0.6s ease 3; }

@@ -1,0 +1,11 @@
+.git
+.venv
+node_modules
+remotion/node_modules
+output
+__pycache__
+*.pyc
+.env
+.vscode
+.claude
+logs

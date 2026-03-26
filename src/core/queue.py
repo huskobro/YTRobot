@@ -65,12 +65,15 @@ class QueueManager:
     async def add_job(self, job_type: str, data: dict, session_id: str) -> str:
         job = VideoJob(job_type, data, session_id)
         self.active_jobs[session_id] = job
-        
-        # Güncel durumu session.json'a yaz
-        session = _read_session(session_id)
-        session["status"] = JobStatus.QUEUED
-        _write_session(session_id, session)
-        
+
+        # Güncel durumu session.json'a yaz (sadece yt_video icin)
+        try:
+            session = _read_session(session_id)
+            session["status"] = JobStatus.QUEUED
+            _write_session(session_id, session)
+        except Exception:
+            pass  # Bulletin/PR jobs don't have session.json
+
         await self.queue.put(job)
         logger.info(f"  [Queue] Job added: {session_id} ({job_type})")
         return session_id

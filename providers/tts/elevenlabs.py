@@ -1,6 +1,7 @@
 from pathlib import Path
 from config import settings
 from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts, trim_silence
+from pipeline.resilience import retry_with_backoff, validate_output
 
 
 class ElevenLabsTTSProvider(BaseTTSProvider):
@@ -11,16 +12,21 @@ class ElevenLabsTTSProvider(BaseTTSProvider):
 
     def synthesize(self, text: str, output_path: Path) -> Path:
         text = clean_for_tts(text, remove_apostrophes=settings.tts_remove_apostrophes)
-        audio = self.client.generate(
-            text=text,
-            voice=self.voice_id,
-            model="eleven_multilingual_v2",
-        )
+        audio = self._generate(text)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "wb") as f:
             for chunk in audio:
                 f.write(chunk)
+        validate_output(output_path, min_size=1000, label="TTS/ElevenLabs")
         if settings.tts_trim_silence:
             trim_silence(output_path)
         apply_speed(output_path, settings.tts_speed)
         return output_path
+
+    @retry_with_backoff(max_retries=3, base_delay=2.0)
+    def _generate(self, text: str):
+        return self.client.generate(
+            text=text,
+            voice=self.voice_id,
+            model="eleven_multilingual_v2",
+        )

@@ -22,43 +22,73 @@ def run_full_pipeline(topic: str = None, script_file: Path = None) -> Path:
     from pipeline.visuals import fetch_visuals
     from pipeline.subtitles import generate_srt, generate_word_timing
     from pipeline.composer import compose
+    from pipeline.resilience import log_stage_error, PipelineStageError
 
     session = _session_dir(settings.output_dir)
     print(f"\n=== YTRobot Session: {session.name} ===")
 
-    # 1. Script
+    # 1. Script (FATAL)
     print("\n[1/6] Script...")
-    if topic:
-        print(f"  Generating script for topic: {topic!r}")
-        scenes = generate_from_topic(topic)
-    else:
-        print(f"  Loading script from: {script_file}")
-        scenes = load_from_file(script_file)
-    save_script(scenes, session / "script.json")
-    print(f"  {len(scenes)} scenes loaded.")
+    try:
+        if topic:
+            print(f"  Generating script for topic: {topic!r}")
+            scenes = generate_from_topic(topic)
+        else:
+            print(f"  Loading script from: {script_file}")
+            scenes = load_from_file(script_file)
+        save_script(scenes, session / "script.json")
+        print(f"  {len(scenes)} scenes loaded.")
+    except Exception as e:
+        log_stage_error(session, "Script", e)
+        print(f"\n[ERROR] Script generation failed: {e}")
+        raise PipelineStageError("Script", str(e), cause=e) from e
 
-    # 2. Metadata (title / description / tags)
+    # 2. Metadata (NON-FATAL — continue with defaults on failure)
     print("\n[2/6] Generating YouTube metadata...")
-    meta = generate_metadata(scenes, topic=topic or "")
-    save_metadata(meta, session / "metadata.json")
-    print(f"  Title: {meta.title}")
+    try:
+        meta = generate_metadata(scenes, topic=topic or "")
+        save_metadata(meta, session / "metadata.json")
+        print(f"  Title: {meta.title}")
+    except Exception as e:
+        log_stage_error(session, "Metadata", e)
+        print(f"  [WARNING] Metadata generation failed: {e} — continuing without metadata.")
 
-    # 3. TTS
+    # 3. TTS (FATAL)
     print("\n[3/6] Text-to-Speech...")
-    audio_paths = synthesize_scenes(scenes, session)
+    try:
+        audio_paths = synthesize_scenes(scenes, session)
+    except Exception as e:
+        log_stage_error(session, "TTS", e)
+        print(f"\n[ERROR] TTS failed: {e}")
+        raise PipelineStageError("TTS", str(e), cause=e) from e
 
-    # 4. Visuals
+    # 4. Visuals (FATAL)
     print("\n[4/6] Visuals...")
-    visual_paths = fetch_visuals(scenes, session)
+    try:
+        visual_paths = fetch_visuals(scenes, session)
+    except Exception as e:
+        log_stage_error(session, "Visuals", e)
+        print(f"\n[ERROR] Visuals failed: {e}")
+        raise PipelineStageError("Visuals", str(e), cause=e) from e
 
-    # 5. Subtitles
+    # 5. Subtitles (NON-FATAL — video can be composed without subtitles)
     print("\n[5/6] Subtitles...")
-    srt_path = generate_srt(audio_paths, scenes, session)
-    generate_word_timing(audio_paths, scenes, session, fps=settings.video_fps)
+    srt_path = None
+    try:
+        srt_path = generate_srt(audio_paths, scenes, session)
+        generate_word_timing(audio_paths, scenes, session, fps=settings.video_fps)
+    except Exception as e:
+        log_stage_error(session, "Subtitles", e)
+        print(f"  [WARNING] Subtitle generation failed: {e} — continuing without subtitles.")
 
-    # 6. Compose
+    # 6. Compose (FATAL)
     print("\n[6/6] Composing video...")
-    output = compose(scenes, audio_paths, visual_paths, srt_path, session)
+    try:
+        output = compose(scenes, audio_paths, visual_paths, srt_path, session)
+    except Exception as e:
+        log_stage_error(session, "Compose", e)
+        print(f"\n[ERROR] Composition failed: {e}")
+        raise PipelineStageError("Compose", str(e), cause=e) from e
 
     print(f"\n✓ Video ready: {output}")
     print(f"✓ Metadata:    {session / 'metadata.txt'}")

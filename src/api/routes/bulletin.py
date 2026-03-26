@@ -161,7 +161,7 @@ def _do_bulletin_render_sync(bid: str, data: dict):
                     mapped = ps + int(p / 100 * (pe - ps))
                     _on_progress(b, mapped, s, f"[{lbl}] {sl}")
                 props = _build_props(_build_news_items([item], body_data), item_style, [], body_data)
-                render_bulletin(props, item_output, body_data.get("fps"), body_data.get("category_templates"), _item_progress, _stop_event, _pause_event)
+                render_bulletin(props, item_output, fps=body_data.get("fps", 60), category_templates=body_data.get("category_templates"), on_progress=_item_progress, stop_event=_stop_event, pause_event=_pause_event)
                 output_files[item_label] = str(item_output)
             if body_data.get("preset_name"):
                 urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
@@ -185,7 +185,7 @@ def _do_bulletin_render_sync(bid: str, data: dict):
                     mapped = ps + int(p / 100 * (pe - ps))
                     _on_progress(b, mapped, s, f"[{cl.upper()}] {sl}")
                 props = _build_props(_build_news_items(cat_items, body_data), cat_style, _make_ticker(cat_items, body_data), body_data)
-                render_bulletin(props, cat_output, body_data.get("fps"), body_data.get("category_templates"), _cat_progress, _stop_event, _pause_event)
+                render_bulletin(props, cat_output, fps=body_data.get("fps", 60), category_templates=body_data.get("category_templates"), on_progress=_cat_progress, stop_event=_stop_event, pause_event=_pause_event)
                 output_files[cat_label] = str(cat_output)
             if body_data.get("preset_name"):
                 urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
@@ -195,7 +195,7 @@ def _do_bulletin_render_sync(bid: str, data: dict):
         else:
             news_items = _build_news_items(raw_items, body_data)
             props = _build_props(news_items, body_data.get("style"), _make_ticker(raw_items, body_data), body_data)
-            render_bulletin(props, output_path, body_data.get("fps"), body_data.get("category_templates"), lambda p,s,sl,b=bid: _on_progress(b,p,s,sl), _stop_event, _pause_event)
+            render_bulletin(props, output_path, fps=body_data.get("fps", 60), category_templates=body_data.get("category_templates"), on_progress=lambda p,s,sl,b=bid: _on_progress(b,p,s,sl), stop_event=_stop_event, pause_event=_pause_event)
             if body_data.get("preset_name"):
                 urls = [item.get("source_url", "") for item in raw_items if item.get("source_url")]
                 if urls: _append_bulletin_history(body_data.get("preset_name"), urls)

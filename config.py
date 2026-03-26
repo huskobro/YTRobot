@@ -1,10 +1,29 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Literal, Optional
 import os
+import re
 from dotenv import load_dotenv
 
 
+def _strip_px(v: object) -> object:
+    """Strip 'px' suffix from values like '64px' so they parse as int."""
+    if isinstance(v, str):
+        return re.sub(r'\s*px\s*$', '', v, flags=re.IGNORECASE)
+    return v
+
+
 class Settings(BaseSettings):
+
+    @field_validator(
+        'remotion_subtitle_size', 'remotion_subtitle_stroke',
+        'remotion_transition_duration', 'remotion_concurrency',
+        'video_fps',
+        mode='before',
+    )
+    @classmethod
+    def strip_px_suffix(cls, v: object) -> object:
+        return _strip_px(v)
     # LLM (OpenAI fallback)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
@@ -171,7 +190,7 @@ class Settings(BaseSettings):
     social_meta_language: str = ""                        # empty = use module/global lang
 
     # Subtitles
-    subtitle_provider: Literal["ffmpeg", "pycaps"] = "ffmpeg"
+    subtitle_provider: Literal["ffmpeg", "pycaps", "remotion"] = "ffmpeg"
     pycaps_style: str = "hype"
 
     # Output

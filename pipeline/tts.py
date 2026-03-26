@@ -1,4 +1,5 @@
 """TTS stage: converts scene narrations to audio files."""
+import subprocess
 from pathlib import Path
 from config import settings
 from pipeline.script import Scene
@@ -77,6 +78,32 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
                 print(f"  [TTS] Scene {i} enhanced → sending to TTS...")
             else:
                 print(f"  [TTS] Synthesizing scene {i}...")
-            provider.synthesize(narration, out, **syn_kwargs)
-        audio_paths.append(out)
+            try:
+                provider.synthesize(narration, out, **syn_kwargs)
+            except Exception as e:
+                print(f"  [TTS] ⚠ Scene {i} synthesis failed: {e}")
+                print(f"  [TTS] Generating silent placeholder for scene {i}...")
+                _generate_silent_audio(out, duration=3.0)
+
+        if out.exists():
+            audio_paths.append(out)
+        else:
+            print(f"  [TTS] ⚠ Scene {i} audio missing, generating silent placeholder...")
+            _generate_silent_audio(out, duration=3.0)
+            audio_paths.append(out)
     return audio_paths
+
+
+def _generate_silent_audio(path: Path, duration: float = 3.0) -> None:
+    """Generate a silent MP3 file as a placeholder."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-f", "lavfi",
+            "-i", f"anullsrc=r=44100:cl=mono",
+            "-t", str(duration),
+            "-q:a", "9",
+            str(path),
+        ],
+        capture_output=True,
+    )

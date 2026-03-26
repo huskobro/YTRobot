@@ -242,7 +242,7 @@ def compose_remotion(
         output_file = session_dir / "final_output.mp4"
 
         print(f"  [Remotion] Serving assets at {base_url} — rendering video...")
-        subprocess.run(
+        result = subprocess.run(
             [
                 npx, "remotion", "render",
                 "YTRobotVideo",
@@ -252,8 +252,15 @@ def compose_remotion(
                 "--log=verbose",
             ],
             cwd=_REMOTION_DIR,
-            check=True,
+            capture_output=True,
+            text=True,
         )
+        if result.returncode != 0:
+            stderr_tail = result.stderr[-1000:] if result.stderr else "no stderr"
+            stdout_tail = result.stdout[-500:] if result.stdout else ""
+            raise RuntimeError(
+                f"[Remotion] Render failed (code {result.returncode}):\n{stderr_tail}\n{stdout_tail}"
+            )
 
     print(f"  [Remotion] Done! Output: {output_file}")
     return output_file

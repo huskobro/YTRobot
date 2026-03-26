@@ -14,6 +14,7 @@ from pathlib import Path
 
 from config import settings
 from providers.visuals.base import BaseVisualsProvider
+from pipeline.resilience import validate_output
 
 _BASE = "https://api.kie.ai"
 _CREATE_URL = f"{_BASE}/api/v1/jobs/createTask"
@@ -68,16 +69,25 @@ class ZImageVisualsProvider(BaseVisualsProvider):
 
         # 2. Poll until done
         elapsed = 0
+        consecutive_poll_failures = 0
         while elapsed < _TIMEOUT:
             time.sleep(_POLL_INTERVAL)
             elapsed += _POLL_INTERVAL
-            status_resp = requests.get(
-                _STATUS_URL,
-                headers=self._headers(),
-                params={"taskId": task_id},
-                timeout=30,
-            )
-            status_resp.raise_for_status()
+            try:
+                status_resp = requests.get(
+                    _STATUS_URL,
+                    headers=self._headers(),
+                    params={"taskId": task_id},
+                    timeout=30,
+                )
+                status_resp.raise_for_status()
+                consecutive_poll_failures = 0
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                consecutive_poll_failures += 1
+                print(f"    [Z-Image] Poll failed ({e.__class__.__name__}), consecutive: {consecutive_poll_failures}")
+                if consecutive_poll_failures >= 3:
+                    raise RuntimeError(f"Z-Image polling failed {consecutive_poll_failures} times consecutively") from e
+                continue
             info = status_resp.json()["data"]
             state = info.get("state", "")
             progress = info.get("progress", 0)
@@ -99,4 +109,5 @@ class ZImageVisualsProvider(BaseVisualsProvider):
         img_resp.raise_for_status()
         with open(output_path, "wb") as f:
             f.write(img_resp.content)
+        validate_output(output_path, min_size=1000, label="Visuals/Z-Image")
         return output_path

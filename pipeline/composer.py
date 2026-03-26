@@ -44,40 +44,58 @@ def _compose_moviepy(
 
     for i, (audio_p, visual_p) in enumerate(zip(audio_paths, visual_paths)):
         print(f"  [Composer] Processing scene {i}...")
-        audio_clip = AudioFileClip(str(audio_p))
-        duration = audio_clip.duration
+        try:
+            audio_clip = AudioFileClip(str(audio_p))
+            duration = audio_clip.duration
+        except Exception as e:
+            print(f"  [Composer] ⚠ Failed to load audio for scene {i}: {e} — skipping scene.")
+            continue
 
-        if visual_p.suffix in (".mp4", ".mov", ".webm"):
-            video_clip = (
-                VideoFileClip(str(visual_p))
-                .with_effects([Loop(duration=duration)])
-                .resized((width, height))
-                .with_audio(audio_clip)
-            )
-        else:
-            video_clip = (
-                ImageClip(str(visual_p))
-                .with_duration(duration)
-                .resized((width, height))
-                .with_audio(audio_clip)
-            )
+        try:
+            if visual_p.suffix in (".mp4", ".mov", ".webm"):
+                video_clip = (
+                    VideoFileClip(str(visual_p))
+                    .with_effects([Loop(duration=duration)])
+                    .resized((width, height))
+                    .with_audio(audio_clip)
+                )
+            else:
+                video_clip = (
+                    ImageClip(str(visual_p))
+                    .with_duration(duration)
+                    .resized((width, height))
+                    .with_audio(audio_clip)
+                )
+            clips.append(video_clip.with_fps(fps))
+        except Exception as e:
+            print(f"  [Composer] ⚠ Failed to load visual for scene {i}: {e} — skipping scene.")
+            continue
 
-        clips.append(video_clip.with_fps(fps))
+    if not clips:
+        raise RuntimeError("[Composer] No valid scenes to compose — all scenes failed to load.")
 
     final = concatenate_videoclips(clips, method="compose")
     raw_output = session_dir / "raw_output.mp4"
     final_output = session_dir / "final_output.mp4"
 
     print("  [Composer] Rendering raw video...")
-    final.write_videofile(str(raw_output), fps=fps, codec="libx264", audio_codec="aac")
+    try:
+        final.write_videofile(str(raw_output), fps=fps, codec="libx264", audio_codec="aac")
+    except Exception as e:
+        raise RuntimeError(f"[Composer] Video rendering failed: {e}") from e
 
     if srt_path and srt_path.exists():
-        if settings.subtitle_provider == "pycaps":
-            _burn_subtitles_pycaps(raw_output, srt_path, final_output)
-            raw_output.unlink(missing_ok=True)
-        else:
-            _burn_subtitles_ffmpeg(raw_output, srt_path, final_output)
-            raw_output.unlink(missing_ok=True)
+        try:
+            if settings.subtitle_provider == "pycaps":
+                _burn_subtitles_pycaps(raw_output, srt_path, final_output)
+                raw_output.unlink(missing_ok=True)
+            else:
+                _burn_subtitles_ffmpeg(raw_output, srt_path, final_output)
+                raw_output.unlink(missing_ok=True)
+        except Exception as e:
+            print(f"  [Composer] ⚠ Subtitle burn failed: {e} — using video without subtitles.")
+            if raw_output.exists():
+                raw_output.rename(final_output)
     else:
         raw_output.rename(final_output)
 
@@ -128,13 +146,15 @@ def _burn_subtitles_ffmpeg(raw_video: Path, srt_path: Path, output: Path) -> Non
 
     if has_subtitles_filter:
         print("  [Composer] Burning in subtitles (hardcoded)...")
-        subprocess.run(
+        result = subprocess.run(
             ["ffmpeg", "-y", "-i", str(raw_video), "-vf", vf, "-c:a", "copy", str(output)],
-            check=True,
+            capture_output=True, text=True,
         )
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg subtitle burn failed (code {result.returncode}): {result.stderr[-500:]}")
     else:
         print("  [Composer] Embedding subtitles as soft track (libass not available)...")
-        subprocess.run(
+        result = subprocess.run(
             [
                 "ffmpeg", "-y",
                 "-i", str(raw_video),
@@ -145,5 +165,7 @@ def _burn_subtitles_ffmpeg(raw_video: Path, srt_path: Path, output: Path) -> Non
                 "-metadata:s:s:0", "language=und",
                 str(output),
             ],
-            check=True,
+            capture_output=True, text=True,
         )
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg subtitle embed failed (code {result.returncode}): {result.stderr[-500:]}")

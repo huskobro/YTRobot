@@ -662,7 +662,7 @@
                 <span x-show="wizardStep <= step" x-text="step"></span>
                 <span x-show="wizardStep > step">✓</span>
               </div>
-              <div class="step-label" x-text="step === 1 ? t('wizard_step_type') : (step === 2 ? t('wizard_step_config') : t('wizard_step_confirm'))"></div>
+              <div class="step-label" x-text="step === 1 ? t('wizard_step_type') : (step === 2 ? t('wizard_step_config') : (step === 3 && wizardMaxSteps === 4 ? t('wizard_step_style') : t('wizard_step_confirm')))"></div>
             </div>
           </template>
         </div>
@@ -697,7 +697,6 @@
         <!-- ── Step 2: Configuration ── -->
         <div x-show="wizardStep === 2" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
           <!-- Normal Video Config -->
-          <!-- Normal Video Config -->
           <div x-show="videoModule==='normal'" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
             <div class="flex gap-2 p-1.5 bg-slate-800/50 rounded-xl mb-8">
               <button @click="mode='topic'" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all"
@@ -716,53 +715,6 @@
               <div x-show="mode==='script'">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('script_label')"></label>
                 <input x-model="newScriptFile" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 placeholder-slate-700 transition-all text-sm" :placeholder="t('script_placeholder')" />
-              </div>
-
-              <!-- Wizard Choices — Row 1 -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_platform_label')"></label>
-                  <select x-model="wizardPlatform" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="youtube">YouTube (Horizontal)</option>
-                    <option value="reels">Instagram / Reels</option>
-                    <option value="tiktok">TikTok / Shorts</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_mood_label')"></label>
-                  <select x-model="wizardMood" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="energetic" x-text="t('mood_energetic')"></option>
-                    <option value="professional" x-text="t('mood_professional')"></option>
-                    <option value="fun" x-text="t('mood_fun')"></option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Wizard Choices — Row 2 -->
-              <div class="grid grid-cols-3 gap-4">
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_captions_label')"></label>
-                  <select x-model="wizardCaptions" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="yes" x-text="t('yes')"></option>
-                    <option value="no" x-text="t('no')"></option>
-                  </select>
-                </div>
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Görsel Stil</label>
-                  <select x-model="wizardStyle" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="dynamic">Dinamik</option>
-                    <option value="cinematic">Sinematik</option>
-                    <option value="minimal">Minimal</option>
-                  </select>
-                </div>
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ses Tonu</label>
-                  <select x-model="wizardTone" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="balanced">Dengeli</option>
-                    <option value="excited">Heyecanlı</option>
-                    <option value="formal">Resmi</option>
-                  </select>
-                </div>
               </div>
 
               <div x-show="presets.length > 0">
@@ -802,9 +754,9 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_platform_label')"></label>
-                  <select x-model="wizardPlatform" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
-                    <option value="youtube">YouTube (Horizontal)</option>
-                    <option value="reels">Shorts / Reels</option>
+                  <select x-model="bulletinRenderCfg.format" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
+                    <option value="16:9">YouTube (Horizontal)</option>
+                    <option value="9:16">Shorts / Reels</option>
                   </select>
                 </div>
                 <div>
@@ -880,8 +832,106 @@
           </div>
         </div>
 
-        <!-- ── Step 3: Review & Submit ── -->
-        <div x-show="wizardStep === 3" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
+        <!-- ── Step 3: Style & Quality (Normal Video only) ── -->
+        <div x-show="wizardStep === 3 && videoModule === 'normal'" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card space-y-8">
+
+            <!-- Quality Preset -->
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_quality_label')"></label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div @click="wizardQuality='quick_draft'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
+                     :class="wizardQuality==='quick_draft' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
+                  <div class="text-2xl mb-2">⚡</div>
+                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_quick')"></div>
+                  <div class="text-slate-500 text-[10px]">720p &middot; 24fps &middot; ~3 min</div>
+                </div>
+                <div @click="wizardQuality='standard'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
+                     :class="wizardQuality==='standard' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
+                  <div class="text-2xl mb-2">🎬</div>
+                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_standard')"></div>
+                  <div class="text-slate-500 text-[10px]">1080p &middot; 30fps &middot; ~8 min</div>
+                </div>
+                <div @click="wizardQuality='cinematic'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
+                     :class="wizardQuality==='cinematic' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
+                  <div class="text-2xl mb-2">✨</div>
+                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_cinematic')"></div>
+                  <div class="text-slate-500 text-[10px]">1080p &middot; 60fps &middot; ~15 min</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Platform Target -->
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_platform_label')"></label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div @click="wizardPlatform='youtube_16_9'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
+                     :class="wizardPlatform==='youtube_16_9' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
+                  <div class="text-2xl mb-2">📺</div>
+                  <div class="font-bold text-white text-sm mb-1">YouTube</div>
+                  <div class="text-slate-500 text-[10px]">16:9 &middot; 1920x1080</div>
+                </div>
+                <div @click="wizardPlatform='shorts_9_16'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
+                     :class="wizardPlatform==='shorts_9_16' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
+                  <div class="text-2xl mb-2">📱</div>
+                  <div class="font-bold text-white text-sm mb-1">YouTube Shorts</div>
+                  <div class="text-slate-500 text-[10px]">9:16 &middot; 1080x1920</div>
+                </div>
+                <div @click="wizardPlatform='tiktok_9_16'"
+                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
+                     :class="wizardPlatform==='tiktok_9_16' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
+                  <div class="text-2xl mb-2">🎵</div>
+                  <div class="font-bold text-white text-sm mb-1">TikTok</div>
+                  <div class="text-slate-500 text-[10px]">9:16 &middot; 1080x1920</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Subtitle Style -->
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_subtitle_label')"></label>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div @click="wizardSubtitleStyle='minimal'"
+                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
+                     :class="wizardSubtitleStyle==='minimal' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
+                  <div class="text-sm font-light text-slate-300 mb-2 font-sans">Aa</div>
+                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_minimal')"></div>
+                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_minimal_desc')"></div>
+                </div>
+                <div @click="wizardSubtitleStyle='hype'"
+                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
+                     :class="wizardSubtitleStyle==='hype' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
+                  <div class="text-sm font-black text-yellow-400 mb-2 uppercase tracking-wider">Aa</div>
+                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_hype')"></div>
+                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_hype_desc')"></div>
+                </div>
+                <div @click="wizardSubtitleStyle='cinematic'"
+                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
+                     :class="wizardSubtitleStyle==='cinematic' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
+                  <div class="text-sm font-medium text-purple-300 mb-2 italic">Aa</div>
+                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_cinematic')"></div>
+                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_cinematic_desc')"></div>
+                </div>
+                <div @click="wizardSubtitleStyle='karaoke'"
+                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
+                     :class="wizardSubtitleStyle==='karaoke' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
+                  <div class="text-sm font-black mb-2"><span class="text-yellow-400">A</span><span class="text-white">a</span></div>
+                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_karaoke')"></div>
+                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_karaoke_desc')"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Step 3 (bulletin/product) / Step 4 (normal): Review & Submit ── -->
+        <div x-show="wizardStep === wizardMaxSteps" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
             <div class="mb-8">
               <h2 class="text-xl font-bold text-white mb-2" x-text="t('wizard_review_title')"></h2>
@@ -890,16 +940,40 @@
 
             <div class="space-y-4 mb-8">
               <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Seçilen Modül</div>
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_module_label')"></div>
                 <div class="flex items-center gap-3">
                   <span class="text-2xl" x-text="videoModule==='normal'?'▶️':(videoModule==='bulletin'?'📺':'🛒')"></span>
                   <span class="font-bold text-white uppercase" x-text="t('module_'+(videoModule||'normal').replace('_','_')+'_title')"></span>
                 </div>
               </div>
-              
+
               <div x-show="videoModule==='normal'" class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2" x-text="mode==='topic'?t('wizard_topic_selected'):t('wizard_script_selected')"></div>
                 <div class="text-sm text-slate-300 italic truncate" x-text="mode==='topic'?newTopic:newScriptFile"></div>
+              </div>
+
+              <!-- Wizard style summary (normal video only) -->
+              <div x-show="videoModule==='normal'" class="grid grid-cols-3 gap-3">
+                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
+                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_quality_label')"></div>
+                  <div class="text-sm text-indigo-400 font-bold" x-text="wizardQualityLabel()"></div>
+                </div>
+                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
+                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_platform_label')"></div>
+                  <div class="text-sm text-red-400 font-bold" x-text="wizardPlatformLabel()"></div>
+                </div>
+                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
+                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_subtitle_label')"></div>
+                  <div class="text-sm text-emerald-400 font-bold" x-text="wizardSubtitleLabel()"></div>
+                </div>
+              </div>
+
+              <!-- Estimated time -->
+              <div x-show="videoModule==='normal'" class="p-4 bg-indigo-950/30 rounded-xl border border-indigo-800/30">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-400 font-bold" x-text="t('wizard_estimated_time')"></span>
+                  <span class="text-sm text-indigo-400 font-black" x-text="wizardEstimate()"></span>
+                </div>
               </div>
 
               <div x-show="selectedPreset" class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">

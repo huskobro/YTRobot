@@ -21,12 +21,15 @@ Whisper word-splits differ from the script (very common in Turkish).
 import json
 import re
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any, Optional
 
 import whisper  # type: ignore  # pyre-ignore[21]
 
 from pipeline.script import Scene  # type: ignore  # pyre-ignore[21]
+
+_WHISPER_TIMEOUT = 120  # seconds per scene
 
 
 def _r4(x: float) -> float:
@@ -74,11 +77,34 @@ def _get_transcription(audio_path: Path, scene: Scene, session_dir: Path) -> dic
         return json.loads(cache_file.read_text(encoding="utf-8"))
 
     model = _get_whisper_model()
-    result = model.transcribe(
-        str(audio_path),
-        word_timestamps=True,
-        initial_prompt=scene.narration,
-    )
+
+    # Run transcription with a timeout to prevent indefinite blocking
+    result_container: list = []
+    error_container: list = []
+
+    def _transcribe():
+        try:
+            r = model.transcribe(
+                str(audio_path),
+                word_timestamps=True,
+                initial_prompt=scene.narration,
+            )
+            result_container.append(r)
+        except Exception as e:
+            error_container.append(e)
+
+    t = threading.Thread(target=_transcribe, daemon=True)
+    t.start()
+    t.join(timeout=_WHISPER_TIMEOUT)
+
+    if t.is_alive():
+        raise TimeoutError(f"Whisper transcription timed out after {_WHISPER_TIMEOUT}s for {audio_path.name}")
+    if error_container:
+        raise error_container[0]
+    if not result_container:
+        raise RuntimeError(f"Whisper returned no result for {audio_path.name}")
+
+    result = result_container[0]
     cache_file.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
     return result
 
@@ -280,9 +306,15 @@ def generate_srt(audio_paths: list, scenes: list, session_dir: Path) -> Path:
         print(f"  [Subtitles] Aligning scene {i} with Whisper...")
         duration: float = _audio_duration(audio_path)
         if duration <= 0:
+            print(f"  [Subtitles] ⚠ Scene {i} audio duration is 0, skipping subtitle alignment.")
             continue
 
-        result = _get_transcription(audio_path, scene, session_dir)
+        try:
+            result = _get_transcription(audio_path, scene, session_dir)
+        except Exception as e:
+            print(f"  [Subtitles] ⚠ Whisper failed for scene {i}: {e} — skipping subtitles for this scene.")
+            time_offset += duration
+            continue
         aligned: list[dict[str, Any]] = list(_align_words(scene.narration, result))
 
         # Group into ~3-word chunks for one subtitle line at a time
@@ -348,8 +380,17 @@ def generate_word_timing(
         chunks = []
 
         if duration > 0:
-            result = _get_transcription(audio_path, scene, session_dir)
-            aligned = _align_words(scene.narration, result)
+            try:
+                result = _get_transcription(audio_path, scene, session_dir)
+                aligned = _align_words(scene.narration, result)
+            except Exception as e:
+                print(f"  [Subtitles] ⚠ Word timing failed for scene {i}: {e}")
+                aligned = []
+            # Only proceed with chunk building if we got alignment data
+            if not aligned:
+                all_scenes.append({"scene": i, "startSec": _r4(time_offset), "chunks": []})
+                time_offset += duration
+                continue
 
             for ci in range(0, len(aligned), chunk_size):
                 chunk_words = aligned[ci : ci + chunk_size]  # pyre-ignore[no-matching-overload]

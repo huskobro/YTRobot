@@ -58,11 +58,18 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         if self.language:
             payload["language"] = self.language
 
+        _RETRYABLE_CODES = (429, 500, 502, 503, 504)
+
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 resp = requests.post(SPESH_URL, headers=headers, json=payload, timeout=TIMEOUT)
                 if not resp.ok:
                     body = resp.text[:500]
+                    if resp.status_code in _RETRYABLE_CODES and attempt < MAX_RETRIES:
+                        wait = attempt * 5
+                        print(f"    [Spesh] HTTP {resp.status_code}, retrying in {wait}s... ({body[:100]})")
+                        time.sleep(wait)
+                        continue
                     raise RuntimeError(f"Spesh Audio API {resp.status_code}: {body}")
                 break
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
@@ -80,10 +87,24 @@ class SpeshAudioTTSProvider(BaseTTSProvider):
         audio_url = data["data"]["audio_url"]
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        audio_resp = requests.get(audio_url, timeout=120)
-        audio_resp.raise_for_status()
+        # Download with retry for transient network errors
+        for dl_attempt in range(1, MAX_RETRIES + 1):
+            try:
+                audio_resp = requests.get(audio_url, timeout=120)
+                audio_resp.raise_for_status()
+                break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if dl_attempt < MAX_RETRIES:
+                    wait = dl_attempt * 5
+                    print(f"    [Spesh] Audio download attempt {dl_attempt} failed, retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raise
         with open(output_path, "wb") as f:
             f.write(audio_resp.content)
+
+        from pipeline.resilience import validate_output
+        validate_output(output_path, min_size=1000, label="TTS/SpeshAudio")
 
         credits_used = data["data"].get("credits_used")
         credits_left = data["data"].get("remaining_credits")

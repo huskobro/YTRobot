@@ -53,6 +53,7 @@ function app() {
     bulletinOverrideStyles: false,
     bulletinTextMode: 'per_scene',
     bulletinShowCategoryFlash: false,
+    bulletinShowItemIntro: false,
     bulletinCategoryStyles: {},
     bulletinItemStyles: {},
     bulletinCategoryOutputs: {},
@@ -76,13 +77,16 @@ function app() {
     prRenderCfg: { style: 'modern', format: '16:9', channelName: 'YTRobot İnceleme', fps: '60' },
     prRendering: false, prJobId: null, prJobStatus: '', prJobError: '',
     prProgress: 0, prStepLabel: '', _prPoll: null,
-    // Wizard Extended Options
-    wizardTone: 'balanced',
-    wizardStyle: 'dynamic',
-    wizardPlatform: 'youtube',
+    // Wizard Extended Options (Normal Video)
+    wizardQuality: 'standard',
+    wizardPlatform: 'youtube_16_9',
+    wizardSubtitleStyle: 'hype',
+    wizardAdvancedOpen: false,
+    // Legacy wizard options (used by Bulletin & Product Review modules)
     wizardMood: 'informative',
     wizardCaptions: 'karaoke',
-    wizardMusic: 'lofi',
+    wizardTone: 'balanced',
+    wizardStyle: 'dynamic',
     _sse: null, _timer: null,
     // Bulletin presets
     bulletinPresets: [],
@@ -150,9 +154,29 @@ function app() {
       this.videoModule = module;
       this.wizardStep = 1;
       // Define max steps per module
-      if (module === 'normal') this.wizardMaxSteps = 3;
+      if (module === 'normal') this.wizardMaxSteps = 4;
       else if (module === 'bulletin') this.wizardMaxSteps = 3;
       else if (module === 'product-review') this.wizardMaxSteps = 3;
+    },
+
+    wizardEstimate() {
+      const estimates = { quick_draft: '~3 min', standard: '~8 min', cinematic: '~15 min' };
+      return estimates[this.wizardQuality] || '~8 min';
+    },
+
+    wizardQualityLabel() {
+      const labels = { quick_draft: this.t('wizard_quality_quick'), standard: this.t('wizard_quality_standard'), cinematic: this.t('wizard_quality_cinematic') };
+      return labels[this.wizardQuality] || 'Standard';
+    },
+
+    wizardPlatformLabel() {
+      const labels = { youtube_16_9: 'YouTube (16:9)', shorts_9_16: 'YouTube Shorts (9:16)', tiktok_9_16: 'TikTok (9:16)' };
+      return labels[this.wizardPlatform] || 'YouTube (16:9)';
+    },
+
+    wizardSubtitleLabel() {
+      const labels = { minimal: this.t('wizard_subtitle_minimal'), hype: this.t('wizard_subtitle_hype'), cinematic: this.t('wizard_subtitle_cinematic'), karaoke: this.t('wizard_subtitle_karaoke') };
+      return labels[this.wizardSubtitleStyle] || 'Hype';
     },
 
     // ── Command Palette Methods ──
@@ -450,7 +474,7 @@ function app() {
           const u = this.sessions.find(s => s.id === this.currentSession.id);
           if (u) this.currentSession = u;
         }
-      } catch(e) {}
+      } catch(e) { console.warn('[poll] session refresh error:', e); }
     },
 
     openSession(session) {
@@ -495,12 +519,19 @@ function app() {
         body.script_file = this.newScriptFile.trim();
       }
       if (this.selectedPreset) body.preset_name = this.selectedPreset;
+      if (this.videoModule === 'normal') {
+        body.wizard_config = {
+          quality_preset: this.wizardQuality,
+          platform: this.wizardPlatform,
+          subtitle_style: this.wizardSubtitleStyle,
+        };
+      }
       this.submitting = true;
       try {
-        const data = await this.apiFetch('/api/run', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify(body) 
+        const data = await this.apiFetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
         const session_id = data.session_id;
         this.newTopic = ''; this.newScriptFile = '';
@@ -753,7 +784,7 @@ function app() {
       try {
         const r = await fetch('/api/presets');
         this.presets = await r.json();
-      } catch(e) {}
+      } catch(e) { console.warn('[presets] load error:', e); }
     },
 
     async savePreset() {
@@ -931,7 +962,7 @@ function app() {
       try {
         const r = await fetch('/api/bulletin/history');
         if (r.ok) this.bulletinHistory = await r.json();
-      } catch(e) {}
+      } catch(e) { console.warn('[bulletin] history load error:', e); }
     },
 
     async clearBulletinHistory() {
@@ -1137,9 +1168,9 @@ function app() {
                 this.playSound('error');
               }
             }
-          } catch(e) {}
+          } catch(e) { console.warn('[bulletin] render poll error:', e); }
         }, 2000);
-      } catch(e) { this.bulletinRendering = false; }
+      } catch(e) { console.error('[bulletin] render start error:', e); this.bulletinRendering = false; }
     },
 
     async stopBulletinRender() {
@@ -1286,9 +1317,9 @@ function app() {
                 this.playSound('error');
               }
             }
-          } catch(e) {}
+          } catch(e) { console.warn('[pr] render poll error:', e); }
         }, 2000);
-      } catch(e) { this.prRendering = false; }
+      } catch(e) { console.error('[pr] render start error:', e); this.prRendering = false; }
     },
 
     async cleanupSystem() {

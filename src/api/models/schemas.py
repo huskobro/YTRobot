@@ -1,10 +1,16 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
+class WizardConfig(BaseModel):
+    quality_preset: Optional[str] = None    # quick_draft | standard | cinematic
+    platform: Optional[str] = None          # youtube_16_9 | shorts_9_16 | tiktok_9_16
+    subtitle_style: Optional[str] = None    # minimal | hype | cinematic | karaoke
+
 class RunReq(BaseModel):
     topic: Optional[str] = None
     script_file: Optional[str] = None
     preset_name: Optional[str] = None
+    wizard_config: Optional[WizardConfig] = None
 
 class NoteReq(BaseModel):
     notes: str
@@ -29,8 +35,11 @@ class BulletinSourcePatch(BaseModel):
     enabled: Optional[bool] = None
 
 class BulletinDraftReq(BaseModel):
-    preset_name: str
+    preset_name: Optional[str] = ""
     limit: int = 5
+    max_items_per_source: int = 3
+    language_override: Optional[str] = ""
+    source_ids: Optional[List[str]] = None
 
 class SocialMetaReq(BaseModel):
     # Eski uyumluluk alanlari (BulletinRenderReq ve ProductReviewRenderReq icin)
@@ -45,19 +54,49 @@ class SocialMetaReq(BaseModel):
     lang: Optional[str] = "tr"
 
 class BulletinRenderReq(BaseModel):
-    sid: str
     items: List[Dict[str, Any]]
-    preset_name: str
-    video_style: Optional[str] = "automatic"
-    auto_lang: Optional[str] = "Otomatik"
+    network_name: Optional[str] = "YTRobot Haber"
+    style: Optional[str] = "breaking"
+    fps: Optional[int] = 60
+    format: Optional[str] = "16:9"
+    preset_name: Optional[str] = ""
+    category_templates: Optional[Dict[str, Any]] = {}
+    render_mode: Optional[str] = "combined"
+    lang: Optional[str] = "auto"
+    show_category_flash: Optional[bool] = False
+    show_item_intro: Optional[bool] = False
+    text_delivery_mode: Optional[str] = "per_scene"
+    category_styles: Optional[Dict[str, Any]] = {}
+    item_styles: Optional[Dict[str, Any]] = {}
+    # Design settings
+    lower_third_enabled: Optional[bool] = False
+    lower_third_text: Optional[str] = ""
+    lower_third_font: Optional[str] = "Inter"
+    lower_third_color: Optional[str] = "#ffffff"
+    lower_third_size: Optional[int] = 32
+    ticker_enabled: Optional[bool] = False
+    ticker_speed: Optional[int] = 3
+    ticker_bg: Optional[str] = "#dc2626"
+    ticker_color: Optional[str] = "#ffffff"
+    show_live: Optional[bool] = True
+    show_source: Optional[bool] = True
+    show_date: Optional[bool] = True
+    # Legacy fields
     publish_youtube: bool = False
     publish_instagram: bool = False
     social_metadata: Optional[SocialMetaReq] = None
 
 class ProductReviewRenderReq(BaseModel):
-    url: str
     product: Dict[str, Any]
+    style: Optional[str] = "modern"
+    format: Optional[str] = "16:9"
+    fps: Optional[int] = 60
+    channel_name: Optional[str] = ""
+    auto_generate_tts: Optional[bool] = True
+    lang: Optional[str] = "tr"
     preset_name: Optional[str] = None
+    # Legacy fields
+    url: Optional[str] = ""
     publish_youtube: bool = False
     publish_instagram: bool = False
     social_metadata: Optional[SocialMetaReq] = None

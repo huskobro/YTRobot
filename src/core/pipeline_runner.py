@@ -59,9 +59,16 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
             s["pid"] = proc.pid
             _write_session(sid, s)
 
+            error_lines = []  # Collect error-relevant lines
             for line in proc.stdout:
                 lf.write(line)
                 lf.flush()
+                # Track error-relevant lines for better diagnostics
+                stripped = line.strip()
+                if any(kw in stripped for kw in ("[ERROR]", "Traceback", "Error:", "Exception:", "RuntimeError:", "failed")):
+                    error_lines.append(stripped)
+                    if len(error_lines) > 20:
+                        error_lines.pop(0)
                 for marker, idx in STEP_MARKERS.items():
                     if marker in line:
                         s = _read_session(sid)
@@ -93,7 +100,11 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
                     s["metadata"] = json.loads(meta_path.read_text())
             else:
                 s["status"] = "failed"
-                s["error"] = f"Process exited with code {proc.returncode}"
+                # Provide meaningful error context from pipeline output
+                if error_lines:
+                    s["error"] = "\n".join(error_lines[-10:])
+                else:
+                    s["error"] = f"Process exited with code {proc.returncode}"
             _write_session(sid, s)
 
     except Exception as e:

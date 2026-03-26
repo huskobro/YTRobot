@@ -38,6 +38,12 @@ async def start_run(req: RunReq):
         if p.exists():
             preset_env = json.loads(p.read_text())
 
+    # Wizard config overrides preset values
+    if req.wizard_config:
+        from src.core.wizard_mapper import wizard_config_to_env
+        wizard_env = wizard_config_to_env(req.wizard_config)
+        preset_env.update(wizard_env)
+
     session = {
         "id": sid,
         "topic": req.topic or req.script_file,
@@ -56,6 +62,7 @@ async def start_run(req: RunReq):
         "metadata": None,
         "preset_name": req.preset_name or "",
         "module": "yt_video",
+        "wizard_config": req.wizard_config.model_dump() if req.wizard_config else None,
     }
     _write_session(sid, session)
 

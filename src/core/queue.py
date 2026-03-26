@@ -85,7 +85,26 @@ class QueueManager:
             "id": job.id,
             "status": job.status,
             "error": job.error,
-            "progress": 0 
+            "progress": 0
+        }
+
+    def get_queue_status(self) -> dict:
+        jobs = list(self.active_jobs.values())
+        return {
+            "running": [
+                {
+                    "id": j.id, "type": j.type, "started_at": j.started_at,
+                    "elapsed": round(time.time() - j.started_at, 1) if j.started_at else 0,
+                }
+                for j in jobs if j.status == "running"
+            ],
+            "queued": [
+                {"id": j.id, "type": j.type, "created_at": j.created_at}
+                for j in jobs if j.status == "queued"
+            ],
+            "running_count": self._running_count,
+            "max_concurrent": self.MAX_CONCURRENT,
+            "total_active": len([j for j in jobs if j.status in ("running", "queued")]),
         }
 
     async def _worker_loop(self, worker_id: int = 0):
@@ -134,7 +153,7 @@ class QueueManager:
                         platforms = []
                         if job.data.get("publish_youtube"): platforms.append("youtube")
                         if job.data.get("publish_instagram"): platforms.append("instagram")
-                        stats_manager.log_render(duration, job.status, platforms, None)
+                        stats_manager.log_render(duration, job.status, platforms, None, module=job.type, session_id=job.id)
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 
@@ -169,7 +188,7 @@ class QueueManager:
                     # Log failure to analytics
                     try:
                         from src.core.analytics import stats_manager
-                        stats_manager.log_render(0, job.status, [], str(e))
+                        stats_manager.log_render(0, job.status, [], str(e), module=job.type, session_id=job.id)
                     except Exception as analytics_err:
                         logger.warning(f"Analytics log failed: {analytics_err}")
 

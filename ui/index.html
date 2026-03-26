@@ -192,7 +192,7 @@
       <!-- Divider -->
       <div class="my-1 border-t border-slate-800/70"></div>
 
-      <button @click="loadSettings();view='social-meta'"
+      <button @click="loadSettings(); view='social-meta'; loadSocialLog()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='social-meta'?'bg-violet-700 text-white shadow-md shadow-violet-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📱</span> <span x-text="t('nav_social_meta')"></span>
@@ -3236,6 +3236,77 @@
             </div>
           </div>
         </div>
+
+      <!-- Meta Preview + SEO Score (shown after generateSocialMeta) -->
+      <template x-if="socialMetaResult">
+        <div class="border-t border-slate-800 pt-8 mt-8 space-y-6">
+          <h2 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span class="w-2 h-2 bg-red-500 rounded-full"></span> YouTube Önizleme
+          </h2>
+          <div class="bg-white rounded-xl overflow-hidden max-w-md shadow-2xl">
+            <div class="bg-slate-200 h-28 flex items-center justify-center">
+              <svg class="w-8 h-8 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/></svg>
+            </div>
+            <div class="p-3">
+              <p class="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight" x-text="socialMetaResult.title||'Başlık yok'"></p>
+              <p class="text-[11px] text-slate-500 mt-1 line-clamp-2" x-text="(socialMetaResult.description||'').substring(0,100)+'...'"></p>
+              <p class="text-[10px] text-slate-400 mt-1">YTRobot • 0 görüntüleme • az önce</p>
+            </div>
+          </div>
+
+          <!-- SEO Score -->
+          <div class="glass-card p-5 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xs font-black text-white uppercase tracking-widest">SEO Skoru</h3>
+              <div class="text-2xl font-black" :class="`text-${computeSeoScore(socialMetaResult)?.color}-400`" x-text="computeSeoScore(socialMetaResult)?.score+'/100'"></div>
+            </div>
+            <div class="space-y-2">
+              <template x-for="check in computeSeoScore(socialMetaResult)?.checks" :key="check.label">
+                <div class="flex items-center justify-between py-1 border-b border-slate-800 last:border-0">
+                  <div class="flex items-center gap-2">
+                    <span :class="check.ok ? 'text-emerald-400' : 'text-red-400'" class="text-xs font-bold w-3" x-text="check.ok ? '✓' : '✗'"></span>
+                    <span class="text-xs text-slate-300" x-text="check.label"></span>
+                  </div>
+                  <span class="text-[10px] text-slate-500" x-text="check.msg"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <button @click="copySocialMeta()" class="w-full px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold transition-all">
+            <span x-text="socialMetaCopied ? t('social_meta_copied') : t('social_meta_copy_btn')"></span>
+          </button>
+        </div>
+      </template>
+
+      <!-- Paylaşım Geçmişi -->
+      <div class="border-t border-slate-800 pt-8 mt-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span class="w-2 h-2 bg-slate-500 rounded-full"></span> Paylaşım Geçmişi
+          </h2>
+          <button @click="loadSocialLog()" class="text-[10px] text-slate-500 hover:text-white transition-colors">Yenile</button>
+        </div>
+        <div x-show="socialLog.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
+          <template x-for="event in [...socialLog].reverse().slice(0,20)" :key="event.ts">
+            <div class="flex items-center gap-3 p-2.5 bg-slate-800/40 border border-slate-700/50 rounded-lg">
+              <svg x-show="event.platform==='youtube'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/></svg>
+              <svg x-show="event.platform!=='youtube'" class="w-4 h-4 text-violet-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs text-slate-300 truncate" x-text="event.title||event.video||'Başlıksız'"></p>
+                <p class="text-[10px] text-slate-600 font-mono" x-text="formatTs(event.ts)"></p>
+              </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                :class="event.status==='success' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
+                x-text="event.status==='success' ? '✓' : '✗'"></span>
+            </div>
+          </template>
+        </div>
+        <div x-show="socialLog.length===0" class="py-8 text-center">
+          <span class="text-[10px] text-slate-600 uppercase tracking-widest">Henüz Paylaşım Yok</span>
+        </div>
+      </div>
+
       </div>
     </div>
 

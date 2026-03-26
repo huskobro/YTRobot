@@ -134,7 +134,7 @@ function app() {
       { id: 'nav_api_keys', title: 'API Keys / Anahtarlar', icon: '🔑', action: function() { this.loadSettings(); this.view = 'api-keys'; } },
       { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: function() { this.view = 'bulletin'; this.bulletinTab = 'sources'; this.loadBulletinSources(); } },
       { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: function() { this.view = 'product-review'; } },
-      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: function() { this.loadSettings(); this.view = 'social-meta'; } },
+      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: function() { this.loadSettings(); this.view = 'social-meta'; this.loadSocialLog(); } },
       { id: 'nav_analytics', title: 'Analytics / Analiz Paneli', icon: '📈', action: function() {
   this.view = 'analytics';
   this.loadAnalytics();
@@ -992,6 +992,41 @@ function app() {
         this.socialMetaCopied = true;
         setTimeout(() => this.socialMetaCopied = false, 2000);
       });
+    },
+
+    computeSeoScore(result) {
+      if (!result) return null;
+      let score = 0;
+      const checks = [];
+      const title = result.title || '';
+      if (title.length >= 20 && title.length <= 60) {
+        score += 25; checks.push({ label: 'Title uzunluğu', ok: true, msg: title.length+' karakter (ideal: 20-60)' });
+      } else {
+        checks.push({ label: 'Title uzunluğu', ok: false, msg: title.length+' karakter (ideal: 20-60)' });
+      }
+      const desc = result.description || '';
+      if (desc.length >= 100 && desc.length <= 500) {
+        score += 25; checks.push({ label: 'Açıklama uzunluğu', ok: true, msg: desc.length+' karakter (ideal: 100-500)' });
+      } else {
+        checks.push({ label: 'Açıklama uzunluğu', ok: false, msg: desc.length+' karakter (ideal: 100-500)' });
+      }
+      const tags = Array.isArray(result.tags) ? result.tags : (result.tags||'').split(',').filter(Boolean);
+      if (tags.length >= 10 && tags.length <= 20) {
+        score += 25; checks.push({ label: 'Etiket sayısı', ok: true, msg: tags.length+' etiket (ideal: 10-20)' });
+      } else {
+        checks.push({ label: 'Etiket sayısı', ok: false, msg: tags.length+' etiket (ideal: 10-20)' });
+      }
+      const titleWords = title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      const descLower = desc.toLowerCase();
+      const matchCount = titleWords.filter(w => descLower.includes(w)).length;
+      const pct = titleWords.length > 0 ? Math.round(matchCount/titleWords.length*100) : 0;
+      if (titleWords.length > 0 && pct >= 50) {
+        score += 25; checks.push({ label: 'Anahtar kelime uyumu', ok: true, msg: '%'+pct+' örtüşme' });
+      } else {
+        checks.push({ label: 'Anahtar kelime uyumu', ok: false, msg: '%'+pct+' örtüşme (ideal: ≥50%)' });
+      }
+      const color = score >= 75 ? 'emerald' : score >= 50 ? 'amber' : 'red';
+      return { score, checks, color };
     },
 
     async testApiKey(provider, keyTests, e) {

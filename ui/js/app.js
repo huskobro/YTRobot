@@ -110,6 +110,10 @@ function app() {
     _errorTimeout: null,
     analyticsData: null,
     analyticsLoading: false,
+    queueStatus: null,
+    errorDetails: [],
+    socialLog: [],
+    _chartInstance: null,
     soundEnabled: localStorage.getItem('ytrobot-sound') !== 'false',
     // ── Toast Bildirim Sistemi ──
     toasts: [],
@@ -127,7 +131,12 @@ function app() {
       { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: function() { this.view = 'bulletin'; this.bulletinTab = 'sources'; this.loadBulletinSources(); } },
       { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: function() { this.view = 'product-review'; } },
       { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: function() { this.loadSettings(); this.view = 'social-meta'; } },
-      { id: 'nav_analytics', title: 'Analytics / Analiz Paneli', icon: '📈', action: function() { this.view = 'analytics'; this.loadAnalytics(); } },
+      { id: 'nav_analytics', title: 'Analytics / Analiz Paneli', icon: '📈', action: function() {
+  this.view = 'analytics';
+  this.loadAnalytics();
+  this.loadQueueStatus();
+  this.loadErrorDetails();
+} },
       { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: function() { this.loadSessions(); } },
       { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: function() { this.globalError = null; } }
     ],
@@ -364,24 +373,83 @@ function app() {
       
       this._timer = setInterval(() => {
         this.loadSessions();
-        if (this.view === 'analytics') this.loadAnalytics();
+        if (this.view === 'analytics') {
+          this.loadAnalytics();
+          this.loadQueueStatus();
+        }
+        if (this.view === 'social-meta') this.loadSocialLog();
       }, 3000);
     },
 
     async loadAnalytics() {
       this.analyticsLoading = true;
       try {
-        const raw = await this.apiFetch('/api/stats');
-        // Ensure numbers are safe for UI rendering (toFixed etc.)
-        this.analyticsData = {
-          ...raw,
-          render_success_rate: parseFloat(raw.render_success_rate || 0),
-          avg_render_time: parseFloat(raw.avg_render_time || 0),
-          total_sessions: parseInt(raw.total_sessions || 0),
-          active_workers: parseInt(raw.active_workers || 0)
-        };
+        this.analyticsData = await this.apiFetch('/api/stats');
+        await this.$nextTick();
+        this.renderDailyChart('dailyRenderChart');
       } catch(e) { console.error("Analytics fetch error:", e); }
       finally { this.analyticsLoading = false; }
+    },
+
+    async loadQueueStatus() {
+      try { this.queueStatus = await this.apiFetch('/api/stats/queue'); }
+      catch(e) { console.warn('[queue] status error:', e); }
+    },
+
+    async loadErrorDetails() {
+      try {
+        const data = await this.apiFetch('/api/stats/errors');
+        this.errorDetails = data.errors || [];
+      } catch(e) { console.warn('[analytics] error details error:', e); }
+    },
+
+    async loadSocialLog() {
+      try {
+        const data = await this.apiFetch('/api/stats/social-log');
+        this.socialLog = data.events || [];
+      } catch(e) { console.warn('[social] log error:', e); }
+    },
+
+    downloadStatsCsv() {
+      window.open('/api/stats/export-csv', '_blank');
+    },
+
+    renderDailyChart(canvasId) {
+      if (!this.analyticsData?.daily_history?.length) return;
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || typeof Chart === 'undefined') return;
+      if (this._chartInstance) { this._chartInstance.destroy(); this._chartInstance = null; }
+      const history = this.analyticsData.daily_history.slice(-14);
+      this._chartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: history.map(d => d.date.slice(5)),
+          datasets: [
+            { label: 'Success', data: history.map(d => d.success),
+              backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
+            { label: 'Failed', data: history.map(d => d.failed),
+              backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 4 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+          scales: {
+            x: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } },
+                 grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } },
+                 grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+          },
+        },
+      });
+    },
+
+    formatTs(ts) {
+      if (!ts) return '';
+      return new Date(ts * 1000).toLocaleString(
+        this.lang === 'tr' ? 'tr-TR' : 'en-US',
+        { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+      );
     },
 
     loadBulletinPresets() {

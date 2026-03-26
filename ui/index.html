@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./css/style.css">
   <script defer src="./js/translations.js"></script>
   <script defer src="./js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 overflow-hidden">
@@ -196,7 +197,7 @@
               :class="view==='social-meta'?'bg-violet-700 text-white shadow-md shadow-violet-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📱</span> <span x-text="t('nav_social_meta')"></span>
       </button>
-      <button @click="view='analytics';loadAnalytics()"
+      <button @click="view='analytics'; loadAnalytics(); loadQueueStatus(); loadErrorDetails()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='analytics'?'bg-emerald-600 text-white shadow-md shadow-emerald-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📈</span> <span x-text="t('nav_analytics')"></span>
@@ -248,102 +249,172 @@
           <h1 class="text-3xl font-black text-white tracking-tight" x-text="t('analytics_title')"></h1>
           <p class="text-slate-500 text-sm mt-1" x-text="t('analytics_subtitle')"></p>
         </div>
-        <button @click="loadAnalytics()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
-          <svg class="w-5 h-5" :class="analyticsLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        </button>
+        <div class="flex items-center gap-2">
+          <button @click="downloadStatsCsv()" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-emerald-500 text-xs font-bold transition-all flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            CSV
+          </button>
+          <button @click="loadAnalytics(); loadQueueStatus(); loadErrorDetails()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+            <svg class="w-5 h-5" :class="analyticsLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Queue Monitor Widget -->
+      <div class="mb-6 glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" :class="queueStatus?.running_count > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'"></span>
+            Kuyruk Monitörü
+          </h2>
+          <span class="text-[10px] font-mono text-slate-500" x-text="queueStatus ? queueStatus.running_count + '/' + queueStatus.max_concurrent + ' Worker Aktif' : '...'"></span>
+        </div>
+        <template x-if="queueStatus && (queueStatus.running.length > 0 || queueStatus.queued.length > 0)">
+          <div class="space-y-1">
+            <template x-for="job in queueStatus.running" :key="job.id">
+              <div class="flex items-center justify-between px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                  <span class="text-[10px] font-mono text-emerald-300" x-text="job.id.substring(0,20)+'...'"></span>
+                  <span class="text-[10px] text-slate-500 uppercase" x-text="job.type"></span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-400" x-text="job.elapsed+'s'"></span>
+              </div>
+            </template>
+            <template x-for="job in queueStatus.queued" :key="job.id">
+              <div class="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                <span class="text-[10px] font-mono text-amber-300" x-text="job.id.substring(0,20)+'...'"></span>
+                <span class="text-[10px] text-slate-500 uppercase" x-text="job.type+' — bekliyor'"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div x-show="!queueStatus || (queueStatus.running.length === 0 && queueStatus.queued.length === 0)" class="text-center py-2">
+          <span class="text-[10px] text-slate-600 uppercase tracking-widest">Kuyruk Boş — Sistem Hazır</span>
+        </div>
       </div>
 
       <template x-if="analyticsData">
         <div class="space-y-8">
           <!-- Stats Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="glass-card p-6 rounded-2xl border border-slate-800 shadow-xl bg-gradient-to-br from-slate-900 to-slate-950 relative overflow-hidden group">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-2xl group-hover:bg-indigo-600/20 transition-all"></div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900 relative overflow-hidden">
               <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Toplam Video</div>
-              <div class="text-4xl font-black text-white" x-text="analyticsData.summary.total_renders"></div>
-              <div class="text-[10px] text-indigo-400 font-mono mt-2">v3.5 OTONOM DÖNGÜ</div>
+              <div class="text-3xl font-black text-white" x-text="analyticsData.summary.total_renders"></div>
+              <div class="text-[10px] text-indigo-400 font-mono mt-1">OTONOM DÖNGÜ</div>
             </div>
-            
-            <div class="glass-card p-6 rounded-2xl border border-slate-800 shadow-xl bg-gradient-to-br from-slate-900 to-slate-950 relative overflow-hidden group">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-600/10 rounded-full blur-2xl group-hover:bg-emerald-600/20 transition-all"></div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900 relative overflow-hidden">
               <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Başarı Oranı</div>
-              <div class="text-4xl font-black text-emerald-400" x-text="((analyticsData.summary.success_rate || 0) * 100).toFixed(1) + '%'"></div>
-              <div class="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                <div class="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000" :style="`width: ${(analyticsData.summary.success_rate || 0) * 100}%`"></div>
+              <div class="text-3xl font-black text-emerald-400" x-text="((analyticsData.summary.success_rate||0)*100).toFixed(1)+'%'"></div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-emerald-500 transition-all duration-1000" :style="`width:${(analyticsData.summary.success_rate||0)*100}%`"></div>
               </div>
             </div>
-
-            <div class="glass-card p-6 rounded-2xl border border-slate-800 shadow-xl bg-gradient-to-br from-slate-900 to-slate-950 relative overflow-hidden group">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl group-hover:bg-amber-600/20 transition-all"></div>
-              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ort. Render Süresi</div>
-              <div class="text-4xl font-black text-amber-400" x-text="(analyticsData.summary.avg_render_time / 60).toFixed(1) + ' dk'"></div>
-              <div class="text-[10px] text-slate-500 mt-2">İŞLEM BAŞINA OPTİMİZE SÜRE</div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ort. Süre</div>
+              <div class="text-3xl font-black text-amber-400" x-text="(analyticsData.summary.avg_render_time/60).toFixed(1)+' dk'"></div>
+              <div class="text-[10px] text-slate-600 mt-1">İŞLEM BAŞINA</div>
             </div>
-
-            <div class="glass-card p-6 rounded-2xl border border-slate-800 shadow-xl bg-gradient-to-br from-slate-900 to-slate-950 relative overflow-hidden group">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-all"></div>
-              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Hata Sayısı</div>
-              <div class="text-4xl font-black text-red-500" x-text="analyticsData.summary.failed_renders"></div>
-              <div class="text-[10px] text-slate-500 mt-2">KRİTİK DURUŞ ANALİZİ</div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Tahmini Maliyet</div>
+              <div class="text-3xl font-black text-violet-400" x-text="'$'+(analyticsData.cost_tracking?.total_estimated_usd||0).toFixed(3)"></div>
+              <div class="text-[10px] text-slate-600 mt-1">API TAHMİNİ</div>
             </div>
           </div>
 
-          <!-- Analysis Detail -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Module Distribution -->
-            <div class="glass-card p-8 rounded-3xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl">
-              <h2 class="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+          <!-- Chart + Module distribution -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Son 14 Gün
+              </h2>
+              <div class="h-48">
+                <canvas id="dailyRenderChart"></canvas>
+              </div>
+              <div x-show="!analyticsData.daily_history?.length" class="h-48 flex items-center justify-center -mt-48">
+                <span class="text-[10px] text-slate-600 uppercase tracking-widest">Henüz Veri Yok</span>
+              </div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                 <span class="w-2 h-2 bg-indigo-500 rounded-full"></span> Modül Dağılımı
               </h2>
-              <div class="space-y-6">
-                <div x-show="analyticsData.modules.yt_video">
-                  <div class="flex justify-between items-end mb-2">
-                    <span class="text-xs font-bold text-slate-300">Normal Video</span>
-                    <span class="text-xs font-mono text-indigo-400" x-text="analyticsData.modules.yt_video + ' Adet'"></span>
+              <div class="space-y-4">
+                <template x-for="[mod, label, color] in [['yt_video','Normal Video','indigo'],['bulletin','Haber Bülteni','red'],['product_review','Ürün İnceleme','amber']]" :key="mod">
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-xs text-slate-300" x-text="label"></span>
+                      <span class="text-xs font-mono" :class="`text-${color}-400`" x-text="(analyticsData.modules[mod]||0)+' Adet'"></span>
+                    </div>
+                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full" :class="`bg-${color}-500`" :style="`width:${((analyticsData.modules[mod]||0)/Math.max(analyticsData.summary.total_renders,1))*100}%`"></div>
+                    </div>
                   </div>
-                  <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-indigo-600 to-indigo-400" :style="`width: ${(analyticsData.modules.yt_video / analyticsData.summary.total_renders) * 100}%`"></div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error patterns + drilldown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Hata Analitiği
+              </h2>
+              <div class="space-y-2">
+                <template x-for="(count, error) in analyticsData.error_patterns" :key="error">
+                  <div class="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex justify-between hover:bg-red-500/10 transition-all cursor-pointer" @click="loadErrorDetails()">
+                    <span class="text-xs text-red-200 truncate pr-4" x-text="error"></span>
+                    <span class="shrink-0 px-2 py-0.5 bg-red-900/30 text-red-400 text-[10px] font-bold rounded-lg" x-text="count+' Kez'"></span>
                   </div>
-                </div>
-                <div x-show="analyticsData.modules.bulletin">
-                  <div class="flex justify-between items-end mb-2">
-                    <span class="text-xs font-bold text-slate-300">Haber Bülteni</span>
-                    <span class="text-xs font-mono text-red-400" x-text="analyticsData.modules.bulletin + ' Adet'"></span>
-                  </div>
-                  <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-red-600 to-red-400" :style="`width: ${(analyticsData.modules.bulletin / analyticsData.summary.total_renders) * 100}%`"></div>
-                  </div>
-                </div>
-                <div x-show="analyticsData.modules.product_review">
-                  <div class="flex justify-between items-end mb-2">
-                    <span class="text-xs font-bold text-slate-300">Ürün İnceleme</span>
-                    <span class="text-xs font-mono text-amber-400" x-text="analyticsData.modules.product_review + ' Adet'"></span>
-                  </div>
-                  <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-amber-600 to-amber-400" :style="`width: ${(analyticsData.modules.product_review / analyticsData.summary.total_renders) * 100}%`"></div>
-                  </div>
+                </template>
+                <div x-show="Object.keys(analyticsData.error_patterns).length===0" class="py-8 text-center">
+                  <span class="text-emerald-500 text-xs font-bold uppercase">✓ Sistem Stabil</span>
                 </div>
               </div>
             </div>
-
-            <!-- Error Patterns -->
-            <div class="glass-card p-8 rounded-3xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl">
-              <h2 class="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Hata Analitiği (Top 5)
-              </h2>
-              <div class="space-y-3">
-                <template x-for="(count, error) in analyticsData.error_patterns" :key="error">
-                  <div class="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between group hover:bg-red-500/10 transition-all">
-                    <span class="text-xs text-red-200 truncate pr-4" x-text="error"></span>
-                    <span class="shrink-0 px-2 py-0.5 bg-red-900/30 text-red-400 text-[10px] font-bold rounded-lg" x-text="count + ' Kez'"></span>
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <div class="flex justify-between mb-4">
+                <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Hata Detayları
+                </h2>
+                <button @click="loadErrorDetails()" class="text-[10px] text-slate-500 hover:text-white">Yenile</button>
+              </div>
+              <div class="space-y-2 max-h-56 overflow-y-auto">
+                <template x-for="err in errorDetails.slice(0,10)" :key="err.ts">
+                  <div class="p-2.5 bg-red-500/5 border border-red-500/10 rounded-lg">
+                    <div class="flex justify-between mb-1">
+                      <span class="text-[9px] font-bold uppercase text-slate-400" x-text="err.module||'unknown'"></span>
+                      <span class="text-[9px] font-mono text-slate-600" x-text="formatTs(err.ts)"></span>
+                    </div>
+                    <p class="text-[10px] text-red-200 truncate" x-text="err.error"></p>
+                    <span x-show="err.session_id" class="text-[9px] font-mono text-slate-600" x-text="err.session_id"></span>
                   </div>
                 </template>
-                <div x-show="Object.keys(analyticsData.error_patterns).length === 0" class="py-12 text-center">
-                  <span class="text-emerald-500 text-xs font-bold uppercase tracking-widest">✓ SİSTEM STABİL — HATA ANALİZİ TEMİZ</span>
+                <div x-show="errorDetails.length===0" class="py-6 text-center">
+                  <span class="text-[10px] text-slate-600 uppercase">Detaylı hata kaydı yok</span>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Cost breakdown -->
+          <template x-if="analyticsData.cost_tracking && Object.keys(analyticsData.cost_tracking.by_provider||{}).length>0">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-violet-500 rounded-full"></span> API Maliyet Dağılımı
+              </h2>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <template x-for="(cost, provider) in analyticsData.cost_tracking.by_provider" :key="provider">
+                  <div class="p-3 bg-violet-500/5 border border-violet-500/10 rounded-xl text-center">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-1" x-text="provider"></div>
+                    <div class="text-lg font-black text-violet-300" x-text="'$'+cost.toFixed(3)"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -3000,6 +3071,8 @@
              </div>
           </div>
         </div>
+      </div>
+    </div>
 
     <!-- ══ SOCIAL OTONOM PAGE ════════════════════════════════════════ -->
     <div x-show="view==='social-meta'" class="max-w-4xl mx-auto p-6">
@@ -3081,8 +3154,8 @@
         <h2 class="text-xl font-bold text-white mb-4">Meta Engine Ayarları</h2>
         
         <div class="mb-6">
-          <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('social_meta_prompt_label')"></label>
-          <textarea x-model="settings.SOCIAL_META_LLM_PROMPT" rows="3"
+          <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('social_meta_master_prompt_label')"></label>
+          <textarea x-model="settings.SOCIAL_META_MASTER_PROMPT" rows="3"
             class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500 resize-none"
             :placeholder="t('social_meta_prompt_placeholder')"></textarea>
           <p class="text-xs text-slate-500 mt-1" x-text="t('social_meta_prompt_hint')"></p>
@@ -3131,10 +3204,6 @@
         </div>
       </div>
     </div>
-      </div>
-    </div>
-
-    <!-- ══ BÜLTEN ══════════════════════════════════════════════════════ -->
 
     <!-- ══ BÜLTEN ══════════════════════════════════════════════════════ -->
     <div x-show="view==='bulletin'" class="p-6">

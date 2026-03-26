@@ -38,11 +38,17 @@ class BulletinRenderReq(BaseModel):
     preset_name: str
     video_style: Optional[str] = "automatic"
     auto_lang: Optional[str] = "Otomatik"
+    publish_youtube: bool = False
+    publish_instagram: bool = False
+    social_metadata: Optional[SocialMetaReq] = None
 
 class ProductReviewRenderReq(BaseModel):
     url: str
     product: Dict[str, Any]
     preset_name: Optional[str] = None
+    publish_youtube: bool = False
+    publish_instagram: bool = False
+    social_metadata: Optional[SocialMetaReq] = None
 
 class ProductReviewAutofillReq(BaseModel):
     url: str

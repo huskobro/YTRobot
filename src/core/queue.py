@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 import time
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from src.core.utils import _write_session, _read_session
 
@@ -86,6 +87,22 @@ class QueueManager:
                     await self._execute_job(job)
                     job.status = JobStatus.COMPLETED
                     print(f"  [Queue] Job completed: {job.id}")
+                    
+                    # --- Faz 4.3: Auto Social Media Post ---
+                    try:
+                        if job.data.get("publish_youtube") or job.data.get("publish_instagram"):
+                            from pipeline.social import social_poster
+                            # Video dosyasının konumunu belirle (session_id'ye göre)
+                            final_video_path = Path(f"sessions/{job.id}/final_video.mp4")
+                            if final_video_path.exists():
+                                meta = job.data.get("social_metadata", {})
+                                meta["publish_youtube"] = job.data.get("publish_youtube")
+                                meta["publish_instagram"] = job.data.get("publish_instagram")
+                                # Asenkron olarak paylaşımı başlat (beklemeye gerek yok, worker devam etsin)
+                                asyncio.create_task(social_poster.auto_publish(final_video_path, meta))
+                                print(f"  [Queue] Social media publishing triggered for {job.id}")
+                    except Exception as se:
+                        print(f"  [Queue] Social media trigger failed: {se}")
                 except Exception as e:
                     job.status = JobStatus.FAILED
                     job.error = str(e)

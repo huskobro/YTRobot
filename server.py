@@ -98,6 +98,7 @@ async def general_exception_handler(request, exc):
     )
 
 from starlette.middleware.gzip import GZipMiddleware
+from src.core.rate_limiter import RateLimiterMiddleware
 
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
@@ -108,6 +109,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(RateLimiterMiddleware, requests_per_minute=120, burst=20)
 
 # Mount Routers
 app.include_router(sessions_router)

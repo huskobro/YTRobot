@@ -4,6 +4,7 @@ import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from src.core.analytics import stats_manager
+from src.core.cache import api_cache
 from typing import Dict, Any
 
 router = APIRouter(tags=["analytics"])
@@ -12,7 +13,12 @@ router = APIRouter(tags=["analytics"])
 @router.get("/stats")
 async def get_dashboard_stats() -> Dict[str, Any]:
     try:
-        return stats_manager.get_stats()
+        cached = api_cache.get("stats")
+        if cached is not None:
+            return cached
+        result = stats_manager.get_stats()
+        api_cache.set("stats", result, ttl=15)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

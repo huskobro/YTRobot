@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from src.api.models.schemas import SettingsReq, PromptsReq, PresetReq
 from src.core.utils import _read_env, _write_env, _list_presets, PRESETS_DIR, PROMPTS_DIR
+from src.core.cache import api_cache
 
 router = APIRouter(prefix="/api", tags=["system"])
 logger = logging.getLogger("ytrobot.system")
@@ -35,12 +36,18 @@ async def search_settings(q: str = ""):
 
 @router.get("/settings")
 def get_settings():
+    cached = api_cache.get("settings")
+    if cached is not None:
+        return cached
     raw = _read_env()
-    return {k: _mask_value(k, v) for k, v in raw.items()}
+    result = {k: _mask_value(k, v) for k, v in raw.items()}
+    api_cache.set("settings", result, ttl=60)
+    return result
 
 @router.post("/settings")
 def update_settings(body: SettingsReq):
     _write_env(body.values)
+    api_cache.invalidate("settings")
     return {"ok": True}
 
 @router.get("/prompts")

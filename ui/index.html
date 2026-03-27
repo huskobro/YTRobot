@@ -158,7 +158,7 @@
     </div>
 
     <nav class="flex-1 px-3 py-4 space-y-1">
-      <button @click="view='dashboard'"
+      <button @click="view='dashboard'; loadDashboard()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📊</span> <span x-text="t('nav_dashboard')"></span>
@@ -452,6 +452,50 @@
           <span x-text="t('dashboard_new_video')"></span>
         </button>
       </div>
+
+      <!-- ── Analytics Widgets ──────────────────────────────────────────── -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+
+        <!-- A) Active Channel Card -->
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Aktif Kanal</h3>
+            <span class="text-xs px-2 py-1 bg-green-900/40 text-green-400 rounded-lg border border-green-700/50" x-text="activeChannelName || 'Varsayılan'"></span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-3">
+            <div class="text-center"><div class="text-2xl font-black text-white" x-text="dashboardStats.totalRenders || 0"></div><div class="text-[10px] text-slate-500 uppercase">Toplam</div></div>
+            <div class="text-center"><div class="text-2xl font-black text-green-400" x-text="dashboardStats.successCount || 0"></div><div class="text-[10px] text-slate-500 uppercase">Başarılı</div></div>
+            <div class="text-center"><div class="text-2xl font-black text-red-400" x-text="dashboardStats.failCount || 0"></div><div class="text-[10px] text-slate-500 uppercase">Başarısız</div></div>
+          </div>
+        </div>
+
+        <!-- B) Queue Status -->
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Kuyruk Durumu</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="text-center"><div class="text-2xl font-black text-blue-400" x-text="queueStatus?.running_count || 0"></div><div class="text-[10px] text-slate-500 uppercase">Çalışan</div></div>
+            <div class="text-center"><div class="text-2xl font-black text-yellow-400" x-text="(queueStatus?.queued || []).length"></div><div class="text-[10px] text-slate-500 uppercase">Sırada</div></div>
+          </div>
+        </div>
+
+        <!-- C) Recent Activity (full width) -->
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700 md:col-span-2 xl:col-span-1">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Son Aktivite</h3>
+          <div class="space-y-2" x-show="recentActivity.length > 0">
+            <template x-for="act in recentActivity" :key="act.session_id || act.ts">
+              <div class="flex items-center gap-3 py-2 border-b border-gray-700/50 last:border-0">
+                <div class="w-2 h-2 rounded-full shrink-0" :class="act.status === 'completed' ? 'bg-green-400' : act.status === 'failed' ? 'bg-red-400' : 'bg-yellow-400'"></div>
+                <div class="flex-1 text-sm text-slate-300 truncate" x-text="act.session_id || act.module || 'Video'"></div>
+                <div class="text-xs text-slate-500" x-text="act.module || ''"></div>
+                <div class="text-xs text-slate-600" x-text="act.duration ? (act.duration.toFixed(0) + 's') : ''"></div>
+              </div>
+            </template>
+          </div>
+          <div x-show="recentActivity.length === 0" class="text-sm text-slate-600 text-center py-4">Henüz aktivite yok</div>
+        </div>
+
+      </div>
+      <!-- ─────────────────────────────────────────────────────────────── -->
 
       <!-- Filter bar -->
       <div x-show="sessions.length>0" class="space-y-2 mb-5">

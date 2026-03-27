@@ -139,6 +139,8 @@ function app() {
     analyticsData: null,
     analyticsLoading: false,
     queueStatus: null,
+    dashboardStats: { totalRenders: 0, successCount: 0, failCount: 0 },
+    recentActivity: [],
     errorDetails: [],
     socialLog: [],
     thumbnailGenerating: false,
@@ -529,12 +531,16 @@ function app() {
         this.loadBulletinPresets();
         this.loadBulletinHistory();
         this.checkYouTubeStatus();
+        this.loadDashboard();
       } catch (e) {
         console.error("Initialization error:", e);
       }
-      
+
       this._timer = setInterval(() => {
         this.loadSessions();
+        if (this.view === 'dashboard') {
+          this.loadDashboard();
+        }
         if (this.view === 'analytics') {
           this.loadAnalytics();
           this.loadQueueStatus();
@@ -556,6 +562,21 @@ function app() {
     async loadQueueStatus() {
       try { this.queueStatus = await this.apiFetch('/api/stats/queue'); }
       catch(e) { console.warn('[queue] status error:', e); }
+    },
+
+    async loadDashboard() {
+      try {
+        const statsResp = await fetch('/api/stats');
+        if (statsResp.ok) {
+          const stats = await statsResp.json();
+          this.dashboardStats = { totalRenders: stats.total_renders || 0, successCount: stats.success_count || 0, failCount: stats.fail_count || 0 };
+          this.recentActivity = (stats.recent || []).slice(0, 5);
+        }
+      } catch(e) { console.warn('Dashboard load failed:', e); }
+      try {
+        const qResp = await fetch('/api/queue/status');
+        if (qResp.ok) this.queueStatus = await qResp.json();
+      } catch(e) {}
     },
 
     async loadErrorDetails() {

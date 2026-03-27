@@ -194,6 +194,18 @@ function app() {
     // ── SEO ──
     seoResult: null,
     seoLoading: false,
+    // ── YouTube Upload ──
+    uploadModal: false,
+    uploadForm: { channel_id: '', privacy: 'private', title: '', description: '', tags: '' },
+    uploadProgress: 0,
+    uploadStatus: '',
+    uploadYoutubeUrl: '',
+    // ── Editable Metadata ──
+    editableMetadata: { title: '', description: '', tags: '' },
+    metadataEditing: false,
+    // ── Analytics Channel Filter ──
+    analyticsChannel: '',
+    channelAnalytics: null,
     // ── Toast Bildirim Sistemi ──
     toasts: [],
     _toastIdCounter: 0,
@@ -681,6 +693,113 @@ function app() {
       if (score >= 70) return 'bg-green-600 text-green-100';
       if (score >= 40) return 'bg-yellow-600 text-yellow-100';
       return 'bg-red-600 text-red-100';
+    },
+
+    // ── YouTube Upload Methods ──
+    openUploadModal() {
+      const meta = this.currentSession?.metadata || {};
+      this.uploadForm = {
+        channel_id: this.activeChannelId || '_default',
+        privacy: 'private',
+        title: meta.title || this.currentSession?.topic || '',
+        description: meta.description || '',
+        tags: (meta.tags || []).join(', ')
+      };
+      this.uploadProgress = 0;
+      this.uploadStatus = '';
+      this.uploadYoutubeUrl = '';
+      this.uploadModal = true;
+    },
+    async uploadToYoutube() {
+      if (!this.currentSession?.id) return;
+      this.uploadStatus = 'uploading';
+      this.uploadProgress = 10;
+      try {
+        const resp = await fetch('/api/youtube/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: this.currentSession.id,
+            channel_id: this.uploadForm.channel_id,
+            privacy: this.uploadForm.privacy,
+            title: this.uploadForm.title,
+            description: this.uploadForm.description,
+            tags: this.uploadForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+          })
+        });
+        this.uploadProgress = 70;
+        if (resp.ok) {
+          const data = await resp.json();
+          this.uploadProgress = 100;
+          this.uploadStatus = 'success';
+          this.uploadYoutubeUrl = data.youtube_url || data.url || '';
+          this.showSuccess('YouTube\'a yüklendi!');
+          this.playSound('success');
+        } else {
+          const err = await resp.json();
+          this.uploadStatus = 'error';
+          this.showError(err.detail || err.error || 'Upload failed');
+        }
+      } catch(e) {
+        this.uploadStatus = 'error';
+        this.showError(e.message);
+      }
+    },
+
+    // ── Editable Metadata Methods ──
+    initEditableMetadata() {
+      const meta = this.currentSession?.metadata || {};
+      this.editableMetadata = {
+        title: meta.title || '',
+        description: meta.description || '',
+        tags: (meta.tags || []).join(', ')
+      };
+      this.metadataEditing = true;
+    },
+    async saveMetadata() {
+      if (!this.currentSession?.id) return;
+      try {
+        await fetch(`/api/sessions/${this.currentSession.id}/metadata`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: this.editableMetadata.title,
+            description: this.editableMetadata.description,
+            tags: this.editableMetadata.tags.split(',').map(t => t.trim()).filter(Boolean)
+          })
+        });
+        if (this.currentSession.metadata) {
+          this.currentSession.metadata.title = this.editableMetadata.title;
+          this.currentSession.metadata.description = this.editableMetadata.description;
+          this.currentSession.metadata.tags = this.editableMetadata.tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+        this.metadataEditing = false;
+        this.showSuccess('Metadata kaydedildi');
+      } catch(e) { this.showError('Metadata kaydedilemedi'); }
+    },
+    downloadVideo() {
+      if (!this.currentSession?.id) return;
+      window.open(`/api/sessions/${this.currentSession.id}/video?download=1`, '_blank');
+    },
+    saveAsTemplate() {
+      if (!this.currentSession?.id) return;
+      this.templateFromSessionId = this.currentSession.id;
+      this.createTemplateFromSession();
+    },
+
+    // ── Channel Analytics ──
+    async loadChannelAnalytics(channelId) {
+      if (!channelId) { this.channelAnalytics = null; return; }
+      try {
+        const data = await this.apiFetch(`/api/channels/${channelId}/analytics`);
+        this.channelAnalytics = data;
+      } catch(e) { console.warn('[channelAnalytics]', e); this.channelAnalytics = null; }
+    },
+
+    // ── TTS Provider Label ──
+    ttsProviderLabel() {
+      const labels = { speshaudio: 'Spes Audio', elevenlabs: 'ElevenLabs', openai: 'OpenAI TTS', google: 'Google TTS', qwen3: 'Qwen3 (Local)' };
+      return labels[this.settings.TTS_PROVIDER] || this.settings.TTS_PROVIDER || 'N/A';
     },
 
     // ── Toast API ──

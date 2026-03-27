@@ -74,12 +74,13 @@ class ChannelHub:
         slug = re.sub(r'[^a-z0-9_-]', '', name.lower().replace(' ', '-').replace('ı', 'i')
                        .replace('ö', 'o').replace('ü', 'u').replace('ş', 's')
                        .replace('ç', 'c').replace('ğ', 'g'))
-        return slug[:50] or "channel"
+        return slug[:64] or "channel"
 
     def _channel_dir(self, channel_id: str) -> Path:
-        # Sanitize to prevent path traversal
+        # Sanitize to prevent path traversal: only [a-z0-9_-] allowed
         safe_id = re.sub(r'[^a-z0-9_-]', '', channel_id)
-        if not safe_id or safe_id in ('.', '..'):
+        # Reject empty, dot-segments, and over-long IDs
+        if not safe_id or safe_id in ('.', '..') or len(safe_id) > 64:
             raise ValueError(f"Invalid channel ID: {channel_id}")
         return CHANNELS_DIR / safe_id
 

@@ -15,3 +15,12 @@ temp/
 tests/
 results/
 recordings/
+
+# OAuth tokens & platform credentials
+channels/*/platforms/*.json
+channels/*/branding/
+youtube_tokens/
+*.pickle
+
+# Runtime logs
+social_log.json

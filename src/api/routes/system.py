@@ -10,9 +10,19 @@ from src.core.utils import _read_env, _write_env, _list_presets, PRESETS_DIR, PR
 router = APIRouter(prefix="/api", tags=["system"])
 logger = logging.getLogger("ytrobot.system")
 
+
+def _mask_value(key: str, value: str) -> str:
+    """Mask sensitive values, showing only last 4 chars."""
+    SENSITIVE_SUFFIXES = ('_api_key', '_client_id', '_client_secret', '_voice_id')
+    if any(key.endswith(s) for s in SENSITIVE_SUFFIXES) and isinstance(value, str) and len(value) > 4:
+        return '****' + value[-4:]
+    return value
+
+
 @router.get("/settings")
 def get_settings():
-    return _read_env()
+    raw = _read_env()
+    return {k: _mask_value(k, v) for k, v in raw.items()}
 
 @router.post("/settings")
 def update_settings(body: SettingsReq):

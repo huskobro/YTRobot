@@ -1,8 +1,20 @@
+import re
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from src.core.channel_hub import channel_hub
 from pathlib import Path
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def _sanitize_channel_id(channel_id: str) -> str:
+    """Reject channel IDs that contain path traversal characters."""
+    safe = re.sub(r'[^a-z0-9_-]', '', channel_id)
+    if not safe or safe in ('.', '..') or len(safe) > 64:
+        raise HTTPException(400, f"Invalid channel ID: {channel_id}")
+    return safe
 
 router = APIRouter(prefix="/api/channels", tags=["channels"])
 
@@ -118,26 +130,29 @@ def get_channel_competitors(channel_id: str):
 
 @router.post("/{channel_id}/branding/logo")
 async def upload_logo(channel_id: str, file: UploadFile = File(...)):
-    ch = channel_hub.get_channel(channel_id)
+    safe_channel_id = _sanitize_channel_id(channel_id)
+    ch = channel_hub.get_channel(safe_channel_id)
     if not ch:
         raise HTTPException(404, f"Channel not found: {channel_id}")
 
-    # Validate file
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(400, "Only image files allowed")
+    # Validate MIME type — must be an image
+    if not file.content_type or file.content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(400, f"Only image files allowed (jpeg, png, gif, webp). Got: {file.content_type}")
 
     content = await file.read()
-    if len(content) > 5 * 1024 * 1024:  # 5MB max
-        raise HTTPException(400, "File too large (max 5MB)")
 
-    # Save logo
-    branding_dir = Path(f"channels/{channel_id}/branding")
+    # Validate file size
+    if len(content) > _MAX_LOGO_SIZE:
+        raise HTTPException(400, "File too large (max 5 MB)")
+
+    # Save logo — filename is hardcoded to logo.png to prevent filename injection
+    branding_dir = Path("channels") / safe_channel_id / "branding"
     branding_dir.mkdir(parents=True, exist_ok=True)
     logo_path = branding_dir / "logo.png"
     logo_path.write_bytes(content)
 
     # Update config
-    channel_hub.update_channel(channel_id, {
+    channel_hub.update_channel(safe_channel_id, {
         "branding": {"logo_path": str(logo_path)}
     })
 

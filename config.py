@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     speshaudio_stability: float = 0.3
     speshaudio_similarity_boost: float = 0.5
     speshaudio_style: float = 0.75
+    dubvoice_api_key: str = ""
+    dubvoice_voice_id: str = ""
 
     # Qwen3 TTS (Local)
     qwen3_model_id: str = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"

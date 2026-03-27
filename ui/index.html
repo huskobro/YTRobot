@@ -160,98 +160,55 @@
       </div>
     </div>
 
-    <nav class="flex-1 px-3 py-4 space-y-1" @click="sidebarOpen=false">
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" @click="sidebarOpen=false">
+      <!-- ── Ana İşlemler ── -->
+      <p class="px-3 pt-4 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_main')">Ana İşlemler</p>
+      <button @click="view='new-run'; mode='topic'; runError=''"
+              class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2.5 transition-all bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
+        <span>✨</span> <span x-text="t('nav_new_video')"></span>
+      </button>
       <button @click="view='dashboard'; loadDashboard()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📊</span> <span x-text="t('nav_dashboard')"></span>
       </button>
-      <button @click="view='new-run';wizardStep=1;mode='topic';runError=''"
+      <button @click="view='gallery'; loadGallery()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='new-run'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>✨</span> <span x-text="t('nav_new_video')"></span>
-      </button>
-      <button @click="loadSettings();view='settings'"
-              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>⚙️</span> <span x-text="t('nav_settings')"></span>
-      </button>
-      <button @click="loadSettings();view='api-keys'"
-              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='api-keys'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>🔑</span> <span x-text="t('nav_api_keys')"></span>
-      </button>
-      <button @click="view='bulletin';bulletinTab='sources';loadBulletinSources()"
-              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='bulletin'?'bg-red-700 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>📺</span> <span x-text="t('nav_bulletin')"></span>
-      </button>
-      <button @click="view='product-review'"
-              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='product-review'?'bg-amber-600 text-white shadow-md shadow-amber-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>🛒</span> <span x-text="t('nav_product_review')"></span>
+              :class="view==='gallery'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>🖼️</span> <span x-text="t('nav_gallery')"></span>
       </button>
 
+      <!-- ── İçerik ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_content')">İçerik</p>
       <button @click="view='channels'; loadChannels()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='channels'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📡</span> <span x-text="t('nav_channels')"></span>
       </button>
-
-      <!-- Divider -->
-      <div class="my-1 border-t border-slate-800/70"></div>
-
-      <button @click="loadSettings(); view='social-meta'; loadSocialLog()"
+      <button @click="view='content-planning'"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='social-meta'?'bg-violet-700 text-white shadow-md shadow-violet-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <span>📱</span> <span x-text="t('nav_social_meta')"></span>
+              :class="view==='content-planning'?'bg-teal-600 text-white shadow-md shadow-teal-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📅</span> <span x-text="t('nav_content_planning')"></span>
       </button>
+
+      <!-- ── Analiz ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_analytics')">Analiz</p>
       <button @click="view='analytics'; loadAnalytics(); loadQueueStatus(); loadErrorDetails()"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='analytics'?'bg-emerald-600 text-white shadow-md shadow-emerald-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📈</span> <span x-text="t('nav_analytics')"></span>
       </button>
-      <button @click="view='yt-analytics'; loadYtAnalytics()"
+
+      <!-- ── Sistem ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_system')">Sistem</p>
+      <button @click="loadSettings();view='settings'"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-              :class="view==='yt-analytics'?'bg-red-600 text-white shadow-md shadow-red-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        <span x-text="t('nav_yt_analytics')"></span>
+              :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>⚙️</span> <span x-text="t('nav_settings')"></span>
       </button>
-        <button @click="view='competitor'; loadCompetitor()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='competitor'?'bg-rose-700 text-white shadow-md shadow-rose-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>🎯</span> <span x-text="t('competitor_title')"></span>
-        </button>
-        <button @click="view='gallery'; loadGallery()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='gallery'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          <span>Galeri</span>
-        </button>
-
-        <!-- Divider -->
-        <div class="my-1 border-t border-slate-800/70"></div>
-
-        <button @click="view='ab-testing'; loadAbTests()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='ab-testing'?'bg-purple-600 text-white shadow-md shadow-purple-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>🧪</span> <span x-text="t('nav_ab_testing')"></span>
-        </button>
-        <button @click="view='calendar'; loadCalendarEntries()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='calendar'?'bg-teal-600 text-white shadow-md shadow-teal-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>📅</span> <span x-text="t('nav_calendar')"></span>
-        </button>
-        <button @click="view='playlists'; loadPlaylists()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='playlists'?'bg-cyan-600 text-white shadow-md shadow-cyan-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>📋</span> <span x-text="t('nav_playlists')"></span>
-        </button>
-        <button @click="view='templates'; loadTemplates()"
-                class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='templates'?'bg-orange-600 text-white shadow-md shadow-orange-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>📄</span> <span x-text="t('nav_templates')"></span>
-        </button>
     </nav>
 
     <!-- Active Channel Badge -->
@@ -742,6 +699,491 @@
             <span class="font-bold text-white" x-text="ytVideoDetail?.title"></span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ ONBOARDING WIZARD ════════════════════════════════════════════ -->
+    <div x-show="view==='onboarding'" class="p-6 max-w-3xl mx-auto">
+      <div class="onboarding-step" :key="onboardingStep">
+
+        <!-- Progress Dots -->
+        <div class="onboarding-progress">
+          <template x-for="i in 7" :key="i">
+            <div class="onboarding-dot"
+                 :class="i < onboardingStep ? 'completed' : (i === onboardingStep ? 'active' : '')"></div>
+          </template>
+        </div>
+
+        <!-- ── Step 1: Welcome + Language ── -->
+        <div x-show="onboardingStep === 1" class="text-center onboarding-step">
+          <div class="text-6xl mb-6">🎬</div>
+          <h1 class="text-3xl font-bold text-white mb-3" x-text="t('onb_welcome_title')"></h1>
+          <p class="text-slate-400 mb-8 max-w-md mx-auto" x-text="t('onb_welcome_desc')"></p>
+
+          <div class="flex gap-4 justify-center mb-8">
+            <button @click="setLang('tr')" class="onboarding-card px-8 py-4 text-center"
+                    :class="lang==='tr' ? 'selected' : ''">
+              <div class="text-2xl mb-2">🇹🇷</div>
+              <div class="font-bold">Türkçe</div>
+            </button>
+            <button @click="setLang('en')" class="onboarding-card px-8 py-4 text-center"
+                    :class="lang==='en' ? 'selected' : ''">
+              <div class="text-2xl mb-2">🇬🇧</div>
+              <div class="font-bold">English</div>
+            </button>
+          </div>
+
+          <div class="flex gap-3 justify-center">
+            <button @click="darkMode=!darkMode; applyTheme()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition-all">
+              <span x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'"></span>
+            </button>
+          </div>
+
+          <button @click="onboardingStep=2" class="mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+            <span x-text="t('onb_start')"></span> →
+          </button>
+        </div>
+
+        <!-- ── Step 2: Channel Creation ── -->
+        <div x-show="onboardingStep === 2" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📡</span> <span x-text="t('onb_channel_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_channel_desc')"></p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_channel_name')"></label>
+              <input x-model="onboardingData.channelName" type="text"
+                     class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white input-premium"
+                     :placeholder="t('onb_channel_name_ph')">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_channel_lang')"></label>
+              <select x-model="onboardingData.channelLang" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="ar">العربية</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_color_primary')"></label>
+                <input x-model="onboardingData.colorPrimary" type="color"
+                       class="w-full h-12 rounded-xl border border-slate-700 cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_color_secondary')"></label>
+                <input x-model="onboardingData.colorSecondary" type="color"
+                       class="w-full h-12 rounded-xl border border-slate-700 cursor-pointer">
+              </div>
+            </div>
+            <!-- Brand preview -->
+            <div class="rounded-xl p-4 flex items-center gap-4" :style="`background: ${onboardingData.colorPrimary}20; border: 1px solid ${onboardingData.colorPrimary}40`">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold" :style="`background: ${onboardingData.colorPrimary}; color: ${onboardingData.colorSecondary}`"
+                   x-text="(onboardingData.channelName || 'K')[0].toUpperCase()"></div>
+              <div>
+                <div class="font-bold text-white" x-text="onboardingData.channelName || t('onb_channel_name_ph')"></div>
+                <div class="text-xs text-slate-400" x-text="t('onb_brand_preview')"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="onboardingStep=1" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="onboardingStep=3" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 3: TTS Provider Selection ── -->
+        <div x-show="onboardingStep === 3" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🎤</span> <span x-text="t('onb_tts_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_tts_desc')"></p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Edge TTS -->
+            <button @click="onboardingData.ttsProvider='edge'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='edge' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🆓 Edge TTS</span>
+                <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_edge_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+              <button @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn mt-3" :class="onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' ? 'playing' : ''">▶</button>
+            </button>
+
+            <!-- Qwen3 -->
+            <button @click="onboardingData.ttsProvider='qwen3'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='qwen3' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🤖 Qwen3</span>
+                <span class="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full font-bold">LOCAL</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_qwen3_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- ElevenLabs -->
+            <button @click="onboardingData.ttsProvider='elevenlabs'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='elevenlabs' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🎙️ ElevenLabs</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_eleven_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- OpenAI -->
+            <button @click="onboardingData.ttsProvider='openai'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='openai' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🗣️ OpenAI</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_openai_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- SpeshAudio -->
+            <button @click="onboardingData.ttsProvider='speshaudio'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='speshaudio' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🎧 SpeshAudio</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_spesh_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- DubVoice -->
+            <button @click="onboardingData.ttsProvider='dubvoice'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='dubvoice' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🔊 DubVoice</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_dub_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★☆☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+          </div>
+
+          <!-- API Key input (if needed) -->
+          <div x-show="['elevenlabs','openai','speshaudio','dubvoice'].includes(onboardingData.ttsProvider)" class="mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+            <label class="block text-sm font-medium text-slate-300 mb-2">API Key</label>
+            <div class="flex gap-2">
+              <input x-model="onboardingData.ttsApiKey" type="password"
+                     class="flex-1 px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium"
+                     placeholder="sk-...">
+              <button @click="testOnboardingKey()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition-all btn-spring">
+                ✓ Test
+              </button>
+            </div>
+            <div x-show="onboardingData.ttsKeyStatus" class="mt-2 text-xs" :class="onboardingData.ttsKeyStatus==='ok' ? 'text-emerald-400' : 'text-red-400'"
+                 x-text="onboardingData.ttsKeyStatus==='ok' ? '✓ API key is valid!' : '✗ API key test failed'"></div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="onboardingStep=2" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="onboardingStep=4" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 4: Voice Selection ── -->
+        <div x-show="onboardingStep === 4" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🗣️</span> <span x-text="t('onb_voice_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_voice_desc')"></p>
+
+          <!-- Edge TTS voices -->
+          <div x-show="onboardingData.ttsProvider==='edge'" class="space-y-2">
+            <template x-for="v in onboardingEdgeVoices" :key="v.id">
+              <div class="flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                   :class="onboardingData.selectedVoice===v.id ? 'bg-indigo-600/20 border border-indigo-500/40' : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'"
+                   @click="onboardingData.selectedVoice=v.id">
+                <span class="text-lg" x-text="v.gender==='male' ? '👨' : '👩'"></span>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-white" x-text="v.name"></div>
+                  <div class="text-[10px] text-slate-500" x-text="v.id"></div>
+                </div>
+                <button @click.stop="playOnboardingSample(v.sample)" class="voice-play-btn" :class="onboardingAudioPlaying===v.sample ? 'playing' : ''">▶</button>
+                <div x-show="onboardingData.selectedVoice===v.id" class="text-indigo-400 font-bold text-sm">✓</div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Qwen3 voices -->
+          <div x-show="onboardingData.ttsProvider==='qwen3'" class="space-y-2">
+            <template x-for="v in onboardingQwen3Voices" :key="v.id">
+              <div class="flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                   :class="onboardingData.selectedVoice===v.id ? 'bg-indigo-600/20 border border-indigo-500/40' : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'"
+                   @click="onboardingData.selectedVoice=v.id">
+                <span class="text-lg" x-text="v.icon"></span>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-white" x-text="v.name"></div>
+                  <div class="text-[10px] text-slate-400" x-text="v.desc"></div>
+                </div>
+                <div x-show="onboardingData.selectedVoice===v.id" class="text-indigo-400 font-bold text-sm">✓</div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Other providers: simple voice message -->
+          <div x-show="!['edge','qwen3'].includes(onboardingData.ttsProvider)" class="p-6 text-center text-slate-400 bg-slate-800/30 rounded-xl">
+            <p x-text="t('onb_voice_api_note')"></p>
+          </div>
+
+          <!-- Speed slider -->
+          <div class="mt-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+              <span x-text="t('onb_speed')"></span>: <span x-text="onboardingData.ttsSpeed + 'x'" class="text-indigo-400 font-bold"></span>
+            </label>
+            <input x-model="onboardingData.ttsSpeed" type="range" min="0.5" max="2.0" step="0.1"
+                   class="w-full accent-indigo-500">
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="onboardingStep=3" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="onboardingStep=5" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 5: Visual Provider ── -->
+        <div x-show="onboardingStep === 5" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🖼️</span> <span x-text="t('onb_visual_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_visual_desc')"></p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <button @click="onboardingData.visualProvider='pexels'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='pexels' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">📹 Pexels</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_pexels_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE (API KEY)</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='zimage'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='zimage' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🎨 Z-Image</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_zimage_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='dalle'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='dalle' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🎭 DALL-E 3</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_dalle_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">OPENAI KEY</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='pollinations'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='pollinations' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🌐 Pollinations</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_poll_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE</span>
+            </button>
+          </div>
+
+          <!-- API Key for visual provider -->
+          <div x-show="['pexels','zimage','dalle'].includes(onboardingData.visualProvider)" class="mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+            <label class="block text-sm font-medium text-slate-300 mb-2"
+                   x-text="onboardingData.visualProvider==='dalle' ? 'OpenAI API Key' : (onboardingData.visualProvider==='zimage' ? 'KIE.AI API Key' : 'Pexels API Key')"></label>
+            <input x-model="onboardingData.visualApiKey" type="password"
+                   class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium">
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="onboardingStep=4" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="onboardingStep=6" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 6: Video Style ── -->
+        <div x-show="onboardingStep === 6" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🎬</span> <span x-text="t('onb_style_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_style_desc')"></p>
+
+          <!-- Resolution -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_resolution')"></label>
+            <div class="flex gap-3">
+              <button @click="onboardingData.resolution='1280x720'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='1280x720' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">720p</button>
+              <button @click="onboardingData.resolution='1920x1080'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='1920x1080' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">1080p</button>
+              <button @click="onboardingData.resolution='3840x2160'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='3840x2160' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">4K</button>
+            </div>
+          </div>
+
+          <!-- Subtitle Animation Preview -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_subtitle_anim')"></label>
+            <div class="grid grid-cols-5 gap-3 mb-3">
+              <template x-for="anim in ['hype','explosive','vibrant','minimal','none']" :key="anim">
+                <button @click="onboardingData.subtitleAnim=anim" class="py-2 px-1 rounded-xl text-xs font-bold text-center transition-all"
+                        :class="onboardingData.subtitleAnim===anim ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
+                        x-text="anim"></button>
+              </template>
+            </div>
+            <!-- Live CSS preview -->
+            <div class="sub-preview-box">
+              <span :class="'sub-preview-' + onboardingData.subtitleAnim"
+                    :key="onboardingData.subtitleAnim"
+                    x-text="lang==='tr' ? 'Merhaba Dünya' : 'Hello World'"></span>
+            </div>
+          </div>
+
+          <!-- Video Effect Preview -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_video_effect')"></label>
+            <div class="grid grid-cols-5 gap-3">
+              <template x-for="eff in ['none','vignette','warm','cool','cinematic']" :key="eff">
+                <div @click="onboardingData.videoEffect=eff" class="effect-preview-card"
+                     :class="onboardingData.videoEffect===eff ? 'selected' : ''">
+                  <img :src="'/samples/effects/' + eff + '.jpg'" :alt="eff" class="w-full h-16 object-cover rounded-lg">
+                  <div class="text-[10px] text-center mt-1 font-bold" :class="onboardingData.videoEffect===eff ? 'text-indigo-400' : 'text-slate-500'" x-text="eff"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Font Selection -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_font')"></label>
+            <div class="grid grid-cols-4 gap-3">
+              <template x-for="f in [{id:'bebas',family:'Bebas Neue'},{id:'roboto',family:'Roboto'},{id:'montserrat',family:'Montserrat'},{id:'oswald',family:'Oswald'},{id:'inter',family:'Inter'},{id:'sans',family:'sans-serif'},{id:'serif',family:'serif'}]" :key="f.id">
+                <div @click="onboardingData.subtitleFont=f.id" class="font-preview-card"
+                     :class="onboardingData.subtitleFont===f.id ? 'selected' : ''">
+                  <div class="text-2xl font-bold mb-1" :style="'font-family:' + f.family">Aa</div>
+                  <div class="text-[10px] text-slate-500" x-text="f.id"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Composer -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_composer')"></label>
+            <div class="flex gap-3">
+              <button @click="onboardingData.composer='moviepy'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.composer==='moviepy' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">
+                MoviePy <span class="text-[10px] opacity-60">(<span x-text="t('onb_simple')"></span>)</span>
+              </button>
+              <button @click="onboardingData.composer='remotion'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.composer==='remotion' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">
+                Remotion <span class="text-[10px] opacity-60">(<span x-text="t('onb_advanced')"></span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="onboardingStep=5" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="onboardingStep=7" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 7: Summary & Complete ── -->
+        <div x-show="onboardingStep === 7" class="onboarding-step text-center">
+          <div class="text-5xl mb-4">✅</div>
+          <h2 class="text-2xl font-bold text-white mb-2" x-text="t('onb_complete_title')"></h2>
+          <p class="text-slate-400 mb-8" x-text="t('onb_complete_desc')"></p>
+
+          <!-- Summary cards -->
+          <div class="space-y-3 text-left max-w-md mx-auto mb-8">
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-xl">📡</span>
+              <div>
+                <div class="text-xs text-slate-500" x-text="t('onb_summary_channel')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.channelName || 'Varsayılan Kanal'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-xl">🎤</span>
+              <div>
+                <div class="text-xs text-slate-500" x-text="t('onb_summary_tts')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.ttsProvider + ' → ' + (onboardingData.selectedVoice || 'default')"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-xl">🖼️</span>
+              <div>
+                <div class="text-xs text-slate-500" x-text="t('onb_summary_visual')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.visualProvider"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-xl">🎬</span>
+              <div>
+                <div class="text-xs text-slate-500" x-text="t('onb_summary_style')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.resolution + ' / ' + onboardingData.subtitleAnim + ' / ' + onboardingData.composer"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 max-w-sm mx-auto">
+            <button @click="completeOnboarding('new-run')" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring text-lg">
+              🎬 <span x-text="t('onb_create_first')"></span>
+            </button>
+            <button @click="completeOnboarding('dashboard')" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition-all">
+              📊 <span x-text="t('onb_go_dashboard')"></span>
+            </button>
+          </div>
+
+          <button @click="onboardingStep=6" class="mt-4 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+            ← <span x-text="t('onb_back')"></span>
+          </button>
+        </div>
+
       </div>
     </div>
 

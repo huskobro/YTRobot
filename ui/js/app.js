@@ -229,6 +229,42 @@ function app() {
     newSecureValue: '',
     wizardStep: 1,
     wizardMaxSteps: 3,
+    // ── Onboarding ──
+    onboardingStep: 1,
+    onboardingAudioPlaying: '',
+    _onboardingAudio: null,
+    onboardingData: {
+      channelName: '', channelLang: 'tr',
+      colorPrimary: '#6366f1', colorSecondary: '#ffffff',
+      ttsProvider: 'edge', ttsApiKey: '', ttsKeyStatus: '',
+      selectedVoice: 'tr-TR-AhmetNeural', ttsSpeed: 1.0,
+      visualProvider: 'pexels', visualApiKey: '',
+      resolution: '1920x1080', subtitleAnim: 'hype',
+      videoEffect: 'none', subtitleFont: 'bebas', composer: 'remotion',
+    },
+    onboardingEdgeVoices: [
+      { id: 'tr-TR-AhmetNeural', name: 'Ahmet (TR)', gender: 'male', sample: '/samples/audio/edge_tr_ahmet.mp3' },
+      { id: 'tr-TR-EmelNeural', name: 'Emel (TR)', gender: 'female', sample: '/samples/audio/edge_tr_emel.mp3' },
+      { id: 'en-US-GuyNeural', name: 'Guy (EN-US)', gender: 'male', sample: '/samples/audio/edge_en_guy.mp3' },
+      { id: 'en-US-JennyNeural', name: 'Jenny (EN-US)', gender: 'female', sample: '/samples/audio/edge_en_jenny.mp3' },
+      { id: 'en-GB-RyanNeural', name: 'Ryan (EN-GB)', gender: 'male', sample: '/samples/audio/edge_en_ryan.mp3' },
+      { id: 'de-DE-ConradNeural', name: 'Conrad (DE)', gender: 'male', sample: '/samples/audio/edge_de_conrad.mp3' },
+      { id: 'fr-FR-HenriNeural', name: 'Henri (FR)', gender: 'male', sample: '/samples/audio/edge_fr_henri.mp3' },
+      { id: 'es-ES-AlvaroNeural', name: 'Alvaro (ES)', gender: 'male', sample: '/samples/audio/edge_es_alvaro.mp3' },
+      { id: 'ja-JP-KeitaNeural', name: 'Keita (JA)', gender: 'male', sample: '/samples/audio/edge_ja_keita.mp3' },
+      { id: 'ar-SA-HamedNeural', name: 'Hamed (AR)', gender: 'male', sample: '/samples/audio/edge_ar_hamed.mp3' },
+    ],
+    onboardingQwen3Voices: [
+      { id: 'Vivian', name: 'Vivian', icon: '👩', desc: 'Young, energetic female' },
+      { id: 'Serena', name: 'Serena', icon: '👩', desc: 'Calm, mature female' },
+      { id: 'Uncle_Fu', name: 'Uncle Fu', icon: '👴', desc: 'Wise elderly male' },
+      { id: 'Dylan', name: 'Dylan', icon: '👨', desc: 'Young male' },
+      { id: 'Eric', name: 'Eric', icon: '👨', desc: 'Mid-age male' },
+      { id: 'Ryan', name: 'Ryan', icon: '👨', desc: 'Energetic male' },
+      { id: 'Aiden', name: 'Aiden', icon: '👦', desc: 'Young boy' },
+      { id: 'Ono_Anna', name: 'Ono Anna', icon: '👩', desc: 'Japanese accent female' },
+      { id: 'Sohee', name: 'Sohee', icon: '👩', desc: 'Korean accent female' },
+    ],
     showCommandPalette: false,
     commandQuery: '',
     selectedCommandIndex: 0,
@@ -380,6 +416,82 @@ function app() {
       } else if (e.key === 'Escape') {
         this.showCommandPalette = false;
       }
+    },
+
+    // ── Onboarding Methods ──
+    playOnboardingSample(url) {
+      if (this._onboardingAudio) { this._onboardingAudio.pause(); this._onboardingAudio = null; }
+      if (this.onboardingAudioPlaying === url) { this.onboardingAudioPlaying = ''; return; }
+      this.onboardingAudioPlaying = url;
+      this._onboardingAudio = new Audio(url);
+      this._onboardingAudio.play().catch(() => {});
+      this._onboardingAudio.onended = () => { this.onboardingAudioPlaying = ''; };
+    },
+
+    async testOnboardingKey() {
+      const prov = this.onboardingData.ttsProvider;
+      const key = this.onboardingData.ttsApiKey;
+      if (!key) return;
+      try {
+        const r = await fetch(`/api/test-key/${prov}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({api_key: key}) });
+        this.onboardingData.ttsKeyStatus = r.ok ? 'ok' : 'fail';
+      } catch { this.onboardingData.ttsKeyStatus = 'fail'; }
+    },
+
+    async completeOnboarding(nextView) {
+      // Save all settings to backend
+      const d = this.onboardingData;
+      const settingsPayload = {
+        TTS_PROVIDER: d.ttsProvider,
+        TTS_SPEED: String(d.ttsSpeed),
+        VISUALS_PROVIDER: d.visualProvider,
+        VIDEO_RESOLUTION: d.resolution,
+        COMPOSER_PROVIDER: d.composer,
+        REMOTION_SUBTITLE_ANIMATION: d.subtitleAnim,
+        REMOTION_VIDEO_EFFECT: d.videoEffect,
+        REMOTION_SUBTITLE_FONT: d.subtitleFont,
+      };
+      // Set voice based on provider
+      if (d.ttsProvider === 'edge') settingsPayload.EDGE_TTS_VOICE = d.selectedVoice;
+      else if (d.ttsProvider === 'qwen3') settingsPayload.QWEN3_SPEAKER = d.selectedVoice;
+      // Set API keys if provided
+      if (d.ttsApiKey) {
+        if (d.ttsProvider === 'elevenlabs') settingsPayload.ELEVENLABS_API_KEY = d.ttsApiKey;
+        else if (d.ttsProvider === 'openai') settingsPayload.OPENAI_API_KEY = d.ttsApiKey;
+        else if (d.ttsProvider === 'speshaudio') settingsPayload.SPESHAUDIO_API_KEY = d.ttsApiKey;
+        else if (d.ttsProvider === 'dubvoice') settingsPayload.DUBVOICE_API_KEY = d.ttsApiKey;
+      }
+      if (d.visualApiKey) {
+        if (d.visualProvider === 'pexels') settingsPayload.PEXELS_API_KEY = d.visualApiKey;
+        else if (d.visualProvider === 'zimage') settingsPayload.KIEAI_API_KEY = d.visualApiKey;
+        else if (d.visualProvider === 'dalle') settingsPayload.OPENAI_API_KEY = d.visualApiKey;
+      }
+      try {
+        await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(settingsPayload) });
+      } catch(e) { console.warn('Settings save error:', e); }
+
+      // Create channel if name provided
+      if (d.channelName) {
+        try {
+          await fetch('/api/channels', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+            name: d.channelName, language: d.channelLang,
+            branding: { color_primary: d.colorPrimary, color_secondary: d.colorSecondary, thumbnail_template: 'classic' }
+          })});
+          await this.loadChannels();
+        } catch(e) { console.warn('Channel create error:', e); }
+      }
+
+      localStorage.setItem('ytrobot-onboarding-done', '1');
+      this.playSound('click');
+      this.view = nextView;
+      if (nextView === 'new-run') { this.mode = 'topic'; this.runError = ''; }
+      if (nextView === 'dashboard') { this.loadSessions(); }
+    },
+
+    resetOnboarding() {
+      localStorage.removeItem('ytrobot-onboarding-done');
+      this.onboardingStep = 1;
+      this.view = 'onboarding';
     },
 
     // ── Video Preview ──
@@ -1232,6 +1344,11 @@ function app() {
           this.toggleCommandPalette();
         }
       });
+
+      // 1b. Check if first run → show onboarding
+      if (!localStorage.getItem('ytrobot-onboarding-done')) {
+        this.view = 'onboarding';
+      }
 
       // 2. Load Data (Parallel & Fault Tolerant)
       console.log("Initializing YTRobot data...");

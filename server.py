@@ -154,6 +154,8 @@ Path("sessions").mkdir(exist_ok=True)
 app.mount("/sessions", StaticFiles(directory="sessions"), name="sessions")
 app.mount("/css", StaticFiles(directory="ui/css"), name="css")
 app.mount("/js", StaticFiles(directory="ui/js"), name="js")
+Path("ui/samples").mkdir(parents=True, exist_ok=True)
+app.mount("/samples", StaticFiles(directory="ui/samples"), name="samples")
 
 # ── Log Streaming ────────────────────────────────────────────────────────────
 

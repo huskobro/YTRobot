@@ -1,11 +1,12 @@
 import os
 import json
 import logging
+import tempfile
 import urllib.request as urllib_req
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from src.api.models.schemas import SettingsReq, PromptsReq, PresetReq
 from src.core.utils import _read_env, _write_env, _list_presets, PRESETS_DIR, PROMPTS_DIR
@@ -294,7 +295,93 @@ def cleanup_system():
                     logger.warning(f"Cleanup failed for {f}: {e}")
     
     return {
-        "ok": True, 
+        "ok": True,
         "message": f"{counts['deleted']} dosya ve klasör temizlendi. {counts['size'] // 1024} KB alan açıldı.",
         "stats": counts
     }
+
+
+# ── TTS Preview ──────────────────────────────────────────────────────────────
+
+class TTSPreviewReq(BaseModel):
+    provider: str = "edge"
+    voice: str = "tr-TR-AhmetNeural"
+    text: str = ""
+
+
+@router.post("/tts/preview")
+async def tts_preview(body: TTSPreviewReq):
+    """Generate a short TTS audio preview and return it as audio/mpeg."""
+    text = body.text.strip() if body.text else ""
+    if not text:
+        text = "Merhaba, bu bir ses önizlemesidir."
+    # Limit text to 200 characters
+    if len(text) > 200:
+        text = text[:200]
+
+    provider = body.provider.lower()
+
+    if provider == "edge":
+        try:
+            import edge_tts
+        except ImportError:
+            raise HTTPException(500, "edge-tts paketi yüklü değil. pip install edge-tts")
+
+        tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+
+        try:
+            communicate = edge_tts.Communicate(text, body.voice)
+            await communicate.save(tmp_path)
+        except Exception as e:
+            logger.error(f"edge-tts preview failed: {e}")
+            # Clean up on error
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise HTTPException(500, f"TTS önizleme başarısız: {e}")
+
+        def _stream_and_cleanup():
+            try:
+                with open(tmp_path, "rb") as f:
+                    yield from iter(lambda: f.read(8192), b"")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+        return StreamingResponse(
+            _stream_and_cleanup(),
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "inline; filename=preview.mp3"},
+        )
+
+    elif provider == "elevenlabs":
+        from config import Settings
+        cfg = Settings()
+        key = os.environ.get("ELEVENLABS_API_KEY") or getattr(cfg, "elevenlabs_api_key", "")
+        if not key:
+            raise HTTPException(400, "ElevenLabs API key yapılandırılmamış")
+        raise HTTPException(501, "ElevenLabs preview henüz desteklenmiyor. Edge TTS kullanın.")
+
+    elif provider == "speshaudio":
+        from config import Settings
+        cfg = Settings()
+        key = os.environ.get("SPESHAUDIO_API_KEY") or getattr(cfg, "speshaudio_api_key", "")
+        if not key:
+            raise HTTPException(400, "SpeshAudio API key yapılandırılmamış")
+        raise HTTPException(501, "SpeshAudio preview henüz desteklenmiyor. Edge TTS kullanın.")
+
+    elif provider == "openai":
+        from config import Settings
+        cfg = Settings()
+        key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+        if not key:
+            raise HTTPException(400, "OpenAI API key yapılandırılmamış")
+        raise HTTPException(501, "OpenAI TTS preview henüz desteklenmiyor. Edge TTS kullanın.")
+
+    else:
+        raise HTTPException(400, f"Bilinmeyen TTS provider: {provider}")

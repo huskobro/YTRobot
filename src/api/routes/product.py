@@ -81,8 +81,19 @@ async def run_product_review_task(rid: str, data: dict):
     await asyncio.to_thread(_do_product_render_sync, rid, data)
 
 def _do_product_render_sync(rid: str, data: dict):
-    from config import settings
-    
+    from config import reload_settings, settings
+    reload_settings()
+    # Apply per-channel settings overrides
+    channel_settings = data.get("channel_settings", {})
+    if channel_settings:
+        for k, v in channel_settings.items():
+            attr = k.lower()
+            if hasattr(settings, attr):
+                try:
+                    setattr(settings, attr, type(getattr(settings, attr))(v))
+                except (ValueError, TypeError):
+                    pass
+
     body_data = data.get("body", {})
     product = body_data.get("product", {})
     lang = body_data.get("lang", "tr")
@@ -260,9 +271,23 @@ async def start_product_review_render(body: ProductReviewRenderReq):
     with _product_review_jobs_lock:
         _product_review_jobs[rid] = {"id": rid, "status": "queued", "started_at": time.time()}
 
+    # Load active channel settings for product review rendering
+    channel_id = "_default"
+    channel_settings = {}
+    try:
+        from src.core.channel_hub import channel_hub
+        ch = channel_hub.get_active_channel()
+        if ch:
+            channel_id = ch.get("id", "_default")
+            channel_settings = channel_hub.get_channel_settings(channel_id)
+    except Exception:
+        pass
+
     await queue_manager.add_job("product_review", {
         "rid": rid,
-        "body": body.model_dump()
+        "body": body.model_dump(),
+        "channel_id": channel_id,
+        "channel_settings": channel_settings,
     }, rid)
     
     return {"id": rid, "status": "queued"}

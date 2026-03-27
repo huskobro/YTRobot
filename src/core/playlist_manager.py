@@ -82,7 +82,7 @@ class PlaylistManager:
         return False
 
     def sync_to_youtube(self, playlist_id: str) -> dict:
-        """Create or sync playlist to YouTube. Returns YouTube playlist info."""
+        """Create or sync playlist to YouTube, including adding all videos."""
         playlist = self.get(playlist_id)
         if not playlist:
             return None
@@ -93,6 +93,7 @@ class PlaylistManager:
             if not service:
                 return {"error": "YouTube not authenticated"}
 
+            # Create playlist on YouTube if not yet created
             if not playlist.get("youtube_playlist_id"):
                 body = {
                     "snippet": {"title": playlist["name"], "description": playlist.get("description", "")},
@@ -102,8 +103,71 @@ class PlaylistManager:
                 playlist["youtube_playlist_id"] = yt_pl["id"]
                 self._save()
 
-            return {"youtube_playlist_id": playlist["youtube_playlist_id"], "status": "synced"}
+            # Sync videos: add any videos that have a youtube_video_id
+            yt_playlist_id = playlist["youtube_playlist_id"]
+            added = 0
+            for video in playlist.get("videos", []):
+                yt_vid_id = video.get("youtube_video_id", "")
+                if yt_vid_id and not video.get("youtube_playlist_item_id"):
+                    result = self._add_video_to_youtube_playlist(service, yt_playlist_id, yt_vid_id)
+                    if result:
+                        video["youtube_playlist_item_id"] = result
+                        added += 1
+            if added:
+                self._save()
+
+            return {"youtube_playlist_id": yt_playlist_id, "status": "synced", "videos_added": added}
         except Exception as e:
             return {"error": str(e)}
+
+    def _add_video_to_youtube_playlist(self, service, playlist_id: str, video_id: str) -> str | None:
+        """Add a single video to a YouTube playlist. Returns playlistItem ID or None."""
+        try:
+            result = service.playlistItems().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "playlistId": playlist_id,
+                        "resourceId": {"kind": "youtube#video", "videoId": video_id}
+                    }
+                }
+            ).execute()
+            logger.info(f"[Playlist] Added video {video_id} to YouTube playlist {playlist_id}")
+            return result.get("id", "")
+        except Exception as e:
+            logger.error(f"[Playlist] Failed to add video {video_id} to playlist: {e}")
+            return None
+
+    def add_video_to_youtube(self, playlist_id: str, youtube_video_id: str) -> dict:
+        """Add a video to both local playlist and YouTube playlist."""
+        playlist = self.get(playlist_id)
+        if not playlist:
+            return {"error": "Playlist not found"}
+
+        # Update local video entry with youtube_video_id
+        for video in playlist.get("videos", []):
+            if not video.get("youtube_video_id"):
+                video["youtube_video_id"] = youtube_video_id
+                break
+
+        # If playlist is synced to YouTube, add video there too
+        yt_playlist_id = playlist.get("youtube_playlist_id")
+        if yt_playlist_id:
+            try:
+                from src.core.youtube_auth import youtube_auth
+                channel_id = playlist.get("channel_id", "_default")
+                service = youtube_auth.get_service(channel_id)
+                if service:
+                    item_id = self._add_video_to_youtube_playlist(service, yt_playlist_id, youtube_video_id)
+                    if item_id:
+                        for video in playlist.get("videos", []):
+                            if video.get("youtube_video_id") == youtube_video_id:
+                                video["youtube_playlist_item_id"] = item_id
+                                break
+            except Exception as e:
+                logger.error(f"[Playlist] YouTube add failed: {e}")
+
+        self._save()
+        return {"status": "ok", "youtube_playlist_id": yt_playlist_id}
 
 playlist_manager = PlaylistManager()

@@ -91,11 +91,8 @@ class SocialPoster:
         except Exception as e:
             logger.error(f"[YouTube] Real upload failed: {e}")
 
-        # Fallback to draft mode
-        if not self.youtube_enabled:
-            result = {"status": "success", "platform": "youtube", "mode": "draft", "url": "local-draft-saved"}
-        else:
-            result = {"status": "success", "platform": "youtube", "id": "mock-yt-123"}
+        # Upload failed — save as draft
+        result = {"status": "error", "platform": "youtube", "mode": "draft", "message": "Upload failed, saved locally"}
         self._log_publish("youtube", result.get("status", "unknown"),
                           video_path, metadata)
         return result
@@ -108,12 +105,8 @@ class SocialPoster:
             result = {"status": "success", "platform": "instagram",
                       "mode": "draft", "url": "local-draft-saved"}
         else:
-            try:
-                result = {"status": "success", "platform": "instagram",
-                          "id": "mock-ig-456"}
-            except Exception as e:
-                logger.error(f"[Instagram] Upload failed: {e}")
-                result = {"status": "error", "message": str(e)}
+            logger.warning("[Instagram] Upload API not yet implemented.")
+            result = {"status": "error", "platform": "instagram", "message": "Instagram upload not implemented"}
         self._log_publish("instagram", result.get("status", "unknown"),
                           video_path, metadata)
         return result

@@ -263,19 +263,20 @@ class QueueManager:
                 logger.error(f"  [Queue] Worker-{worker_id} loop error: {e}")
                 await asyncio.sleep(1)
 
+    _job_handlers: dict = {}
+
+    @classmethod
+    def register_handler(cls, job_type: str, handler):
+        """Register an async handler for a job type. Called during app startup."""
+        cls._job_handlers[job_type] = handler
+        logger.info(f"  [Queue] Registered handler for '{job_type}'")
+
     async def _execute_job(self, job: VideoJob):
-        """Asıl üretim mantığı burada çağrılır."""
-        if job.type == "yt_video":
-            from src.api.routes.sessions import run_pipeline_task
-            await run_pipeline_task(job.id, job.data, job.type)
-        elif job.type == "bulletin":
-            from src.api.routes.bulletin import run_bulletin_task
-            await run_bulletin_task(job.id, job.data)
-        elif job.type == "product_review":
-            from src.api.routes.product import run_product_review_task
-            await run_product_review_task(job.id, job.data)
-        else:
-            raise ValueError(f"Unknown job type: {job.type}")
+        """Execute job via registered handler (no circular imports)."""
+        handler = self._job_handlers.get(job.type)
+        if handler is None:
+            raise ValueError(f"No handler registered for job type: {job.type}")
+        await handler(job.id, job.data)
 
 # Singleton Instance
 queue_manager = QueueManager()

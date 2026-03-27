@@ -7,6 +7,14 @@
       "language": "tr",
       "created_at": "2026-03-27T00:00:00Z",
       "active": true
+    },
+    {
+      "id": "boxingboxyt",
+      "name": "BoxingBoxYT",
+      "slug": "boxingboxyt",
+      "language": "tr",
+      "created_at": "2026-03-27T17:45:53Z",
+      "active": true
     }
   ],
   "active_channel": "_default"

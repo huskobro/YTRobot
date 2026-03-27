@@ -1,0 +1,221 @@
+{# View: gallery #}
+    <div x-show="view==='gallery'" class="p-6">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-3xl font-black text-white tracking-tight" x-text="t('gallery_title') || 'Video Galerisi'"></h1>
+          <div class="flex gap-2 items-center">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" x-model="gallerySearch" @input.debounce.300ms="loadGallery()" :placeholder="t('gallery_search') || 'Ara...'" class="bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-sm text-white w-56 focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Pill Filters ── -->
+        <div class="flex flex-wrap gap-2 mb-5">
+          <!-- Status pills -->
+          <button @click="galleryFilter=''; loadGallery()"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryFilter==='' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-slate-500'"
+                  x-text="t('gallery_all') || 'Tümü'"></button>
+          <button @click="galleryFilter='completed'; loadGallery()"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryFilter==='completed' ? 'bg-green-600 text-white border-green-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-green-600/50'">
+            ✓ <span x-text="t('gallery_completed') || 'Tamamlanan'"></span></button>
+          <button @click="galleryFilter='failed'; loadGallery()"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryFilter==='failed' ? 'bg-red-600 text-white border-red-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-red-600/50'">
+            ✗ <span x-text="t('gallery_failed') || 'Başarısız'"></span></button>
+          <button @click="galleryFilter='unknown'; loadGallery()"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryFilter==='unknown' ? 'bg-gray-600 text-white border-gray-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-gray-500/50'">
+            ? Bilinmeyen</button>
+
+          <span class="w-px h-6 bg-slate-700 self-center mx-1"></span>
+
+          <!-- Bulk mode toggle -->
+          <button @click="galleryBulkMode = !galleryBulkMode; if(!galleryBulkMode) galleryBulkSelected = []"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryBulkMode ? 'bg-orange-600 text-white border-orange-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-orange-600/50'">
+            ☑ Toplu İşlem</button>
+          <template x-if="galleryBulkMode">
+            <div class="flex gap-1 items-center">
+              <button @click="selectAllGalleryByStatus('failed')"
+                      class="px-2 py-1 text-[10px] font-bold rounded-full bg-red-900/50 text-red-400 border border-red-700/50 hover:bg-red-800/50 transition-all">
+                Başarısızları Seç</button>
+              <button @click="galleryBulkSelected = galleryVideos.map(v => v.session_id)"
+                      class="px-2 py-1 text-[10px] font-bold rounded-full bg-slate-700/50 text-slate-300 border border-slate-600 hover:bg-slate-600/50 transition-all">
+                Tümünü Seç</button>
+              <button @click="galleryBulkSelected = []"
+                      class="px-2 py-1 text-[10px] font-bold rounded-full bg-slate-700/50 text-slate-300 border border-slate-600 hover:bg-slate-600/50 transition-all">
+                Temizle</button>
+            </div>
+          </template>
+
+          <span class="w-px h-6 bg-slate-700 self-center mx-1"></span>
+
+          <!-- Module pills -->
+          <button @click="galleryModuleFilter=''; loadGallery()"
+                  class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                  :class="galleryModuleFilter==='' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white hover:border-indigo-600/50'"
+                  x-text="t('gallery_all_modules') || 'Tüm Modüller'"></button>
+          <template x-for="m in (galleryAvailableFilters.modules || [])" :key="m">
+            <button @click="galleryModuleFilter=m; loadGallery()"
+                    class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                    :class="galleryModuleFilter===m
+                      ? (m==='bulletin' ? 'bg-red-600 text-white border-red-500' : m==='product_review' ? 'bg-amber-600 text-white border-amber-500' : 'bg-indigo-600 text-white border-indigo-500')
+                      : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white'">
+              <span x-text="m === 'yt_video' ? '🎬 Video' : m === 'bulletin' ? '📺 Bülten' : m === 'product_review' ? '🛒 İnceleme' : m"></span>
+            </button>
+          </template>
+
+          <!-- Channel pills (if multiple) -->
+          <template x-if="(galleryAvailableFilters.channels || []).length > 1">
+            <div class="flex gap-2 items-center">
+              <span class="w-px h-6 bg-slate-700 self-center mx-1"></span>
+              <button @click="galleryChannelFilter=''; loadGallery()"
+                      class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                      :class="galleryChannelFilter==='' ? 'bg-cyan-600 text-white border-cyan-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white'"
+                      x-text="t('gallery_all_channels') || 'Tüm Kanallar'"></button>
+              <template x-for="ch in (galleryAvailableFilters.channels || [])" :key="ch">
+                <button @click="galleryChannelFilter=ch; loadGallery()"
+                        class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                        :class="galleryChannelFilter===ch ? 'bg-cyan-600 text-white border-cyan-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white'"
+                        x-text="ch === '_default' ? (t('gallery_default_channel') || 'Varsayılan') : ch"></button>
+              </template>
+            </div>
+          </template>
+
+          <!-- Platform pills (if available) -->
+          <template x-if="(galleryAvailableFilters.platforms || []).length > 0">
+            <div class="flex gap-2 items-center">
+              <span class="w-px h-6 bg-slate-700 self-center mx-1"></span>
+              <template x-for="pf in (galleryAvailableFilters.platforms || [])" :key="pf">
+                <button @click="galleryPlatformFilter = galleryPlatformFilter===pf ? '' : pf; loadGallery()"
+                        class="px-3 py-1.5 text-xs font-bold rounded-full transition-all border"
+                        :class="galleryPlatformFilter===pf ? 'bg-purple-600 text-white border-purple-500' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-white'"
+                        x-text="pf === 'shorts_9_16' ? '📱 9:16' : pf === 'landscape_16_9' ? '🖥️ 16:9' : pf"></button>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <!-- ── Results count ── -->
+        <div class="text-xs text-slate-500 mb-3" x-show="galleryVideos.length > 0">
+          <span x-text="galleryTotal"></span> <span x-text="t('gallery_results') || 'sonuç'"></span>
+        </div>
+
+        <!-- ── Video Grid ── -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <template x-for="vid in galleryVideos" :key="vid.session_id">
+            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden hover:border-gray-600 transition-all group relative cursor-pointer"
+                 :class="galleryBulkMode && galleryBulkSelected.includes(vid.session_id) ? 'ring-2 ring-orange-500 border-orange-500' : ''"
+                 @click="galleryBulkMode ? toggleGalleryBulkSelect(vid.session_id) : previewVideo(vid.session_id)">
+              <!-- Bulk select checkbox -->
+              <div x-show="galleryBulkMode" class="absolute top-2 left-1/2 -translate-x-1/2 z-30" @click.stop="toggleGalleryBulkSelect(vid.session_id)">
+                <div class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all"
+                     :class="galleryBulkSelected.includes(vid.session_id) ? 'bg-orange-500 border-orange-500' : 'bg-black/50 border-slate-400 backdrop-blur-sm'">
+                  <svg x-show="galleryBulkSelected.includes(vid.session_id)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+              </div>
+              <!-- Quick action buttons overlay -->
+              <div x-show="!galleryBulkMode" class="absolute bottom-0 left-0 right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto" @click.stop>
+                <div class="flex justify-center gap-1 px-2 py-1.5 bg-gradient-to-t from-black/80 to-transparent pt-6">
+                  <button @click.stop="galleryQuickDelete(vid.session_id)" title="Sil"
+                          class="w-8 h-8 rounded-lg bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center transition-all backdrop-blur-sm text-sm">
+                    🗑️</button>
+                  <button @click.stop="galleryQuickUploadYT(vid.session_id)" title="YouTube'a Yükle"
+                          class="w-8 h-8 rounded-lg bg-blue-600/80 hover:bg-blue-500 text-white flex items-center justify-center transition-all backdrop-blur-sm text-sm">
+                    📤</button>
+                  <button @click.stop="galleryQuickSeo(vid.session_id)" title="SEO Skoru"
+                          class="w-8 h-8 rounded-lg bg-green-600/80 hover:bg-green-500 text-white flex items-center justify-center transition-all backdrop-blur-sm text-sm">
+                    📊</button>
+                  <button @click.stop="galleryQuickThumbnail(vid.session_id)" title="Thumbnail Oluştur"
+                          class="w-8 h-8 rounded-lg bg-purple-600/80 hover:bg-purple-500 text-white flex items-center justify-center transition-all backdrop-blur-sm text-sm">
+                    🖼️</button>
+                </div>
+              </div>
+              <!-- Thumbnail -->
+              <div class="aspect-video bg-gray-900 relative overflow-hidden">
+                <template x-if="vid.has_video">
+                  <img :src="'/api/sessions/' + vid.session_id + '/thumbnail'"
+                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                       loading="lazy"
+                       @error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+                </template>
+                <!-- Fallback: play icon overlay -->
+                <div class="absolute inset-0 flex items-center justify-center" :style="vid.has_video ? 'display:none' : ''">
+                  <div class="text-slate-600">
+                    <svg class="w-12 h-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  </div>
+                </div>
+                <!-- Play button overlay on hover -->
+                <div x-show="vid.has_video" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                  <div class="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+                <!-- Status badge -->
+                <div class="absolute top-2 right-2">
+                  <span class="text-[10px] px-2 py-0.5 rounded-md font-bold backdrop-blur-sm"
+                        :class="{
+                          'bg-green-900/80 text-green-400 border border-green-700/50': vid.status==='completed',
+                          'bg-red-900/80 text-red-400 border border-red-700/50': vid.status==='failed',
+                          'bg-yellow-900/80 text-yellow-400 border border-yellow-700/50': vid.status==='running',
+                          'bg-gray-700/80 text-gray-400 border border-gray-600': !['completed','failed','running'].includes(vid.status)
+                        }"
+                        x-text="vid.status"></span>
+                </div>
+                <!-- Module badge -->
+                <div class="absolute top-2 left-2" x-show="vid.module">
+                  <span class="text-[10px] px-2 py-0.5 rounded-md font-bold backdrop-blur-sm"
+                        :class="{
+                          'bg-indigo-900/80 text-indigo-300 border border-indigo-700/50': vid.module==='yt_video',
+                          'bg-red-900/80 text-red-300 border border-red-700/50': vid.module==='bulletin',
+                          'bg-amber-900/80 text-amber-300 border border-amber-700/50': vid.module==='product_review'
+                        }"
+                        x-text="vid.module === 'yt_video' ? '🎬 Video' : vid.module === 'bulletin' ? '📺 Bülten' : vid.module === 'product_review' ? '🛒 İnceleme' : vid.module"></span>
+                </div>
+                <!-- Duration badge -->
+                <div class="absolute bottom-2 right-2" x-show="vid.duration">
+                  <span class="text-[10px] px-1.5 py-0.5 bg-black/70 text-white rounded font-mono backdrop-blur-sm" x-text="vid.duration"></span>
+                </div>
+              </div>
+              <!-- Card body -->
+              <div class="p-3">
+                <div class="text-sm font-semibold text-white truncate" x-text="vid.topic || vid.session_id"></div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="text-[10px] text-slate-600" x-text="vid.created_at ? new Date(vid.created_at).toLocaleDateString() : vid.session_id.substring(0,8)"></span>
+                  <span x-show="vid.channel_id && vid.channel_id !== '_default'" class="text-[10px] px-1.5 py-0.5 bg-slate-700/50 text-slate-400 rounded" x-text="vid.channel_id"></span>
+                  <span x-show="vid.platform" class="text-[10px] px-1.5 py-0.5 bg-slate-700/50 text-slate-400 rounded" x-text="vid.platform === 'shorts_9_16' ? '9:16' : vid.platform === 'landscape_16_9' ? '16:9' : vid.platform"></span>
+                </div>
+                <!-- Tags preview -->
+                <div class="flex flex-wrap gap-1 mt-2" x-show="vid.tags && vid.tags.length > 0">
+                  <template x-for="tag in (vid.tags || []).slice(0,3)" :key="tag">
+                    <span class="text-[9px] px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded-full" x-text="tag"></span>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div x-show="galleryVideos.length === 0" class="text-center py-16"><div class="text-4xl mb-3">🎬</div><div class="text-slate-400 font-semibold" x-text="t('gallery_empty') || 'Henüz video üretilmemiş'"></div></div>
+        <div x-show="galleryHasMore" class="text-center mt-6"><button @click="loadMoreGallery()" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-all" x-text="t('gallery_load_more') || 'Daha fazla'"></button></div>
+
+        <!-- Bulk action floating bar -->
+        <div x-show="galleryBulkMode && galleryBulkSelected.length > 0"
+             x-transition
+             class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl px-6 py-3 shadow-2xl shadow-black/50 flex items-center gap-4">
+          <span class="text-sm font-bold text-white"><span x-text="galleryBulkSelected.length"></span> seçildi</span>
+          <div class="w-px h-6 bg-slate-700"></div>
+          <button @click="bulkDeleteGallery()"
+                  class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2">
+            🗑️ Toplu Sil
+          </button>
+          <button @click="galleryBulkSelected = []; galleryBulkMode = false"
+                  class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-bold rounded-xl transition-all">
+            İptal
+          </button>
+        </div>
+      </div>
+    </div>

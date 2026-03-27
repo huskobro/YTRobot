@@ -1,0 +1,119 @@
+{# Component: sidebar #}
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <!-- Mobile sidebar overlay -->
+  <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 bg-black/60 z-40 md:hidden" x-transition.opacity></div>
+  <aside class="w-52 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex"
+         :class="{'!fixed !inset-y-0 !left-0 !z-50 !flex': sidebarOpen}">
+    <div class="px-5 py-5 border-b border-slate-800">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-red-900/40">▶</div>
+        <div>
+          <div class="font-bold text-white leading-tight">YTRobot</div>
+          <div class="text-slate-500 text-xs" x-text="t('app_subtitle')"></div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" @click="sidebarOpen=false">
+      <!-- ── Ana İşlemler ── -->
+      <p class="px-3 pt-4 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_main')">Ana İşlemler</p>
+      <button @click="navigateTo('new-run', function(){ this.mode='topic'; this.runError=''; })"
+              class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2.5 transition-all"
+              :class="view==='new-run'?'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>✨</span> <span x-text="t('nav_new_video')"></span>
+      </button>
+      <button @click="navigateTo('dashboard', function(){ this.loadDashboard(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📊</span> <span x-text="t('nav_dashboard')"></span>
+      </button>
+      <button @click="navigateTo('gallery', function(){ this.loadGallery(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='gallery'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>🖼️</span> <span x-text="t('nav_gallery')"></span>
+      </button>
+
+      <!-- ── İçerik ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_content')">İçerik</p>
+      <button @click="navigateTo('channels', function(){ this.loadChannels(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='channels'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📡</span> <span x-text="t('nav_channels')"></span>
+      </button>
+      <button @click="navigateTo('content-planning', function(){ if(this.contentPlanningTab==='calendar') this.loadCalendarEntries(); else if(this.contentPlanningTab==='playlists') this.loadPlaylists(); else if(this.contentPlanningTab==='ab-testing') this.loadAbTests(); else if(this.contentPlanningTab==='templates') this.loadTemplates(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='content-planning'?'bg-teal-600 text-white shadow-md shadow-teal-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📅</span> <span x-text="t('nav_content_planning')"></span>
+      </button>
+
+      <!-- ── Analiz ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_analytics')">Analiz</p>
+      <button @click="navigateTo('analytics', function(){ this.loadAnalytics(); this.loadQueueStatus(); this.loadErrorDetails(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='analytics'?'bg-emerald-600 text-white shadow-md shadow-emerald-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>📈</span> <span x-text="t('nav_analytics')"></span>
+      </button>
+
+      <!-- ── Sistem ── -->
+      <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
+      <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_system')">Sistem</p>
+      <button @click="navigateTo('settings', function(){ this.loadSettings(); })"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
+              :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <span>⚙️</span> <span x-text="t('nav_settings')"></span>
+      </button>
+    </nav>
+
+    <!-- Active Channel Badge -->
+    <div class="px-4 py-2.5 border-t border-slate-800">
+      <button @click="view='channels'; loadChannels()"
+              class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/50 transition-all group"
+              title="Aktif kanal">
+        <div class="w-2 h-2 rounded-full bg-green-400 shrink-0"></div>
+        <span class="text-[10px] text-slate-400 group-hover:text-white truncate flex-1 text-left" x-text="activeChannelName"></span>
+        <svg class="w-3 h-3 text-slate-600 group-hover:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="px-4 py-3 border-t border-slate-800 space-y-1.5">
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_running')"></span>
+        <span class="font-mono font-bold" :class="sessions.filter(s=>s.status==='running').length>0?'text-blue-400':'text-slate-500'"
+              x-text="sessions.filter(s=>s.status==='running').length"></span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_completed')"></span>
+        <span class="font-mono text-green-400" x-text="sessions.filter(s=>s.status==='completed').length"></span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500" x-text="t('sidebar_total')"></span>
+        <span class="font-mono text-slate-400" x-text="sessions.length"></span>
+      </div>
+    </div>
+
+    <!-- Language toggle -->
+    <div class="px-4 py-3 border-t border-slate-800">
+      <div class="flex gap-1 p-1 bg-slate-800 rounded-lg">
+        <button @click="setLang('tr')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all"
+                :class="lang==='tr'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'">TR</button>
+        <button @click="setLang('en')" class="flex-1 py-1.5 text-xs font-bold rounded-md transition-all"
+                :class="lang==='en'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'">EN</button>
+      </div>
+      <!-- Ses Toggler -->
+      <button @click="toggleSound()" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all mt-1" :title="soundEnabled ? 'Sesi Kapat' : 'Sesi Aç'">
+        <span x-text="soundEnabled ? '🔔 Ses Açık' : '🔕 Ses Kapalı'"></span>
+        <div class="w-6 h-3 rounded-full transition-colors relative" :class="soundEnabled ? 'bg-indigo-600' : 'bg-slate-700'">
+          <div class="absolute top-0.5 w-2 h-2 bg-white rounded-full transition-all" :class="soundEnabled ? 'left-3.5' : 'left-0.5'"></div>
+        </div>
+      </button>
+      <!-- Tema Toggler -->
+      <button @click="toggleTheme()" class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all mt-1" title="Tema Değiştir">
+        <span x-text="darkMode ? '🌙 Koyu Tema' : '☀️ Açık Tema'"></span>
+        <svg x-show="darkMode" class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg x-show="!darkMode" x-cloak class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 24 24"><path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+      </button>
+    </div>
+  </aside>

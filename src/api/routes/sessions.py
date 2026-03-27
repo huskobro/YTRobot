@@ -271,6 +271,16 @@ async def start_run(req: RunReq):
         wizard_env = wizard_config_to_env(req.wizard_config)
         preset_env.update(wizard_env)
 
+    # Resolve active channel early so we can embed it in the session
+    try:
+        from src.core.channel_hub import channel_hub
+        ch = channel_hub.get_active_channel()
+        channel_config = ch or {}
+        channel_id = channel_config.get("id", "_default")
+    except Exception:
+        channel_config = {}
+        channel_id = "_default"
+
     session = {
         "id": sid,
         "topic": req.topic or req.script_file,
@@ -290,18 +300,24 @@ async def start_run(req: RunReq):
         "preset_name": req.preset_name or "",
         "module": "yt_video",
         "wizard_config": req.wizard_config.model_dump() if req.wizard_config else None,
+        # Lifecycle tracking (FAZ 3)
+        "channel_id": channel_id,
+        "channel_name": channel_config.get("name", "Varsayılan Kanal"),
+        "youtube_video_id": None,
+        "youtube_playlist_id": None,
+        "published_at": None,
     }
     _write_session(sid, session)
 
-    # Attach active channel config to job data
+    # Load per-channel settings and merge into preset_env
     try:
-        from src.core.channel_hub import channel_hub
-        ch = channel_hub.get_active_channel()
-        channel_config = ch or {}
-        channel_id = channel_config.get("id", "_default")
+        channel_settings = channel_hub.get_channel_settings(channel_id)
+        if channel_settings:
+            # Channel settings go UNDER preset_env so wizard overrides still win
+            merged_env = {**channel_settings, **preset_env}
+            preset_env = merged_env
     except Exception:
-        channel_config = {}
-        channel_id = "_default"
+        pass
 
     # Use queue manager instead of raw thread
     await queue_manager.add_job("yt_video", {
@@ -315,7 +331,7 @@ async def start_run(req: RunReq):
     
     return {"session_id": sid, "status": "queued"}
 
-async def run_pipeline_task(sid: str, data: dict, job_type: str):
+async def run_pipeline_task(sid: str, data: dict):
     """Bridge for QueueManager to call the core runner safely."""
     # Since _run is synchronous, we run it in a separate thread but managed by asyncio
     topic = data.get("topic")

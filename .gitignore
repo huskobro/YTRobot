@@ -24,3 +24,9 @@ youtube_tokens/
 
 # Runtime logs
 social_log.json
+
+# Generated/temp data
+antigravity_data.json
+channels/*/analytics.json
+data/
+stats.json

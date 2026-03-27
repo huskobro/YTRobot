@@ -37,7 +37,7 @@ from src.api.routes.video_templates import router as video_templates_router
 from src.api.routes.seo import router as seo_router
 from src.api.routes.youtube_analytics import router as youtube_analytics_router
 from src.api.routes.secure import router as secure_router
-from src.core.queue import queue_manager
+from src.core.queue import queue_manager, QueueManager
 from src.core.scheduler import video_scheduler
 from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
@@ -81,8 +81,15 @@ logger = logging.getLogger("ytrobot.server")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    asset_cache.cleanup() # Disk optimization
+    # Startup — register job handlers (breaks circular import chain)
+    from src.api.routes.sessions import run_pipeline_task
+    from src.api.routes.bulletin import run_bulletin_task
+    from src.api.routes.product import run_product_review_task
+    QueueManager.register_handler("yt_video", run_pipeline_task)
+    QueueManager.register_handler("bulletin", run_bulletin_task)
+    QueueManager.register_handler("product_review", run_product_review_task)
+
+    asset_cache.cleanup()
     queue_manager.start()
     video_scheduler.start()
     yield
@@ -183,17 +190,33 @@ async def stream_logs_endpoint(sid: str):
             await asyncio.sleep(0.5)
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-# ── Root UI ──────────────────────────────────────────────────────────────────
+# ── Jinja2 Template Engine ────────────────────────────────────────────────────
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+_jinja_env = Environment(
+    loader=FileSystemLoader(str(Path(__file__).parent / "ui")),
+    autoescape=select_autoescape(["html"]),
+)
 
 @app.get("/")
 def serve_ui():
-    html_path = Path(__file__).parent / "ui" / "index.html"
-    if not html_path.exists():
-        return HTMLResponse("<h1>UI not found</h1>", status_code=404)
-    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    try:
+        template = _jinja_env.get_template("base.html")
+        return HTMLResponse(template.render())
+    except Exception:
+        # Fallback to monolithic index.html if base.html doesn't exist yet
+        html_path = Path(__file__).parent / "ui" / "index.html"
+        if not html_path.exists():
+            return HTMLResponse("<h1>UI not found</h1>", status_code=404)
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=5006, help="Server port (default: 5006 for v3)")
+    args = parser.parse_args()
     OUTPUT_DIR.mkdir(exist_ok=True)
     _cleanup_stale_sessions()
-    print("🎬 YTRobot v2.0 → http://localhost:5005")
-    uvicorn.run(app, host="0.0.0.0", port=5005, reload=False)
+    print(f"🎬 YTRobot v3.0 → http://localhost:{args.port}")
+    uvicorn.run(app, host="0.0.0.0", port=args.port, reload=False)

@@ -1,0 +1,1536 @@
+{# View: onboarding #}
+    <div x-show="view==='onboarding'" class="p-6 max-w-3xl mx-auto">
+      <div class="onboarding-step" :key="onboardingStep">
+
+        <!-- Mode Banner -->
+        <div x-show="onboardingMode === 'admin'" class="mb-4 px-4 py-2.5 bg-purple-900/30 border border-purple-700/50 rounded-xl flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-purple-400">🧙</span>
+            <span class="text-sm font-bold text-purple-300" x-text="lang==='tr' ? 'Varsayılan Ayarlar Sihirbazı — Tüm kanallar için geçerli varsayılanları düzenliyorsunuz' : 'Default Settings Wizard — Editing global defaults for all channels'"></span>
+          </div>
+          <button @click="view='settings'" class="text-xs text-purple-400 hover:text-purple-300 font-bold" x-text="lang==='tr' ? 'Vazgeç' : 'Cancel'"></button>
+        </div>
+        <div x-show="onboardingMode === 'user' && onboardingChannelId" class="mb-4 px-4 py-2.5 bg-blue-900/30 border border-blue-700/50 rounded-xl flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-blue-400">📡</span>
+            <span class="text-sm font-bold text-blue-300" x-text="(lang==='tr' ? 'Kanal Ayarları Düzenleniyor: ' : 'Editing Channel Settings: ') + onboardingData.channelName"></span>
+          </div>
+          <button @click="view='channels'" class="text-xs text-blue-400 hover:text-blue-300 font-bold" x-text="lang==='tr' ? 'Vazgeç' : 'Cancel'"></button>
+        </div>
+
+        <!-- Progress Dots -->
+        <div class="onboarding-progress">
+          <template x-for="i in wizardTotalSteps" :key="i">
+            <div class="onboarding-dot"
+                 :class="i < onboardingStep ? 'completed' : (i === onboardingStep ? 'active' : '')"></div>
+          </template>
+        </div>
+
+        <!-- ── Step 1: Welcome + Language ── -->
+        <div x-show="isWizardStep('welcome')" class="text-center onboarding-step">
+          <div class="text-6xl mb-6">🎬</div>
+          <h1 class="text-3xl font-bold text-white mb-3" x-text="t('onb_welcome_title')"></h1>
+          <p class="text-slate-400 mb-8 max-w-md mx-auto" x-text="t('onb_welcome_desc')"></p>
+
+          <div class="flex gap-4 justify-center mb-8">
+            <button @click="setLang('tr')" class="onboarding-card px-8 py-4 text-center"
+                    :class="lang==='tr' ? 'selected' : ''">
+              <div class="text-2xl mb-2">🇹🇷</div>
+              <div class="font-bold">Türkçe</div>
+            </button>
+            <button @click="setLang('en')" class="onboarding-card px-8 py-4 text-center"
+                    :class="lang==='en' ? 'selected' : ''">
+              <div class="text-2xl mb-2">🇬🇧</div>
+              <div class="font-bold">English</div>
+            </button>
+          </div>
+
+          <div class="flex gap-3 justify-center">
+            <button @click="darkMode=!darkMode; applyTheme()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition-all">
+              <span x-text="darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'"></span>
+            </button>
+          </div>
+
+          <button @click="nextWizardStep()" class="mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+            <span x-text="t('onb_start')"></span> →
+          </button>
+        </div>
+
+        <!-- ── Step 2: Channel Creation ── -->
+        <div x-show="isWizardStep('channel')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📡</span> <span x-text="t('onb_channel_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_channel_desc')"></p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_channel_name')"></label>
+              <input x-model="onboardingData.channelName" type="text"
+                     class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white input-premium"
+                     :placeholder="t('onb_channel_name_ph')">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_channel_lang')"></label>
+              <select x-model="onboardingData.channelLang" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="ar">العربية</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_color_primary')"></label>
+                <input x-model="onboardingData.colorPrimary" type="color"
+                       class="w-full h-12 rounded-xl border border-slate-700 cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1" x-text="t('onb_color_secondary')"></label>
+                <input x-model="onboardingData.colorSecondary" type="color"
+                       class="w-full h-12 rounded-xl border border-slate-700 cursor-pointer">
+              </div>
+            </div>
+            <!-- Brand preview -->
+            <div class="rounded-xl p-4 flex items-center gap-4" :style="`background: ${onboardingData.colorPrimary}20; border: 1px solid ${onboardingData.colorPrimary}40`">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold" :style="`background: ${onboardingData.colorPrimary}; color: ${onboardingData.colorSecondary}`"
+                   x-text="(onboardingData.channelName || 'K')[0].toUpperCase()"></div>
+              <div>
+                <div class="font-bold text-white" x-text="onboardingData.channelName || t('onb_channel_name_ph')"></div>
+                <div class="text-xs text-slate-400" x-text="t('onb_brand_preview')"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 3: TTS Provider Selection ── -->
+        <div x-show="isWizardStep('tts_provider')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🎤</span> <span x-text="t('onb_tts_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_tts_desc')"></p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Edge TTS -->
+            <button @click="onboardingData.ttsProvider='edge'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='edge' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🆓 Edge TTS</span>
+                <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_edge_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+              <button @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn mt-3" :class="onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' ? 'playing' : ''">▶</button>
+            </button>
+
+            <!-- Qwen3 -->
+            <button @click="onboardingData.ttsProvider='qwen3'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='qwen3' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🤖 Qwen3</span>
+                <span class="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full font-bold">LOCAL</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_qwen3_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- ElevenLabs -->
+            <button @click="onboardingData.ttsProvider='elevenlabs'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='elevenlabs' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🎙️ ElevenLabs</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_eleven_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- OpenAI -->
+            <button @click="onboardingData.ttsProvider='openai'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='openai' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🗣️ OpenAI</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_openai_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- SpeshAudio -->
+            <button @click="onboardingData.ttsProvider='speshaudio'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='speshaudio' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🎧 SpeshAudio</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_spesh_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★★★</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+
+            <!-- DubVoice -->
+            <button @click="onboardingData.ttsProvider='dubvoice'" class="onboarding-card text-left"
+                    :class="onboardingData.ttsProvider==='dubvoice' ? 'selected' : ''">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold">🔊 DubVoice</span>
+                <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+              </div>
+              <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_dub_desc')"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>★★★☆☆</span>
+                <span x-text="t('onb_quality')"></span>
+              </div>
+            </button>
+          </div>
+
+          <!-- API Key input (if needed) -->
+          <div x-show="['elevenlabs','openai','speshaudio','dubvoice'].includes(onboardingData.ttsProvider)" class="mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+            <label class="block text-sm font-medium text-slate-300 mb-2">API Key</label>
+            <div class="flex gap-2">
+              <input x-model="onboardingData.ttsApiKey" type="password"
+                     class="flex-1 px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium"
+                     placeholder="sk-...">
+              <button @click="testOnboardingKey()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition-all btn-spring">
+                ✓ Test
+              </button>
+            </div>
+            <div x-show="onboardingData.ttsKeyStatus" class="mt-2 text-xs" :class="onboardingData.ttsKeyStatus==='ok' ? 'text-emerald-400' : 'text-red-400'"
+                 x-text="onboardingData.ttsKeyStatus==='ok' ? '✓ API key is valid!' : '✗ API key test failed'"></div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 4: Voice Selection ── -->
+        <div x-show="isWizardStep('voice_select')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🗣️</span> <span x-text="t('onb_voice_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_voice_desc')"></p>
+
+          <!-- Edge TTS voices -->
+          <div x-show="onboardingData.ttsProvider==='edge'" class="space-y-2">
+            <template x-for="v in onboardingEdgeVoices" :key="v.id">
+              <div class="flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                   :class="onboardingData.selectedVoice===v.id ? 'bg-indigo-600/20 border border-indigo-500/40' : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'"
+                   @click="onboardingData.selectedVoice=v.id">
+                <span class="text-lg" x-text="v.gender==='male' ? '👨' : '👩'"></span>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-white" x-text="v.name"></div>
+                  <div class="text-[10px] text-slate-500" x-text="v.id"></div>
+                </div>
+                <button @click.stop="playOnboardingSample(v.sample)" class="voice-play-btn" :class="onboardingAudioPlaying===v.sample ? 'playing' : ''">▶</button>
+                <div x-show="onboardingData.selectedVoice===v.id" class="text-indigo-400 font-bold text-sm">✓</div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Qwen3 voices -->
+          <div x-show="onboardingData.ttsProvider==='qwen3'" class="space-y-2">
+            <template x-for="v in onboardingQwen3Voices" :key="v.id">
+              <div class="flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                   :class="onboardingData.selectedVoice===v.id ? 'bg-indigo-600/20 border border-indigo-500/40' : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'"
+                   @click="onboardingData.selectedVoice=v.id">
+                <span class="text-lg" x-text="v.icon"></span>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-white" x-text="v.name"></div>
+                  <div class="text-[10px] text-slate-400" x-text="v.desc"></div>
+                </div>
+                <div x-show="onboardingData.selectedVoice===v.id" class="text-indigo-400 font-bold text-sm">✓</div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Other providers: simple voice message -->
+          <div x-show="!['edge','qwen3'].includes(onboardingData.ttsProvider)" class="p-6 text-center text-slate-400 bg-slate-800/30 rounded-xl">
+            <p x-text="t('onb_voice_api_note')"></p>
+          </div>
+
+          <!-- Speed slider -->
+          <div class="mt-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+              <span x-text="t('onb_speed')"></span>: <span x-text="onboardingData.ttsSpeed + 'x'" class="text-indigo-400 font-bold"></span>
+            </label>
+            <input x-model="onboardingData.ttsSpeed" type="range" min="0.5" max="2.0" step="0.1"
+                   class="w-full accent-indigo-500">
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 5: Visual Provider ── -->
+        <div x-show="isWizardStep('visual_provider')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🖼️</span> <span x-text="t('onb_visual_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_visual_desc')"></p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <button @click="onboardingData.visualProvider='pexels'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='pexels' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">📹 Pexels</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_pexels_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE (API KEY)</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='zimage'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='zimage' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🎨 Z-Image</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_zimage_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='dalle'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='dalle' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🎭 DALL-E 3</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_dalle_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">OPENAI KEY</span>
+            </button>
+
+            <button @click="onboardingData.visualProvider='pollinations'" class="onboarding-card text-left"
+                    :class="onboardingData.visualProvider==='pollinations' ? 'selected' : ''">
+              <div class="text-lg font-bold mb-1">🌐 Pollinations</div>
+              <p class="text-xs text-slate-400 mb-2" x-text="t('onb_vis_poll_desc')"></p>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE</span>
+            </button>
+          </div>
+
+          <!-- API Key for visual provider -->
+          <div x-show="['pexels','zimage','dalle'].includes(onboardingData.visualProvider)" class="mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+            <label class="block text-sm font-medium text-slate-300 mb-2"
+                   x-text="onboardingData.visualProvider==='dalle' ? 'OpenAI API Key' : (onboardingData.visualProvider==='zimage' ? 'KIE.AI API Key' : 'Pexels API Key')"></label>
+            <input x-model="onboardingData.visualApiKey" type="password"
+                   class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium">
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 6: Video Style ── -->
+        <div x-show="isWizardStep('video_style')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🎬</span> <span x-text="t('onb_style_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_style_desc')"></p>
+
+          <!-- Resolution -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_resolution')"></label>
+            <div class="flex gap-3">
+              <button @click="onboardingData.resolution='1280x720'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='1280x720' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">720p</button>
+              <button @click="onboardingData.resolution='1920x1080'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='1920x1080' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">1080p</button>
+              <button @click="onboardingData.resolution='3840x2160'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.resolution==='3840x2160' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">4K</button>
+            </div>
+          </div>
+
+          <!-- Subtitle Animation Preview -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_subtitle_anim')"></label>
+            <div class="grid grid-cols-5 gap-3 mb-3">
+              <template x-for="anim in ['hype','explosive','vibrant','minimal','none']" :key="anim">
+                <button @click="onboardingData.subtitleAnim=anim" class="py-2 px-1 rounded-xl text-xs font-bold text-center transition-all"
+                        :class="onboardingData.subtitleAnim===anim ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
+                        x-text="anim"></button>
+              </template>
+            </div>
+            <!-- Live CSS preview -->
+            <div class="sub-preview-box">
+              <span :class="'sub-preview-' + onboardingData.subtitleAnim"
+                    :key="onboardingData.subtitleAnim"
+                    x-text="lang==='tr' ? 'Merhaba Dünya' : 'Hello World'"></span>
+            </div>
+          </div>
+
+          <!-- Video Effect Preview -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_video_effect')"></label>
+            <div class="grid grid-cols-5 gap-3">
+              <template x-for="eff in ['none','vignette','warm','cool','cinematic']" :key="eff">
+                <div @click="onboardingData.videoEffect=eff" class="effect-preview-card"
+                     :class="onboardingData.videoEffect===eff ? 'selected' : ''">
+                  <img :src="'/samples/effects/' + eff + '.jpg'" :alt="eff" class="w-full h-16 object-cover rounded-lg">
+                  <div class="text-[10px] text-center mt-1 font-bold" :class="onboardingData.videoEffect===eff ? 'text-indigo-400' : 'text-slate-500'" x-text="eff"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Font Selection -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_font')"></label>
+            <div class="grid grid-cols-4 gap-3">
+              <template x-for="f in [{id:'bebas',family:'Bebas Neue'},{id:'roboto',family:'Roboto'},{id:'montserrat',family:'Montserrat'},{id:'oswald',family:'Oswald'},{id:'inter',family:'Inter'},{id:'sans',family:'sans-serif'},{id:'serif',family:'serif'}]" :key="f.id">
+                <div @click="onboardingData.subtitleFont=f.id" class="font-preview-card"
+                     :class="onboardingData.subtitleFont===f.id ? 'selected' : ''">
+                  <div class="text-2xl font-bold mb-1" :style="'font-family:' + f.family">Aa</div>
+                  <div class="text-[10px] text-slate-500" x-text="f.id"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Composer -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2" x-text="t('onb_composer')"></label>
+            <div class="flex gap-3">
+              <button @click="onboardingData.composer='moviepy'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.composer==='moviepy' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">
+                MoviePy <span class="text-[10px] opacity-60">(<span x-text="t('onb_simple')"></span>)</span>
+              </button>
+              <button @click="onboardingData.composer='remotion'" class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                      :class="onboardingData.composer==='remotion' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">
+                Remotion <span class="text-[10px] opacity-60">(<span x-text="t('onb_advanced')"></span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 7: TTS Advanced Settings ── -->
+        <div x-show="isWizardStep('tts_advanced')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🔧</span> <span x-text="t('onb_tts_advanced_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_tts_advanced_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- Remove Apostrophes -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div>
+                <div class="text-sm font-medium text-white" x-text="t('onb_remove_apostrophes')"></div>
+                <div class="text-xs text-slate-500" x-text="t('onb_remove_apostrophes_desc')"></div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.ttsRemoveApostrophes" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- Trim Silence -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div>
+                <div class="text-sm font-medium text-white" x-text="t('onb_trim_silence')"></div>
+                <div class="text-xs text-slate-500" x-text="t('onb_trim_silence_desc')"></div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.ttsTrimSilence" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- Enhance with LLM -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div>
+                <div class="text-sm font-medium text-white" x-text="t('onb_tts_enhance')"></div>
+                <div class="text-xs text-slate-500" x-text="t('onb_tts_enhance_desc')"></div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.ttsEnhanceWithLlm" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- Concurrent Workers -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_tts_workers')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.ttsConcurrentWorkers"></span>
+              </div>
+              <input x-model="onboardingData.ttsConcurrentWorkers" type="range" min="1" max="5" step="1" class="w-full accent-indigo-500">
+            </div>
+
+            <!-- Provider-specific: SpeshAudio -->
+            <div x-show="onboardingData.ttsProvider==='speshaudio'" class="space-y-3 p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-slate-300">SpeshAudio</h4>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_spesh_language')"></label>
+                <input x-model="onboardingData.speshLanguage" type="text" placeholder="tr, en, de..."
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_spesh_voice_id')"></label>
+                <input x-model="onboardingData.speshVoiceId" type="text"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Stability: <span class="text-indigo-400" x-text="onboardingData.speshStability"></span></label>
+                  <input x-model="onboardingData.speshStability" type="range" min="0" max="1" step="0.05" class="w-full accent-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Similarity: <span class="text-indigo-400" x-text="onboardingData.speshSimilarity"></span></label>
+                  <input x-model="onboardingData.speshSimilarity" type="range" min="0" max="1" step="0.05" class="w-full accent-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Style: <span class="text-indigo-400" x-text="onboardingData.speshStyle"></span></label>
+                  <input x-model="onboardingData.speshStyle" type="range" min="0" max="1" step="0.05" class="w-full accent-indigo-500">
+                </div>
+              </div>
+            </div>
+
+            <!-- Provider-specific: ElevenLabs -->
+            <div x-show="onboardingData.ttsProvider==='elevenlabs'" class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-slate-300 mb-2">ElevenLabs</h4>
+              <label class="block text-xs text-slate-400 mb-1">Voice ID</label>
+              <input x-model="onboardingData.elevenlabsVoiceId" type="text"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm"
+                     placeholder="21m00Tcm4TlvDq8ikWAM">
+            </div>
+
+            <!-- Provider-specific: OpenAI TTS -->
+            <div x-show="onboardingData.ttsProvider==='openai'" class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-slate-300 mb-2">OpenAI TTS Voice</h4>
+              <select x-model="onboardingData.openaiTtsVoice" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <option value="alloy">alloy</option><option value="ash">ash</option><option value="coral">coral</option>
+                <option value="echo">echo</option><option value="fable">fable</option><option value="nova">nova</option>
+                <option value="onyx">onyx</option><option value="sage">sage</option><option value="shimmer">shimmer</option>
+              </select>
+            </div>
+
+            <!-- Provider-specific: DubVoice -->
+            <div x-show="onboardingData.ttsProvider==='dubvoice'" class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-slate-300 mb-2">DubVoice</h4>
+              <label class="block text-xs text-slate-400 mb-1">Voice ID</label>
+              <input x-model="onboardingData.dubvoiceVoiceId" type="text"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+            </div>
+
+            <!-- Provider-specific: Qwen3 Advanced -->
+            <div x-show="onboardingData.ttsProvider==='qwen3'" class="space-y-3 p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-slate-300">Qwen3 Advanced</h4>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Model ID</label>
+                <input x-model="onboardingData.qwen3ModelId" type="text"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Model Type</label>
+                <select x-model="onboardingData.qwen3ModelType" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  <option value="custom">custom</option><option value="design">design</option><option value="clone">clone</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Voice Instruct</label>
+                <input x-model="onboardingData.qwen3VoiceInstruct" type="text"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Ref Audio Path</label>
+                <input x-model="onboardingData.qwen3RefAudio" type="text"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Device</label>
+                <select x-model="onboardingData.qwen3Device" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  <option value="auto">auto</option><option value="cpu">cpu</option><option value="mps">mps (Mac)</option><option value="cuda">cuda (GPU)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 8: Subtitle Details & Camera ── -->
+        <div x-show="isWizardStep('subtitle_detail')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📝</span> <span x-text="t('onb_subtitle_detail_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_subtitle_detail_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- Subtitle Provider (moved here from Step 9) -->
+            <div class="p-4 rounded-xl bg-indigo-900/10 border border-indigo-500/20">
+              <div class="text-sm font-bold text-white mb-3" x-text="t('onb_subtitle_provider')"></div>
+              <div class="grid grid-cols-3 gap-3">
+                <template x-for="sp in ['remotion','pycaps','ffmpeg']" :key="sp">
+                  <button @click="onboardingData.subtitleProvider=sp" class="py-3 rounded-xl text-xs font-bold transition-all text-center"
+                          :class="onboardingData.subtitleProvider===sp ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'">
+                    <div class="text-lg mb-1" x-text="sp==='remotion' ? '⚛️' : sp==='pycaps' ? '🐍' : '🎞️'"></div>
+                    <div x-text="sp"></div>
+                  </button>
+                </template>
+              </div>
+            </div>
+            <!-- Pycaps Style (if pycaps selected) -->
+            <div x-show="onboardingData.subtitleProvider==='pycaps'" class="p-3 rounded-xl bg-slate-800/50" x-transition>
+              <div class="text-sm font-medium text-white mb-2">Pycaps Style</div>
+              <select x-model="onboardingData.pycapsStyle" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <option value="hype">hype</option><option value="classic">classic</option><option value="vibrant">vibrant</option>
+                <option value="explosive">explosive</option><option value="fast">fast</option><option value="retro-gaming">retro-gaming</option>
+                <option value="minimalist">minimalist</option><option value="neo-minimal">neo-minimal</option>
+                <option value="line-focus">line-focus</option><option value="word-focus">word-focus</option>
+                <option value="model">model</option><option value="default">default</option>
+              </select>
+            </div>
+
+            <div class="border-t border-slate-700/50 pt-4"></div>
+
+            <!-- Subtitle Size -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_sub_size')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.subtitleSize + 'px'"></span>
+              </div>
+              <input x-model="onboardingData.subtitleSize" type="range" min="32" max="120" step="2" class="w-full accent-indigo-500">
+            </div>
+            <!-- Subtitle Color -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white" x-text="t('onb_sub_color')"></div>
+              <input x-model="onboardingData.subtitleColor" type="color" class="w-12 h-8 rounded border border-slate-600 cursor-pointer">
+            </div>
+            <!-- Subtitle Background -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white mb-2" x-text="t('onb_sub_bg')"></div>
+              <div class="flex gap-3">
+                <template x-for="bg in ['none','box','pill']" :key="bg">
+                  <button @click="onboardingData.subtitleBg=bg" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                          :class="onboardingData.subtitleBg===bg ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="bg"></button>
+                </template>
+              </div>
+            </div>
+            <!-- Subtitle Stroke -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_sub_stroke')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.subtitleStroke + 'px'"></span>
+              </div>
+              <input x-model="onboardingData.subtitleStroke" type="range" min="0" max="8" step="1" class="w-full accent-indigo-500">
+            </div>
+            <!-- Karaoke -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div>
+                <div class="text-sm font-medium text-white" x-text="t('onb_karaoke_enabled')"></div>
+                <div class="text-xs text-slate-500" x-text="t('onb_karaoke_desc')"></div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.karaokeEnabled" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- Karaoke Color -->
+            <div x-show="onboardingData.karaokeEnabled" class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white" x-text="t('onb_karaoke_color')"></div>
+              <input x-model="onboardingData.karaokeColor" type="color" class="w-12 h-8 rounded border border-slate-600 cursor-pointer">
+            </div>
+            <!-- Transition Duration -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_transition_dur')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.transitionDuration + ' frames'"></span>
+              </div>
+              <input x-model="onboardingData.transitionDuration" type="range" min="0" max="30" step="1" class="w-full accent-indigo-500">
+            </div>
+            <!-- Ken Burns Zoom -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_ken_burns_zoom')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.kenBurnsZoom"></span>
+              </div>
+              <input x-model="onboardingData.kenBurnsZoom" type="range" min="0" max="0.2" step="0.01" class="w-full accent-indigo-500">
+            </div>
+            <!-- Ken Burns Direction -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white mb-2" x-text="t('onb_ken_burns_dir')"></div>
+              <div class="flex gap-2">
+                <template x-for="dir in ['center','pan-left','pan-right','random']" :key="dir">
+                  <button @click="onboardingData.kenBurnsDirection=dir" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                          :class="onboardingData.kenBurnsDirection===dir ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="dir"></button>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 9: Script/AI & System Settings ── -->
+        <div x-show="isWizardStep('ai_system')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🧠</span> <span x-text="t('onb_ai_system_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_ai_system_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- Target Audience -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <label class="block text-sm font-medium text-white mb-2" x-text="t('onb_target_audience')"></label>
+              <input x-model="onboardingData.targetAudience" type="text"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm"
+                     :placeholder="t('onb_target_audience_ph')">
+            </div>
+            <!-- Script Humanize -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div>
+                <div class="text-sm font-medium text-white" x-text="t('onb_script_humanize')"></div>
+                <div class="text-xs text-slate-500" x-text="t('onb_script_humanize_desc')"></div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.scriptHumanize" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- FPS -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white">FPS</div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.videoFps"></span>
+              </div>
+              <div class="flex gap-3">
+                <template x-for="fps in [24,30,60]" :key="fps">
+                  <button @click="onboardingData.videoFps=fps" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all"
+                          :class="onboardingData.videoFps==fps ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="fps + 'fps'"></button>
+                </template>
+              </div>
+            </div>
+            <!-- GPU Encoding -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white mb-2" x-text="t('onb_gpu_encoding')"></div>
+              <div class="flex gap-3">
+                <template x-for="mode in ['auto','force','disabled']" :key="mode">
+                  <button @click="onboardingData.gpuEncoding=mode" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                          :class="onboardingData.gpuEncoding===mode ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="mode"></button>
+                </template>
+              </div>
+            </div>
+            <!-- Subtitle Provider moved to Step 8 -->
+            <!-- Remotion Concurrency -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-sm font-medium text-white" x-text="t('onb_remotion_concurrency')"></div>
+                <span class="text-indigo-400 font-bold text-sm" x-text="onboardingData.remotionConcurrency"></span>
+              </div>
+              <input x-model="onboardingData.remotionConcurrency" type="range" min="1" max="8" step="1" class="w-full accent-indigo-500">
+            </div>
+            <!-- Z-Image Aspect Ratio -->
+            <div x-show="onboardingData.visualProvider==='zimage'" class="p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white mb-2">Z-Image Aspect Ratio</div>
+              <div class="flex gap-2">
+                <template x-for="ar in ['1:1','4:3','3:4','16:9','9:16']" :key="ar">
+                  <button @click="onboardingData.zimageAspectRatio=ar" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                          :class="onboardingData.zimageAspectRatio===ar ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="ar"></button>
+                </template>
+              </div>
+            </div>
+            <!-- CORS & Debug -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">CORS Origins</label>
+                  <input x-model="onboardingData.corsOrigins" type="text"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="text-sm font-medium text-white">Debug Mode</div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="onboardingData.debugMode" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 10: API Keys ── -->
+        <div x-show="isWizardStep('api_keys')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🔑</span> <span x-text="t('onb_api_keys_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_api_keys_desc')"></p>
+
+          <div class="space-y-4">
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">OpenAI API Key</label>
+              <input x-model="onboardingData.openaiApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium" placeholder="sk-...">
+              <div class="text-[10px] text-slate-500 mt-1">TTS, DALL-E, Script</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">Anthropic API Key</label>
+              <input x-model="onboardingData.anthropicApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium" placeholder="sk-ant-...">
+              <div class="text-[10px] text-slate-500 mt-1">Script generation</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">KIE.AI API Key</label>
+              <input x-model="onboardingData.kieaiApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium">
+              <div class="text-[10px] text-slate-500 mt-1">Gemini 2.5 Flash (Script/Metadata), Z-Image</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">Gemini API Key</label>
+              <input x-model="onboardingData.geminiApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium" placeholder="AIzaSy...">
+              <div class="text-[10px] text-slate-500 mt-1">B-Roll, Product Review autofill</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">YouTube Data API Key</label>
+              <input x-model="onboardingData.youtubeApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium">
+              <div class="text-[10px] text-slate-500 mt-1" x-text="t('onb_yt_api_key_desc')"></div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <label class="block text-sm font-medium text-slate-300 mb-1">Pixabay API Key</label>
+              <input x-model="onboardingData.pixabayApiKey" type="password"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm input-premium">
+              <div class="text-[10px] text-slate-500 mt-1" x-text="t('onb_pixabay_desc')"></div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 11: YouTube & Publishing ── -->
+        <div x-show="isWizardStep('notifications')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📺</span> <span x-text="t('onb_youtube_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_youtube_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- YouTube OAuth -->
+            <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+              <h4 class="text-sm font-bold text-white mb-3">YouTube OAuth2</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Client ID</label>
+                  <input x-model="onboardingData.ytOauthClientId" type="text"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Client Secret</label>
+                  <input x-model="onboardingData.ytOauthClientSecret" type="password"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+              </div>
+            </div>
+            <!-- Auto-publish toggles -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white" x-text="t('onb_autopublish_yt')"></div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="onboardingData.autopublishYoutube" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <!-- Privacy Status -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <div class="text-sm font-medium text-white mb-2" x-text="t('onb_yt_privacy')"></div>
+              <div class="flex gap-3">
+                <template x-for="priv in ['private','unlisted','public']" :key="priv">
+                  <button @click="onboardingData.ytPrivacyStatus=priv" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                          :class="onboardingData.ytPrivacyStatus===priv ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                          x-text="priv"></button>
+                </template>
+              </div>
+            </div>
+            <!-- Category ID -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <label class="block text-sm font-medium text-white mb-2" x-text="t('onb_yt_category')"></label>
+              <select x-model="onboardingData.ytCategoryId" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <option value="1">Film & Animation</option><option value="2">Autos & Vehicles</option>
+                <option value="10">Music</option><option value="15">Pets & Animals</option>
+                <option value="17">Sports</option><option value="20">Gaming</option>
+                <option value="22">People & Blogs</option><option value="23">Comedy</option>
+                <option value="24">Entertainment</option><option value="25">News & Politics</option>
+                <option value="26">Howto & Style</option><option value="27">Education</option>
+                <option value="28">Science & Technology</option>
+              </select>
+            </div>
+            <!-- Other platforms -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white">Auto-publish Reels</div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.autopublishReels" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white">Share on Instagram</div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.shareOnInstagram" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white">Share on TikTok</div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.shareOnTiktok" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 12: Notifications ── -->
+        <div x-show="isWizardStep('social_meta')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🔔</span> <span x-text="t('onb_notif_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_notif_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- Webhook -->
+            <div class="p-4 rounded-xl border border-slate-700" :class="onboardingData.webhookEnabled ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-slate-800/50'">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-white">Webhook (Slack/Discord)</h4>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.webhookEnabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div x-show="onboardingData.webhookEnabled" class="space-y-2">
+                <input x-model="onboardingData.webhookUrl" type="url" placeholder="https://hooks.slack.com/..."
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" x-model="onboardingData.webhookOnComplete" class="rounded"> On Complete
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" x-model="onboardingData.webhookOnFailure" class="rounded"> On Failure
+                  </label>
+                </div>
+                <input x-model="onboardingData.webhookMention" type="text" placeholder="@channel"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.webhookSecret" type="password" placeholder="HMAC Secret (optional)"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+            </div>
+            <!-- Telegram -->
+            <div class="p-4 rounded-xl border border-slate-700" :class="onboardingData.telegramEnabled ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-slate-800/50'">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-white">Telegram</h4>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.telegramEnabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div x-show="onboardingData.telegramEnabled" class="space-y-2">
+                <input x-model="onboardingData.telegramBotToken" type="password" placeholder="Bot Token"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.telegramChatId" type="text" placeholder="Chat ID"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+            </div>
+            <!-- Email -->
+            <div class="p-4 rounded-xl border border-slate-700" :class="onboardingData.emailEnabled ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-slate-800/50'">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-white">E-mail</h4>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.emailEnabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div x-show="onboardingData.emailEnabled" class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <input x-model="onboardingData.emailSmtpHost" type="text" placeholder="SMTP Host"
+                         class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  <input x-model="onboardingData.emailSmtpPort" type="number" placeholder="Port"
+                         class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+                <input x-model="onboardingData.emailSmtpUser" type="text" placeholder="SMTP User"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.emailSmtpPassword" type="password" placeholder="SMTP Password"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.emailFrom" type="email" placeholder="From email"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.emailTo" type="text" placeholder="To (comma-separated)"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+            </div>
+            <!-- WhatsApp -->
+            <div class="p-4 rounded-xl border border-slate-700" :class="onboardingData.whatsappEnabled ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-slate-800/50'">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-white">WhatsApp</h4>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.whatsappEnabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div x-show="onboardingData.whatsappEnabled" class="space-y-2">
+                <input x-model="onboardingData.whatsappApiUrl" type="url" placeholder="API URL (Twilio/WA Business)"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.whatsappApiToken" type="password" placeholder="API Token"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                <input x-model="onboardingData.whatsappTo" type="text" placeholder="+905551234567"
+                       class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 13: Social Meta ── -->
+        <div x-show="isWizardStep('youtube_oauth')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📱</span> <span x-text="t('onb_social_meta_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_social_meta_desc')"></p>
+
+          <div class="space-y-5">
+            <!-- Per-module toggles -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white" x-text="t('onb_social_yt_video')"></div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.socialMetaEnabledYt" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white" x-text="t('onb_social_bulletin')"></div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.socialMetaEnabledBulletin" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                <div class="text-sm font-medium text-white" x-text="t('onb_social_pr')"></div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="onboardingData.socialMetaEnabledPr" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+            </div>
+            <!-- Fields -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <label class="block text-sm font-medium text-white mb-2" x-text="t('onb_social_fields')"></label>
+              <input x-model="onboardingData.socialMetaFields" type="text"
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm"
+                     placeholder="title,description,tags">
+              <div class="text-[10px] text-slate-500 mt-1">title, description, tags, source, link</div>
+            </div>
+            <!-- Master Prompt -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <label class="block text-sm font-medium text-white mb-2" x-text="t('onb_social_prompt')"></label>
+              <textarea x-model="onboardingData.socialMetaMasterPrompt" rows="3"
+                        class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm"
+                        :placeholder="t('onb_social_prompt_ph')"></textarea>
+            </div>
+            <!-- Language -->
+            <div class="p-3 rounded-xl bg-slate-800/50">
+              <label class="block text-sm font-medium text-white mb-2" x-text="t('onb_social_lang')"></label>
+              <input x-model="onboardingData.socialMetaLanguage" type="text" placeholder="tr, en..."
+                     class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 14: Module TTS Overrides ── -->
+        <div x-show="isWizardStep('module_tts')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">🎛️</span> <span x-text="t('onb_module_override_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_module_override_desc')"></p>
+
+          <div class="space-y-6">
+            <!-- YT Video Override -->
+            <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-white mb-3">🎬 YT Video</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_override_tts_provider')"></label>
+                  <select x-model="onboardingData.ytTtsProvider" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                    <option value="">(Global default)</option>
+                    <option value="edge">Edge TTS</option><option value="qwen3">Qwen3</option>
+                    <option value="elevenlabs">ElevenLabs</option><option value="openai">OpenAI</option>
+                    <option value="speshaudio">SpeshAudio</option><option value="dubvoice">DubVoice</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Voice ID</label>
+                    <input x-model="onboardingData.ytTtsVoiceId" type="text" placeholder="(global)"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Speed (0=global)</label>
+                    <input x-model="onboardingData.ytTtsSpeed" type="number" step="0.1" min="0" max="4"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Bulletin Override -->
+            <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-white mb-3">📺 Bulletin</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_override_tts_provider')"></label>
+                  <select x-model="onboardingData.bulletinTtsProvider" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                    <option value="">(Global default)</option>
+                    <option value="edge">Edge TTS</option><option value="qwen3">Qwen3</option>
+                    <option value="elevenlabs">ElevenLabs</option><option value="openai">OpenAI</option>
+                    <option value="speshaudio">SpeshAudio</option><option value="dubvoice">DubVoice</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Voice ID</label>
+                    <input x-model="onboardingData.bulletinTtsVoiceId" type="text" placeholder="(global)"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Speed (0=global)</label>
+                    <input x-model="onboardingData.bulletinTtsSpeed" type="number" step="0.1" min="0" max="4"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- PR Override -->
+            <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-white mb-3">🛒 Product Review</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_override_tts_provider')"></label>
+                  <select x-model="onboardingData.prTtsProvider" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                    <option value="">(Global default)</option>
+                    <option value="edge">Edge TTS</option><option value="qwen3">Qwen3</option>
+                    <option value="elevenlabs">ElevenLabs</option><option value="openai">OpenAI</option>
+                    <option value="speshaudio">SpeshAudio</option><option value="dubvoice">DubVoice</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Voice ID</label>
+                    <input x-model="onboardingData.prTtsVoiceId" type="text" placeholder="(global)"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Speed (0=global)</label>
+                    <input x-model="onboardingData.prTtsSpeed" type="number" step="0.1" min="0" max="4"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 15: Bulletin & Product Review Module Settings ── -->
+        <div x-show="isWizardStep('module_settings')" class="onboarding-step">
+          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+            <span class="text-3xl">📋</span> <span x-text="t('onb_modules_title')"></span>
+          </h2>
+          <p class="text-slate-400 mb-6" x-text="t('onb_modules_desc')"></p>
+
+          <div class="space-y-6">
+            <!-- Bulletin Settings -->
+            <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">📺 <span x-text="t('onb_bulletin_settings')"></span></h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_bulletin_network')"></label>
+                  <input x-model="onboardingData.bulletinNetworkName" type="text"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_bulletin_style')"></label>
+                  <div class="flex gap-2">
+                    <template x-for="s in ['breaking','tech','corporate','minimal']" :key="s">
+                      <button @click="onboardingData.bulletinStyle=s" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                              :class="onboardingData.bulletinStyle===s ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'"
+                              x-text="s"></button>
+                    </template>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Format</label>
+                    <select x-model="onboardingData.bulletinFormat" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">FPS</label>
+                    <select x-model="onboardingData.bulletinFps" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="30">30</option><option value="60">60</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_bulletin_max_items')"></label>
+                    <input x-model="onboardingData.bulletinMaxItems" type="number" min="1" max="20"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_bulletin_lang')"></label>
+                  <input x-model="onboardingData.bulletinDefaultLanguage" type="text" placeholder="(per-source)"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Review Settings -->
+            <div class="p-4 rounded-xl border border-slate-700 bg-slate-800/30">
+              <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">🛒 <span x-text="t('onb_pr_settings')"></span></h4>
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_pr_style')"></label>
+                    <select x-model="onboardingData.prStyle" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="modern">modern</option><option value="classic">classic</option><option value="minimal">minimal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Format</label>
+                    <select x-model="onboardingData.prFormat" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">FPS</label>
+                    <select x-model="onboardingData.prFps" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="30">30</option><option value="60">60</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_pr_currency')"></label>
+                    <select x-model="onboardingData.prCurrency" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                      <option value="TL">TL</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Channel Name</label>
+                    <input x-model="onboardingData.prChannelName" type="text"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">CTA Text</label>
+                  <input x-model="onboardingData.prCtaText" type="text"
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="text-sm font-medium text-white" x-text="t('onb_pr_auto_tts')"></div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="onboardingData.prAutoGenerateTts" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  </label>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_pr_master_prompt')"></label>
+                  <textarea x-model="onboardingData.prMasterPrompt" rows="2"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm"
+                            :placeholder="t('onb_pr_master_prompt_ph')"></textarea>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" x-text="t('onb_pr_ai_lang')"></label>
+                  <input x-model="onboardingData.prAiLanguage" type="text" placeholder="tr, en..."
+                         class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-8">
+            <button @click="prevWizardStep()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition-all">
+              ← <span x-text="t('onb_back')"></span>
+            </button>
+            <button @click="nextWizardStep()" class="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring">
+              <span x-text="t('onb_next')"></span> →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Step 16: Summary & Complete ── -->
+        <div x-show="isWizardStep('summary')" class="onboarding-step text-center">
+          <div class="text-5xl mb-4">✅</div>
+          <h2 class="text-2xl font-bold text-white mb-2" x-text="t('onb_complete_title')"></h2>
+          <p class="text-slate-400 mb-4" x-text="t('onb_complete_desc')"></p>
+
+          <!-- ── Live Output Preview ── -->
+          <div class="max-w-2xl mx-auto mb-6">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3" x-text="t('onb_preview_title')"></h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Video Frame Mockup -->
+              <div class="relative rounded-xl overflow-hidden border border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" style="aspect-ratio:16/9">
+                <!-- Video effect overlay -->
+                <div class="absolute inset-0"
+                     :class="{
+                       'bg-gradient-to-br from-orange-900/20 via-transparent to-yellow-900/20': onboardingData.videoEffect === 'warm',
+                       'bg-gradient-to-br from-blue-900/20 via-transparent to-cyan-900/20': onboardingData.videoEffect === 'cool',
+                       'bg-gradient-to-br from-amber-900/10 via-transparent to-slate-900/30': onboardingData.videoEffect === 'cinematic'
+                     }"></div>
+                <!-- Vignette overlay -->
+                <div x-show="onboardingData.videoEffect === 'vignette' || onboardingData.videoEffect === 'cinematic'"
+                     class="absolute inset-0" style="box-shadow: inset 0 0 80px rgba(0,0,0,0.7)"></div>
+                <!-- Ken Burns simulated motion indicator -->
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div class="text-slate-600 text-sm" :class="{'animate-pulse': onboardingData.kenBurnsZoom > 0}">
+                    <svg class="w-16 h-16 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  </div>
+                </div>
+                <!-- Resolution badge -->
+                <div class="absolute top-2 left-2 text-[9px] px-1.5 py-0.5 bg-black/60 text-slate-400 rounded font-mono" x-text="onboardingData.resolution + ' / ' + onboardingData.videoFps + 'fps'"></div>
+                <!-- Effect badge -->
+                <div x-show="onboardingData.videoEffect !== 'none'" class="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 bg-black/60 text-amber-400 rounded" x-text="onboardingData.videoEffect"></div>
+                <!-- Subtitle preview at bottom -->
+                <div class="absolute bottom-4 left-0 right-0 flex justify-center px-4">
+                  <div class="preview-subtitle-text"
+                       :style="getSubtitlePreviewStyle()"
+                       :class="{
+                         'animate-subtitle-hype': onboardingData.subtitleAnim === 'hype',
+                         'animate-subtitle-explosive': onboardingData.subtitleAnim === 'explosive',
+                         'animate-subtitle-vibrant': onboardingData.subtitleAnim === 'vibrant',
+                         'animate-subtitle-minimal': onboardingData.subtitleAnim === 'minimal'
+                       }">
+                    <span x-text="lang === 'tr' ? 'Merhaba Dünya' : 'Hello World'"></span>
+                    <span x-show="onboardingData.karaokeEnabled" :style="'color:' + (onboardingData.karaokeColor || '#FFD700')" class="font-bold ml-1" x-text="lang === 'tr' ? 'Karaoke' : 'Karaoke'"></span>
+                  </div>
+                </div>
+                <!-- Composer badge -->
+                <div class="absolute bottom-2 right-2 text-[9px] px-1.5 py-0.5 bg-black/60 text-slate-400 rounded" x-text="onboardingData.composer"></div>
+              </div>
+
+              <!-- Audio Preview -->
+              <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="text-lg">🎤</span>
+                    <span class="text-sm font-bold text-white" x-text="t('onb_preview_audio')"></span>
+                  </div>
+                  <div class="space-y-2 text-left text-xs text-slate-400">
+                    <div class="flex justify-between"><span>Provider:</span><span class="text-white font-medium" x-text="onboardingData.ttsProvider"></span></div>
+                    <div class="flex justify-between"><span x-text="t('onb_preview_voice') + ':'"></span><span class="text-white font-medium truncate ml-2" x-text="onboardingData.selectedVoice || 'default'"></span></div>
+                    <div class="flex justify-between"><span x-text="t('onb_preview_speed') + ':'"></span><span class="text-white font-medium" x-text="onboardingData.ttsSpeed + 'x'"></span></div>
+                  </div>
+                </div>
+                <!-- TTS Preview Button -->
+                <button @click="playTtsPreview()"
+                        class="mt-3 w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-sm font-medium rounded-lg border border-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                        :disabled="ttsPreviewLoading">
+                  <template x-if="!ttsPreviewLoading">
+                    <span>▶ <span x-text="t('onb_preview_listen')"></span></span>
+                  </template>
+                  <template x-if="ttsPreviewLoading">
+                    <span class="flex items-center gap-2"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> <span x-text="t('onb_preview_generating')"></span></span>
+                  </template>
+                </button>
+                <audio x-ref="ttsPreviewAudio" class="hidden"></audio>
+                <!-- Waveform visual -->
+                <div class="mt-2 flex items-end gap-[2px] h-6 justify-center">
+                  <template x-for="i in 20" :key="i">
+                    <div class="w-1 rounded-full transition-all duration-300"
+                         :class="ttsPreviewPlaying ? 'bg-indigo-500' : 'bg-slate-700'"
+                         :style="'height:' + (ttsPreviewPlaying ? (4 + Math.random() * 16) : (2 + (i % 3) * 2)) + 'px; animation-delay:' + (i * 50) + 'ms'"
+                    ></div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary cards -->
+          <div class="space-y-2 text-left max-w-lg mx-auto mb-8 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">📡</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_channel')"></div>
+                <div class="text-sm font-bold text-white truncate" x-text="(onboardingData.channelName || 'Default') + ' (' + onboardingData.channelLang + ')'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">🎤</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_tts')"></div>
+                <div class="text-sm font-bold text-white truncate" x-text="onboardingData.ttsProvider + ' → ' + (onboardingData.selectedVoice || 'default') + ' (' + onboardingData.ttsSpeed + 'x)'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">🖼️</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_visual')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.visualProvider"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">🎬</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_style')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.resolution + ' / ' + onboardingData.videoFps + 'fps / ' + onboardingData.composer"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">📝</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_subtitle')"></div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.subtitleAnim + ' / ' + onboardingData.subtitleFont + ' / ' + onboardingData.subtitleSize + 'px'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">🎞️</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_effects')"></div>
+                <div class="text-sm font-bold text-white" x-text="'Effect: ' + onboardingData.videoEffect + ' / Ken Burns: ' + onboardingData.kenBurnsZoom"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">🔔</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_notif')"></div>
+                <div class="text-sm font-bold text-white" x-text="[onboardingData.webhookEnabled ? 'Webhook' : '', onboardingData.telegramEnabled ? 'Telegram' : '', onboardingData.emailEnabled ? 'Email' : '', onboardingData.whatsappEnabled ? 'WhatsApp' : ''].filter(Boolean).join(', ') || 'None'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">📺</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500">YouTube</div>
+                <div class="text-sm font-bold text-white" x-text="onboardingData.ytOauthClientId ? 'OAuth configured / ' + onboardingData.ytPrivacyStatus : 'Not configured'"></div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center gap-3">
+              <span class="text-lg">📋</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-slate-500" x-text="t('onb_summary_modules')"></div>
+                <div class="text-sm font-bold text-white" x-text="'Bulletin: ' + onboardingData.bulletinStyle + ' / PR: ' + onboardingData.prStyle"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 max-w-sm mx-auto">
+            <button @click="completeOnboarding('new-run')" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all btn-spring text-lg">
+              🎬 <span x-text="t('onb_create_first')"></span>
+            </button>
+            <button @click="completeOnboarding('dashboard')" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition-all">
+              📊 <span x-text="t('onb_go_dashboard')"></span>
+            </button>
+          </div>
+
+          <button @click="prevWizardStep()" class="mt-4 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+            ← <span x-text="t('onb_back')"></span>
+          </button>
+        </div>
+
+      </div>
+    </div>

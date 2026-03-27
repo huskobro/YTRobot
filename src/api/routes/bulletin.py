@@ -118,10 +118,20 @@ async def run_bulletin_task(bid: str, data: dict):
     await asyncio.to_thread(_do_bulletin_render_sync, bid, data)
 
 def _do_bulletin_render_sync(bid: str, data: dict):
-    from config import reload_settings
+    from config import reload_settings, settings
     reload_settings()
+    # Apply per-channel settings overrides
+    channel_settings = data.get("channel_settings", {})
+    if channel_settings:
+        for k, v in channel_settings.items():
+            attr = k.lower()
+            if hasattr(settings, attr):
+                try:
+                    setattr(settings, attr, type(getattr(settings, attr))(v))
+                except (ValueError, TypeError):
+                    pass
     from pipeline.news_bulletin import run_bulletin as render_bulletin
-    
+
     body_data = data.get("body", {})
     render_mode = data.get("render_mode", "combined")
     _stop_event = threading.Event()
@@ -292,10 +302,24 @@ async def start_bulletin_render(body: BulletinRenderReq):
     with _bulletin_jobs_lock:
         _bulletin_jobs[bid] = {"id": bid, "status": "queued", "started_at": time.time()}
 
+    # Load active channel settings for bulletin rendering
+    channel_id = "_default"
+    channel_settings = {}
+    try:
+        from src.core.channel_hub import channel_hub
+        ch = channel_hub.get_active_channel()
+        if ch:
+            channel_id = ch.get("id", "_default")
+            channel_settings = channel_hub.get_channel_settings(channel_id)
+    except Exception:
+        pass
+
     await queue_manager.add_job("bulletin", {
         "bid": bid,
         "body": body.model_dump(),
-        "render_mode": body.render_mode
+        "render_mode": body.render_mode,
+        "channel_id": channel_id,
+        "channel_settings": channel_settings,
     }, bid)
     
     return {"bulletin_id": bid}

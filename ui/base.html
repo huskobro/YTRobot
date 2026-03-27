@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTRobot v3</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@700;900&family=Oswald:wght@600;700&family=Roboto:wght@700&family=Inter:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css">
+  <script defer src="./js/translations.js"></script>
+  <!-- View mixins (loaded before app.js) -->
+  <script defer src="./js/views/bulletin.js?v=3"></script>
+  <script defer src="./js/views/product-review.js?v=3"></script>
+  <script defer src="./js/views/content-planning.js?v=3"></script>
+  <script defer src="./js/views/analytics.js?v=3"></script>
+  <script defer src="./js/views/gallery.js?v=3"></script>
+  <script defer src="./js/views/channels.js?v=3"></script>
+  <script defer src="./js/views/session.js?v=3"></script>
+  <script defer src="./js/views/new-run.js?v=3"></script>
+  <script defer src="./js/views/settings.js?v=3"></script>
+  <script defer src="./js/views/onboarding.js?v=3"></script>
+  <!-- Core app (spreads mixins) -->
+  <script defer src="./js/app.js?v=4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-hidden">
+
+<div x-data="app()" x-init="init()" x-cloak class="flex h-screen relative">
+
+  {% include 'components/command-palette.html' %}
+  {% include 'components/toasts.html' %}
+  {% include 'components/error-banner.html' %}
+  {% include 'components/sidebar.html' %}
+
+  <main class="flex-1 overflow-y-auto">
+    {% include 'components/header.html' %}
+
+    {% include 'views/analytics.html' %}
+    {% include 'views/onboarding.html' %}
+    {% include 'views/dashboard.html' %}
+    {% include 'views/session.html' %}
+    {% include 'views/new-run.html' %}
+    {% include 'views/api-keys.html' %}
+    {% include 'views/settings.html' %}
+    {% include 'views/bulletin.html' %}
+    {% include 'views/product-review.html' %}
+    {% include 'views/channels.html' %}
+    {% include 'views/gallery.html' %}
+    {% include 'views/ab-testing.html' %}
+    {% include 'views/content-planning.html' %}
+  </main>
+
+  {% include 'components/modals.html' %}
+
+</div>
+
+</body>
+</html>

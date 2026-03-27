@@ -1,0 +1,2256 @@
+{# View: settings #}
+    <div x-show="view==='settings'" class="p-6">
+      <div class="max-w-5xl mx-auto">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-2xl font-bold text-white" x-text="t('settings_title')"></h1>
+              <span x-show="settingsChanged" class="text-xs px-2 py-1 bg-amber-900/40 text-amber-300 rounded-full animate-pulse">Kaydedilmemiş değişiklikler</span>
+            </div>
+            <p class="text-slate-500 text-sm mt-0.5" x-text="t('settings_subtitle')"></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button @click="launchAdminWizard()"
+                    class="px-4 py-2.5 bg-purple-700 hover:bg-purple-600 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-md shadow-purple-900/30"
+                    :title="lang==='tr' ? 'Tüm varsayılan ayarları adım adım düzenle' : 'Edit all defaults step by step'">
+              <span>🧙</span>
+              <span x-text="lang==='tr' ? 'Varsayılan Ayarlar Sihirbazı' : 'Default Settings Wizard'"></span>
+            </button>
+            <button @click="openWizardConfig()"
+                    class="px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+                    :title="lang==='tr' ? 'Wizard adımlarını yapılandır' : 'Configure wizard steps'">
+              <span>⚙️</span>
+              <span class="hidden lg:inline" x-text="lang==='tr' ? 'Wizard Yapılandırma' : 'Wizard Config'"></span>
+            </button>
+            <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="autoSaveEnabled" class="w-4 h-4 accent-indigo-500 cursor-pointer rounded" />
+              <span>Otomatik Kayıt</span>
+            </label>
+            <button @click="handleSaveSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-900/30 transition-all font-sans"
+                    x-text="t('save_settings')"></button>
+          </div>
+        </div>
+
+        <div x-show="settingsSaved" x-transition class="mb-4 px-4 py-3 bg-green-900/30 border border-green-700/50 rounded-xl text-sm text-green-400 flex items-center gap-2"
+             x-text="t('settings_saved')"></div>
+
+        <!-- Settings Search -->
+        <div class="mb-5">
+          <input type="text" x-model="settingsSearch" @input.debounce.300ms="searchSettings()" placeholder="Ayar ara... (örn: tts, api_key)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-all">
+          <div x-show="settingsSearchResults.length > 0" class="mt-3 bg-gray-800 rounded-xl border border-gray-700 p-3 space-y-2">
+            <template x-for="r in settingsSearchResults" :key="r.key">
+              <div class="flex items-center justify-between py-1.5 border-b border-gray-700/50 last:border-0">
+                <span class="text-xs font-mono text-blue-400" x-text="r.key"></span>
+                <span class="text-xs text-slate-400 truncate max-w-[200px]" x-text="r.value"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Module Tab Selector -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+          <button @click="settingsModule='tts'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='tts'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            🎙 <span x-text="t('settings_tab_tts')"></span>
+          </button>
+          <button @click="settingsModule='visuals'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='visuals'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            🎨 <span x-text="t('settings_tab_visuals')"></span>
+          </button>
+          <button @click="settingsModule='ai'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='ai'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            🤖 <span x-text="t('settings_tab_ai')"></span>
+          </button>
+          <button @click="settingsModule='system'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='system'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            ⚙️ <span x-text="t('settings_tab_system')"></span>
+          </button>
+          <button @click="settingsModule='secure'; loadSecureKeys()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='secure'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            🔐 <span x-text="t('secure_title')"></span>
+          </button>
+          <button @click="settingsModule='social_meta'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  :class="settingsModule==='social_meta'?'bg-slate-700 text-white shadow-md':'text-slate-400 hover:text-white hover:bg-slate-800'">
+            📱 <span x-text="t('nav_social_meta') || 'Sosyal Medya'"></span>
+          </button>
+        </div>
+
+        <!-- ══ TTS TAB ══════════════════════════════════════════════════ -->
+        <!-- ══ TTS / SES TAB ══════════════════════════════════════════════ -->
+        <div x-show="settingsModule==='tts'" x-data="{ ttsTab: 'provider' }">
+
+          <!-- ── Tab Bar ── -->
+          <div class="flex gap-1 mb-6 p-1 bg-slate-900/60 rounded-xl border border-slate-800 w-fit">
+            <template x-for="tab in [{id:'provider',icon:'🎙',label:'Ses Kaynağı'},{id:'quality',icon:'🛠',label:'Kalite & İşleme'},{id:'overrides',icon:'🔀',label:'Modül Override'}]" :key="tab.id">
+              <button @click="ttsTab=tab.id"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                :class="ttsTab===tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+                <span x-text="tab.icon"></span>
+                <span x-text="tab.label"></span>
+              </button>
+            </template>
+          </div>
+
+          <!-- ══ TAB: SES KAYNAĞI ══ -->
+          <div x-show="ttsTab==='provider'" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              <!-- TTS Provider Seçimi (Kart Bazlı) -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <div class="w-7 h-7 bg-indigo-600/15 rounded-lg flex items-center justify-center text-indigo-400 text-sm">🎙</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('tts_default_section')"></span>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2" x-text="t('provider_label')"></label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="prov in [{val:'speshaudio',icon:'🔊',name:'Spes Audio',desc:'Yüksek kalite Türkçe'},{val:'elevenlabs',icon:'🎤',name:'ElevenLabs',desc:'Premium sesler'},{val:'openai',icon:'🤖',name:'OpenAI TTS',desc:'Hızlı & güvenilir'},{val:'google',icon:'🌐',name:'Google TTS',desc:'Çoklu dil desteği'},{val:'qwen3',icon:'💻',name:'Qwen3 (Local)',desc:'Offline / GPU'}]" :key="prov.val">
+                        <button @click="settings.TTS_PROVIDER=prov.val; voicesList=[]; triggerAutoSave()"
+                          class="flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all"
+                          :class="settings.TTS_PROVIDER===prov.val ? 'bg-indigo-950/50 border-indigo-500/60 shadow-lg shadow-indigo-900/20' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-base mt-0.5" x-text="prov.icon"></span>
+                          <div>
+                            <div class="text-[11px] font-black text-white" x-text="prov.name"></div>
+                            <div class="text-[9px] text-slate-500" x-text="prov.desc"></div>
+                          </div>
+                          <div x-show="settings.TTS_PROVIDER===prov.val" class="ml-auto mt-0.5 w-3.5 h-3.5 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <svg class="w-2 h-2 text-white" fill="none" viewBox="0 0 8 8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1.5 4L3.5 6L6.5 2"/></svg>
+                          </div>
+                        </button>
+                      </template>
+                    </div>
+                    <!-- Active Provider Info -->
+                    <div class="mt-3 flex items-center gap-2 px-3 py-2 bg-indigo-900/15 border border-indigo-800/30 rounded-lg">
+                      <svg class="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <span class="text-[10px] text-indigo-300">Aktif: <strong x-text="ttsProviderLabel()"></strong></span>
+                    </div>
+                  </div>
+
+                  <!-- OpenAI Voice (sadece openai seçiliyken) -->
+                  <div x-show="settings.TTS_PROVIDER==='openai'" class="pt-2 border-t border-slate-800">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2" x-text="t('openai_voice_label')"></label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                      <template x-for="v in ['alloy','ash','coral','echo','fable','nova','onyx','sage','shimmer']" :key="v">
+                        <button @click="settings.OPENAI_TTS_VOICE=v; triggerAutoSave()"
+                          class="py-2 rounded-lg border text-center transition-all text-[10px] font-bold capitalize"
+                          :class="(settings.OPENAI_TTS_VOICE||'alloy')===v ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'"
+                          x-text="v"></button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hız & Ses Ayarları -->
+              <div class="space-y-4">
+                <!-- Hız Kontrolü -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-emerald-600/15 rounded-lg flex items-center justify-center text-emerald-400 text-sm">⚡</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('tts_speed_label')"></span>
+                  </div>
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <label class="text-[10px] font-bold text-slate-500 uppercase">Konuşma Hızı</label>
+                      <span class="text-sm font-mono font-bold text-emerald-400" x-text="parseFloat(settings.TTS_SPEED||1.0).toFixed(2)+'×'"></span>
+                    </div>
+                    <input type="range" x-model="settings.TTS_SPEED" min="0.5" max="2.0" step="0.05" @change="triggerAutoSave()"
+                           class="w-full h-2 rounded-full appearance-none cursor-pointer accent-emerald-500 bg-slate-800" />
+                    <div class="flex justify-between text-[9px] text-slate-600 mt-1"><span>0.5× Yavaş</span><span>1.0× Normal</span><span>2.0× Hızlı</span></div>
+                  </div>
+                </div>
+
+                <!-- Qwen3 Local Settings (sadece qwen3 seçiliyken) -->
+                <div x-show="settings.TTS_PROVIDER==='qwen3'" class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-violet-600/15 rounded-lg flex items-center justify-center text-violet-400 text-sm">💻</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Qwen3 Local Ayarları</span>
+                  </div>
+                  <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Model Tipi</label>
+                        <select x-model="settings.QWEN3_MODEL_TYPE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+                          <option value="custom">Custom Voice (Presets)</option>
+                          <option value="design">Voice Design (Prompt)</option>
+                          <option value="clone">Voice Clone (Audio)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Cihaz</label>
+                        <select x-model="settings.QWEN3_DEVICE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-violet-500">
+                          <option value="auto">Auto</option>
+                          <option value="cpu">CPU</option>
+                          <option value="mps">MPS (Apple Silicon)</option>
+                          <option value="cuda">CUDA (NVIDIA)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Model ID / Path</label>
+                      <input x-model="settings.QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-violet-500" placeholder="Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice" />
+                    </div>
+                    <div x-show="settings.QWEN3_MODEL_TYPE === 'custom'">
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Speaker</label>
+                      <input x-model="settings.QWEN3_SPEAKER" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500" placeholder="E.g. Vivian, Ryan" />
+                    </div>
+                    <div x-show="settings.QWEN3_MODEL_TYPE !== 'clone'">
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Ses Talimatı</label>
+                      <textarea x-model="settings.QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500" placeholder="'Enerjik bir ses tonuyla söyle'"></textarea>
+                    </div>
+                    <div x-show="settings.QWEN3_MODEL_TYPE === 'clone'">
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Referans Ses Dosyası</label>
+                      <input x-model="settings.QWEN3_REF_AUDIO" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-violet-500" placeholder="/path/to/ref.wav or https://..." />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ TAB: KALİTE & İŞLEME ══ -->
+          <div x-show="ttsTab==='quality'" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+              <!-- TTS Enhance -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <div class="w-7 h-7 bg-violet-600/15 rounded-lg flex items-center justify-center text-violet-400 text-sm">✨</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('tts_enhance_label')"></span>
+                </div>
+                <p class="text-[10px] text-slate-500 mb-3" x-text="t('tts_enhance_hint')"></p>
+                <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span class="text-xs font-bold text-white">LLM İyileştirme</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" :checked="settings.TTS_ENHANCE_WITH_LLM==='true'" @change="settings.TTS_ENHANCE_WITH_LLM=$event.target.checked?'true':'false'; triggerAutoSave()" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-violet-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Trim Silence -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <div class="w-7 h-7 bg-cyan-600/15 rounded-lg flex items-center justify-center text-cyan-400 text-sm">✂️</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('tts_trim_silence_label')"></span>
+                </div>
+                <p class="text-[10px] text-slate-500 mb-3" x-text="t('tts_trim_silence_hint') || 'Ses dosyasındaki baş/son sessizlikleri temizler'"></p>
+                <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span class="text-xs font-bold text-white">Sessizlik Kırpma</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" :checked="settings.TTS_TRIM_SILENCE==='true'" @change="settings.TTS_TRIM_SILENCE=$event.target.checked?'true':'false'; triggerAutoSave()" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Remove Apostrophes -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <div class="w-7 h-7 bg-amber-600/15 rounded-lg flex items-center justify-center text-amber-400 text-sm">🔤</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('tts_remove_apostrophes_label')"></span>
+                </div>
+                <p class="text-[10px] text-slate-500 mb-3" x-text="t('tts_remove_apostrophes_hint') || 'Apostrof işaretlerini temizleyerek mikro duraklamaları önler'"></p>
+                <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span class="text-xs font-bold text-white">Apostrof Temizle</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" :checked="settings.TTS_REMOVE_APOSTROPHES!=='false'" @change="settings.TTS_REMOVE_APOSTROPHES=$event.target.checked?'true':'false'; triggerAutoSave()" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-amber-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ TAB: MODÜL OVERRİDE ══ -->
+          <div x-show="ttsTab==='overrides'" class="space-y-4">
+
+            <!-- YT Video Override -->
+            <div x-data="{open:false}" class="bg-slate-900 border border-indigo-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-indigo-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-indigo-600/15 rounded-xl flex items-center justify-center text-indigo-400">▶</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider" x-text="t('module_yt_video')"></div>
+                    <div class="text-[9px] text-slate-500" x-text="settings.YT_TTS_PROVIDER ? '✓ Override aktif — '+settings.YT_TTS_PROVIDER : '↑ Globalden devralıyor'"></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button x-show="settings.YT_TTS_PROVIDER" @click.stop="settings.YT_TTS_PROVIDER=''; settings.YT_TTS_VOICE_ID=''; settings.YT_ELEVENLABS_VOICE_ID=''; settings.YT_OPENAI_TTS_VOICE=''; settings.YT_SPESHAUDIO_VOICE_ID=''; settings.YT_TTS_SPEED=0; settings.YT_TTS_LANGUAGE=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Reset</button>
+                  <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+              </div>
+              <div x-show="open" class="px-5 pb-5 space-y-4 border-t border-indigo-900/20">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <!-- Provider -->
+                  <div>
+                    <label class="block text-[10px] font-bold text-indigo-300/80 uppercase mb-1.5">TTS Sağlayıcı</label>
+                    <select x-model="settings.YT_TTS_PROVIDER" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                      <option value="">(↑ Global ayardan devral)</option>
+                      <option value="speshaudio">SpesAudio</option>
+                      <option value="elevenlabs">ElevenLabs</option>
+                      <option value="openai">OpenAI TTS</option>
+                      <option value="qwen3">Qwen3 (Local)</option>
+                    </select>
+                  </div>
+                  <!-- Voice ID (provider-specific) -->
+                  <div>
+                    <label class="block text-[10px] font-bold text-indigo-300/80 uppercase mb-1.5">Voice ID</label>
+                    <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'">
+                      <input type="text" x-model="settings.YT_ELEVENLABS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="ElevenLabs Voice ID..." />
+                    </div>
+                    <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                      <select x-model="settings.YT_OPENAI_TTS_VOICE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">(global default)</option>
+                        <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                        <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                        <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                      </select>
+                    </div>
+                    <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'">
+                      <input type="text" x-model="settings.YT_SPESHAUDIO_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="SpesAudio Voice ID..." />
+                    </div>
+                    <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                      <input type="text" x-model="settings.YT_TTS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="Voice ID..." />
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Hız -->
+                  <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                      <label class="text-[10px] font-bold text-indigo-300/80 uppercase">Hız</label>
+                      <span class="text-[10px] font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_SPEED||0)===0?'(global)':parseFloat(settings.YT_TTS_SPEED).toFixed(2)+'×'"></span>
+                    </div>
+                    <input type="range" x-model="settings.YT_TTS_SPEED" @change="triggerAutoSave()" min="0" max="2.0" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-800" />
+                  </div>
+                  <!-- Dil -->
+                  <div>
+                    <label class="block text-[10px] font-bold text-indigo-300/80 uppercase mb-1.5">Dil Kodu</label>
+                    <input type="text" x-model="settings.YT_TTS_LANGUAGE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="tr" />
+                  </div>
+                </div>
+                <!-- SpesAudio Kalite Sliderları -->
+                <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="grid grid-cols-3 gap-3 pt-3 border-t border-indigo-900/20">
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_stability')"></label><span class="text-[9px] font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_STABILITY||-1)<0?'↑':parseFloat(settings.YT_TTS_STABILITY).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.YT_TTS_STABILITY" @change="triggerAutoSave()" min="-1" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-800" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_similarity')"></label><span class="text-[9px] font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_SIMILARITY_BOOST||-1)<0?'↑':parseFloat(settings.YT_TTS_SIMILARITY_BOOST).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.YT_TTS_SIMILARITY_BOOST" @change="triggerAutoSave()" min="-1" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-800" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_style')"></label><span class="text-[9px] font-mono text-indigo-400" x-text="parseFloat(settings.YT_TTS_STYLE||-1)<0?'↑':parseFloat(settings.YT_TTS_STYLE).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.YT_TTS_STYLE" @change="triggerAutoSave()" min="-1" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-500 bg-slate-800" />
+                  </div>
+                </div>
+                <!-- Qwen3 Override -->
+                <div x-show="(settings.YT_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-indigo-900/20">
+                  <div class="text-[9px] font-bold text-indigo-400/60 uppercase tracking-widest">Qwen3 Override</div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <select x-model="settings.YT_QWEN3_MODEL_TYPE" @change="triggerAutoSave()" class="bg-slate-950 border border-indigo-900/30 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"><option value="">(Globalden)</option><option value="custom">Custom</option><option value="design">Design</option><option value="clone">Clone</option></select>
+                    <select x-model="settings.YT_QWEN3_DEVICE" @change="triggerAutoSave()" class="bg-slate-950 border border-indigo-900/30 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"><option value="">(Globalden)</option><option value="auto">Auto</option><option value="cpu">CPU</option><option value="mps">MPS</option><option value="cuda">CUDA</option></select>
+                  </div>
+                  <input x-model="settings.YT_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500" placeholder="Model ID..." />
+                  <textarea x-show="(settings.YT_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE)!=='clone'" x-model="settings.YT_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500" placeholder="Instruct..."></textarea>
+                </div>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-indigo-900/20">
+                  <div class="text-[11px] font-black text-indigo-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-indigo-800/40 rounded-xl bg-indigo-950/20 cursor-pointer hover:bg-indigo-900/30 hover:border-indigo-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.YT_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-indigo-500 rounded" />
+                      <span class="text-xs text-indigo-200 font-semibold">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bülten Override -->
+            <div x-data="{open:false}" class="bg-slate-900 border border-red-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-red-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-red-600/15 rounded-xl flex items-center justify-center text-red-400">📺</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider" x-text="t('module_bulletin')"></div>
+                    <div class="text-[9px] text-slate-500" x-text="settings.BULLETIN_TTS_PROVIDER ? '✓ Override aktif — '+settings.BULLETIN_TTS_PROVIDER : '↑ Globalden devralıyor'"></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button x-show="settings.BULLETIN_TTS_PROVIDER" @click.stop="settings.BULLETIN_TTS_PROVIDER=''; settings.BULLETIN_TTS_VOICE_ID=''; settings.BULLETIN_ELEVENLABS_VOICE_ID=''; settings.BULLETIN_OPENAI_TTS_VOICE=''; settings.BULLETIN_SPESHAUDIO_VOICE_ID=''; settings.BULLETIN_TTS_SPEED=0; settings.BULLETIN_TTS_LANGUAGE=''; settings.BULLETIN_TTS_STABILITY=-1; settings.BULLETIN_TTS_SIMILARITY_BOOST=-1; settings.BULLETIN_TTS_STYLE=-1; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Reset</button>
+                  <svg :class="open?'rotate-180':''" class="w-4 h-4 text-red-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+              </div>
+              <div x-show="open" class="px-5 pb-5 space-y-4 border-t border-red-900/20">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-red-300/80 uppercase mb-1.5" x-text="t('bulletin_tts_provider_label')"></label>
+                    <select x-model="settings.BULLETIN_TTS_PROVIDER" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                      <option value="" x-text="t('bulletin_tts_inherit')"></option>
+                      <option value="speshaudio">SpesAudio</option>
+                      <option value="elevenlabs">ElevenLabs</option>
+                      <option value="openai">OpenAI TTS</option>
+                      <option value="qwen3">Qwen3 (Local)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-red-300/80 uppercase mb-1.5" x-text="t('bulletin_tts_voice_label')"></label>
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'" class="space-y-1.5">
+                      <select x-model="settings.BULLETIN_ELEVENLABS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                        <option value="">(global/default)</option>
+                        <template x-for="v in voicesList.filter(x=>voicesProvider==='elevenlabs')" :key="v.id">
+                          <option :value="v.id" x-text="v.name"></option>
+                        </template>
+                      </select>
+                      <input type="text" x-model="settings.BULLETIN_ELEVENLABS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-[10px] text-slate-400 font-mono" placeholder="ElevenLabs ID..." />
+                    </div>
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                      <select x-model="settings.BULLETIN_OPENAI_TTS_VOICE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                        <option value="">(global default)</option>
+                        <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                        <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                        <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                      </select>
+                    </div>
+                    <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="space-y-1.5">
+                      <select x-model="settings.BULLETIN_SPESHAUDIO_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                        <option value="">(global/default)</option>
+                        <template x-for="v in voicesList.filter(x=>voicesProvider==='speshaudio')" :key="v.id">
+                          <option :value="v.id" x-text="v.name"></option>
+                        </template>
+                      </select>
+                      <input type="text" x-model="settings.BULLETIN_SPESHAUDIO_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-[10px] text-slate-400 font-mono" placeholder="SpesAudio ID..." />
+                    </div>
+                    <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                      <input type="text" x-model="settings.BULLETIN_TTS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:border-red-500" :placeholder="t('bulletin_tts_manual_voice_ph') || 'Manuel Ses ID...'" />
+                    </div>
+                    <div x-show="bulletinVoicesFetchError" class="mt-1 text-[10px] text-red-400" x-text="bulletinVoicesFetchError"></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-red-300/80 uppercase mb-1.5" x-text="t('bulletin_tts_lang_label')"></label>
+                    <input type="text" x-model="settings.BULLETIN_TTS_LANGUAGE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-500" :placeholder="t('bulletin_tts_lang_placeholder')" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                      <label class="text-[10px] font-bold text-red-300/80 uppercase" x-text="t('bulletin_tts_speed_label')"></label>
+                      <span class="text-[10px] font-mono text-red-400" x-text="parseFloat(settings.BULLETIN_TTS_SPEED||0)===0?'(global)':parseFloat(settings.BULLETIN_TTS_SPEED).toFixed(2)+'×'"></span>
+                    </div>
+                    <input type="range" x-model="settings.BULLETIN_TTS_SPEED" @change="triggerAutoSave()" min="0.5" max="2.0" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-red-500 bg-slate-800" />
+                  </div>
+                  <div></div>
+                </div>
+                <!-- SpesAudio Kalite Sliderları -->
+                <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'" class="grid grid-cols-3 gap-3 pt-3 border-t border-red-900/20">
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_stability')"></label><span class="text-[9px] font-mono text-red-400" x-text="parseFloat(settings.BULLETIN_TTS_STABILITY||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_STABILITY).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.BULLETIN_TTS_STABILITY" @change="triggerAutoSave()" min="0" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-red-500 bg-slate-800" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_similarity')"></label><span class="text-[9px] font-mono text-red-400" x-text="parseFloat(settings.BULLETIN_TTS_SIMILARITY_BOOST||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_SIMILARITY_BOOST).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.BULLETIN_TTS_SIMILARITY_BOOST" @change="triggerAutoSave()" min="0" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-red-500 bg-slate-800" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-slate-500 uppercase" x-text="t('spesaudio_style')"></label><span class="text-[9px] font-mono text-red-400" x-text="parseFloat(settings.BULLETIN_TTS_STYLE||-1)<0?'↑':parseFloat(settings.BULLETIN_TTS_STYLE).toFixed(2)"></span></div>
+                    <input type="range" x-model="settings.BULLETIN_TTS_STYLE" @change="triggerAutoSave()" min="0" max="1" step="0.05" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-red-500 bg-slate-800" />
+                  </div>
+                </div>
+                <!-- Qwen3 Override -->
+                <div x-show="(settings.BULLETIN_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-red-900/20">
+                  <div class="text-[9px] font-bold text-red-400/60 uppercase tracking-widest">Qwen3 Override</div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <select x-model="settings.BULLETIN_QWEN3_MODEL_TYPE" @change="triggerAutoSave()" class="bg-slate-950 border border-red-900/30 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-red-500"><option value="">(Globalden)</option><option value="custom">Custom</option><option value="design">Design</option><option value="clone">Clone</option></select>
+                    <select x-model="settings.BULLETIN_QWEN3_DEVICE" @change="triggerAutoSave()" class="bg-slate-950 border border-red-900/30 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-red-500"><option value="">(Globalden)</option><option value="auto">Auto</option><option value="cpu">CPU</option><option value="mps">MPS</option><option value="cuda">CUDA</option></select>
+                  </div>
+                  <input x-model="settings.BULLETIN_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-red-500" placeholder="Model ID..." />
+                  <textarea x-show="(settings.BULLETIN_QWEN3_MODEL_TYPE||settings.QWEN3_MODEL_TYPE)!=='clone'" x-model="settings.BULLETIN_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-red-500" placeholder="Instruct..."></textarea>
+                </div>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-red-900/20">
+                  <div class="text-[11px] font-black text-red-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-red-800/40 rounded-xl bg-red-950/20 cursor-pointer hover:bg-red-900/30 hover:border-red-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.BULLETIN_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-red-500 rounded" />
+                      <span class="text-xs text-red-200 font-semibold">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ürün İnceleme Override -->
+            <div x-data="{open:false}" class="bg-slate-900 border border-amber-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-amber-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-amber-600/15 rounded-xl flex items-center justify-center text-amber-400">🛒</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider" x-text="t('module_product_review')"></div>
+                    <div class="text-[9px] text-slate-500" x-text="settings.PR_TTS_PROVIDER ? '✓ Override aktif — '+settings.PR_TTS_PROVIDER : '↑ Globalden devralıyor'"></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button x-show="settings.PR_TTS_PROVIDER" @click.stop="settings.PR_TTS_PROVIDER=''; settings.PR_ELEVENLABS_VOICE_ID=''; settings.PR_OPENAI_TTS_VOICE=''; settings.PR_SPESHAUDIO_VOICE_ID=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Reset</button>
+                  <svg :class="open?'rotate-180':''" class="w-4 h-4 text-amber-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+              </div>
+              <div x-show="open" class="px-5 pb-5 space-y-4 border-t border-amber-900/20">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-amber-300/80 uppercase mb-1.5">TTS Sağlayıcı</label>
+                    <select x-model="settings.PR_TTS_PROVIDER" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                      <option value="">(↑ Global Ses Kullan)</option>
+                      <option value="openai">OpenAI TTS</option>
+                      <option value="elevenlabs">ElevenLabs</option>
+                      <option value="speshaudio">SpesAudio</option>
+                      <option value="qwen3">Qwen3 (Local)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-amber-300/80 uppercase mb-1.5">Voice ID</label>
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='elevenlabs'">
+                      <input type="text" x-model="settings.PR_ELEVENLABS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-500" placeholder="ElevenLabs Voice ID..." />
+                    </div>
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='openai'">
+                      <select x-model="settings.PR_OPENAI_TTS_VOICE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        <option value="">(Global Default)</option>
+                        <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option>
+                        <option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option>
+                        <option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+                      </select>
+                    </div>
+                    <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='speshaudio'">
+                      <input type="text" x-model="settings.PR_SPESHAUDIO_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-500" placeholder="SpesAudio Voice ID..." />
+                    </div>
+                    <div x-show="!['elevenlabs','openai','speshaudio'].includes(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)">
+                      <input type="text" x-model="settings.PR_TTS_VOICE_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-500" placeholder="Voice ID..." />
+                    </div>
+                  </div>
+                </div>
+                <!-- Qwen3 Override -->
+                <div x-show="(settings.PR_TTS_PROVIDER||settings.TTS_PROVIDER)==='qwen3'" class="space-y-3 pt-3 border-t border-amber-900/20">
+                  <div class="text-[9px] font-bold text-amber-400/60 uppercase tracking-widest">Qwen3 Override</div>
+                  <input x-model="settings.PR_QWEN3_MODEL_ID" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-200 font-mono focus:outline-none focus:border-amber-500" placeholder="Model ID..." />
+                  <textarea x-model="settings.PR_QWEN3_VOICE_INSTRUCT" @change="triggerAutoSave()" rows="2" class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-3 py-2 text-xs text-amber-100/70 focus:outline-none focus:border-amber-500" placeholder="Voice Instruct..."></textarea>
+                </div>
+                <!-- Gelişmiş İşleme -->
+                <div class="pt-4 border-t border-amber-900/20">
+                  <div class="text-[11px] font-black text-amber-300/60 uppercase tracking-widest mb-3">Gelişmiş İşleme</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_ENHANCE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">TTS İyileştirme</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_SCRIPT_HUMANIZE_WITH_LLM" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Script İnsanlaştırma</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_TRIM_SILENCE" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Sessizlik Temizle</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 px-4 py-3 border border-amber-800/40 rounded-xl bg-amber-950/20 cursor-pointer hover:bg-amber-900/30 hover:border-amber-700/60 transition-all">
+                      <input type="checkbox" x-model="settings.PR_TTS_REMOVE_APOSTROPHES" @change="triggerAutoSave()" class="w-4 h-4 accent-amber-500 rounded" />
+                      <span class="text-xs text-amber-200 font-semibold">Apostrof Temizle</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ══ VISUALS TAB ══════════════════════════════════════════════ -->
+        <div x-show="settingsModule==='visuals'" x-data="{ veTab: 'source' }">
+
+          <!-- ── Tab Bar ── -->
+          <div class="flex gap-1 mb-6 p-1 bg-slate-900/60 rounded-xl border border-slate-800 w-fit">
+            <template x-for="tab in [{id:'source',icon:'🖼',label:'Görsel Kaynak'},{id:'compose',icon:'🎬',label:'Kompozisyon'},{id:'subtitle',icon:'💬',label:'Altyazı & Karaoke'},{id:'overrides',icon:'🎛',label:'Modül Override'}]" :key="tab.id">
+              <button @click="veTab=tab.id"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                :class="veTab===tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+                <span x-text="tab.icon"></span>
+                <span x-text="tab.label"></span>
+              </button>
+            </template>
+          </div>
+
+          <!-- ══ TAB: GÖRSEL KAYNAK ══ -->
+          <div x-show="veTab==='source'" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              <!-- Görsel Provider Seçimi -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <div class="w-7 h-7 bg-indigo-600/15 rounded-lg flex items-center justify-center text-indigo-400 text-sm">🖼</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('visuals_source_section')"></span>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2" x-text="t('provider_label')"></label>
+                    <!-- Provider Cards -->
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="prov in [{val:'pexels',icon:'🎞',name:'Pexels',desc:'Stok Video (önerilen)'},{val:'pixabay',icon:'📷',name:'Pixabay',desc:'Stok Video/Fotoğraf'},{val:'zimage',icon:'🤖',name:'ZImage',desc:'AI Görsel Üretimi'},{val:'dalle',icon:'🎨',name:'DALL-E',desc:'OpenAI Üretimi'}]" :key="prov.val">
+                        <button @click="settings.VISUALS_PROVIDER=prov.val; triggerAutoSave()"
+                          class="flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all"
+                          :class="settings.VISUALS_PROVIDER===prov.val ? 'bg-indigo-950/50 border-indigo-500/60 shadow-lg shadow-indigo-900/20' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-base mt-0.5" x-text="prov.icon"></span>
+                          <div>
+                            <div class="text-[11px] font-black text-white" x-text="prov.name"></div>
+                            <div class="text-[9px] text-slate-500" x-text="prov.desc"></div>
+                          </div>
+                          <div x-show="settings.VISUALS_PROVIDER===prov.val" class="ml-auto mt-0.5 w-3.5 h-3.5 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5"/></svg>
+                          </div>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI B-Roll & Görsel Ayarlar -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-7 h-7 bg-emerald-600/15 rounded-lg flex items-center justify-center text-emerald-400 text-sm">✨</div>
+                  <span class="text-xs font-black text-white uppercase tracking-wider">AI Geliştirmeler</span>
+                </div>
+
+                <!-- AI B-Roll Toggle -->
+                <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <div>
+                    <div class="text-xs font-bold text-white">Gemini AI B-Roll</div>
+                    <div class="text-[10px] text-slate-500">İçeriğe göre en alakalı stokları AI ile seç</div>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="settings.AI_BROLL_ENABLED" @change="triggerAutoSave()" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+
+                <!-- Aspect Ratio -->
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Çıktı Formatı</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <template x-for="ar in [{val:'16:9',icon:'🖥',label:'16:9',hint:'YouTube'},{val:'9:16',icon:'📱',label:'9:16',hint:'Shorts/Reels'},{val:'1:1',icon:'⬜',label:'1:1',hint:'Instagram'}]" :key="ar.val">
+                      <button @click="settings.ASPECT_RATIO=ar.val; triggerAutoSave()"
+                        class="flex flex-col items-center py-2.5 px-1 rounded-xl border text-center transition-all"
+                        :class="(settings.ASPECT_RATIO||'16:9')===ar.val ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                        <span class="text-sm mb-0.5" x-text="ar.icon"></span>
+                        <span class="text-[10px] font-black" x-text="ar.label"></span>
+                        <span class="text-[8px] opacity-60" x-text="ar.hint"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Görsel Kalite -->
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Kalitesi</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <template x-for="q in [{val:'720p',label:'720p',hint:'Hızlı'},{val:'1080p',label:'1080p',hint:'Önerilen'},{val:'4k',label:'4K',hint:'Premium'}]" :key="q.val">
+                      <button @click="settings.OUTPUT_QUALITY=q.val; triggerAutoSave()"
+                        class="py-2 rounded-xl border text-center transition-all"
+                        :class="(settings.OUTPUT_QUALITY||'1080p')===q.val ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                        <div class="text-[11px] font-black" x-text="q.label"></div>
+                        <div class="text-[9px] opacity-60" x-text="q.hint"></div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ TAB: KOMPOZİSYON ══ -->
+          <div x-show="veTab==='compose'" class="space-y-4">
+
+            <!-- Composer Seçimi + Canlı Önizleme -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+              <!-- Sol: Ayarlar -->
+              <div class="lg:col-span-3 space-y-4">
+
+                <!-- Composer Provider -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-violet-600/15 rounded-lg flex items-center justify-center text-violet-400 text-sm">🎬</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider" x-text="t('visuals_compose_section')"></span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <button @click="settings.COMPOSER_PROVIDER='moviepy'; triggerAutoSave()"
+                      class="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all"
+                      :class="settings.COMPOSER_PROVIDER==='moviepy' ? 'bg-violet-950/40 border-violet-500/60 shadow-lg' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                      <span class="text-2xl">🐍</span>
+                      <span class="text-xs font-black text-white">MoviePy</span>
+                      <span class="text-[9px] text-slate-500">Python Tabanlı</span>
+                    </button>
+                    <button @click="settings.COMPOSER_PROVIDER='remotion'; triggerAutoSave()"
+                      class="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all"
+                      :class="settings.COMPOSER_PROVIDER==='remotion' ? 'bg-violet-950/40 border-violet-500/60 shadow-lg' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                      <span class="text-2xl">⚛️</span>
+                      <span class="text-xs font-black text-white">Remotion</span>
+                      <span class="text-[9px] text-slate-500">React Tabanlı (Önerilen)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Ken Burns -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-amber-600/15 rounded-lg flex items-center justify-center text-amber-400 text-sm">🎥</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Ken Burns Efekti</span>
+                  </div>
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Hareket Yönü</label>
+                      <div class="grid grid-cols-4 gap-1.5">
+                        <template x-for="kb in [{val:'center',icon:'⊙',label:'Zoom'},{val:'pan-left',icon:'→',label:'Sağa'},{val:'pan-right',icon:'←',label:'Sola'},{val:'random',icon:'🔀',label:'Rastgele'}]" :key="kb.val">
+                          <button @click="settings.KEN_BURNS_DIRECTION=kb.val; triggerAutoSave()"
+                            class="flex flex-col items-center py-2.5 rounded-xl border text-center transition-all"
+                            :class="(settings.KEN_BURNS_DIRECTION||'center')===kb.val ? 'bg-amber-950/40 border-amber-500/50 text-amber-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'">
+                            <span class="text-base" x-text="kb.icon"></span>
+                            <span class="text-[9px] font-bold mt-0.5" x-text="kb.label"></span>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Zoom Şiddeti</label>
+                        <span class="text-[10px] font-bold text-amber-400" x-text="{'none':'Kapalı','subtle':'%5','normal':'%10','strong':'%20'}[settings.KEN_BURNS_INTENSITY||'normal']"></span>
+                      </div>
+                      <div class="flex gap-2">
+                        <template x-for="kbi in ['none','subtle','normal','strong']" :key="kbi">
+                          <button @click="settings.KEN_BURNS_INTENSITY=kbi; triggerAutoSave()"
+                            class="flex-1 py-1.5 text-[9px] font-bold rounded-lg border transition-all uppercase"
+                            :class="(settings.KEN_BURNS_INTENSITY||'normal')===kbi ? 'bg-amber-500/20 border-amber-500/60 text-amber-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'"
+                            x-text="kbi"></button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Geçiş & Video Efekti -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-pink-600/15 rounded-lg flex items-center justify-center text-pink-400 text-sm">✨</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Video Efektleri</span>
+                  </div>
+                  <div class="space-y-4">
+                    <!-- Geçiş Süresi -->
+                    <div x-show="settings.COMPOSER_PROVIDER==='remotion'">
+                      <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Sahne Geçiş Süresi</label>
+                        <span class="text-[10px] font-bold text-pink-400" x-text="(settings.REMOTION_TRANSITION_DURATION||10)+' kare'"></span>
+                      </div>
+                      <input type="range" min="0" max="30" step="5"
+                        x-model="settings.REMOTION_TRANSITION_DURATION"
+                        @change="triggerAutoSave()"
+                        class="w-full h-2 bg-slate-800 rounded-full appearance-none cursor-pointer accent-pink-500">
+                      <div class="flex justify-between text-[9px] text-slate-600 mt-1">
+                        <span>Kapalı</span><span>Orta</span><span>Uzun</span>
+                      </div>
+                    </div>
+                    <!-- Overlay Efekti -->
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Renk Overlay</label>
+                      <div class="grid grid-cols-5 gap-2">
+                        <template x-for="eff in [{val:'none',icon:'⬜',label:'Yok',color:'bg-slate-800'},{val:'vignette',icon:'🔲',label:'Vignette',color:'bg-slate-700'},{val:'warm',icon:'🟧',label:'Sıcak',color:'bg-orange-900/60'},{val:'cool',icon:'🟦',label:'Soğuk',color:'bg-blue-900/60'},{val:'cinematic',icon:'🎞',label:'Sinema',color:'bg-amber-950/80'}]" :key="eff.val">
+                          <button @click="settings.VIDEO_EFFECT=eff.val; triggerAutoSave()"
+                            class="flex flex-col items-center py-2.5 rounded-xl border transition-all"
+                            :class="(settings.VIDEO_EFFECT||'none')===eff.val ? 'border-pink-500/60 shadow-lg shadow-pink-900/20 scale-105' : 'border-slate-800 hover:border-slate-600'">
+                            <div class="w-6 h-6 rounded-md mb-1" :class="eff.color"></div>
+                            <span class="text-[8px] font-bold text-center leading-tight" :class="(settings.VIDEO_EFFECT||'none')===eff.val ? 'text-pink-300' : 'text-slate-500'" x-text="eff.label"></span>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sağ: Canlı Önizleme Kartı -->
+              <div class="lg:col-span-2">
+                <div class="sticky top-4">
+                  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                      <div class="w-6 h-6 bg-indigo-600/20 rounded-lg flex items-center justify-center text-indigo-400 text-xs">👁</div>
+                      <span class="text-[10px] font-black text-white uppercase tracking-wider">Canlı Önizleme</span>
+                    </div>
+                    <!-- Simülasyon video kartı -->
+                    <div class="relative rounded-xl overflow-hidden aspect-video bg-slate-950 border border-slate-800 mb-3">
+                      <!-- Overlay efekti simülasyonu -->
+                      <div class="absolute inset-0 transition-all duration-500"
+                        :class="{
+                          'bg-transparent': (settings.VIDEO_EFFECT||'none')==='none',
+                          'bg-gradient-radial-vignette': (settings.VIDEO_EFFECT||'none')==='vignette',
+                          'bg-orange-900/30': (settings.VIDEO_EFFECT||'none')==='warm',
+                          'bg-blue-900/30': (settings.VIDEO_EFFECT||'none')==='cool',
+                          'bg-amber-950/40': (settings.VIDEO_EFFECT||'none')==='cinematic'
+                        }"></div>
+                      <!-- Simülasyon görseli -->
+                      <div class="absolute inset-0 flex flex-col justify-end p-3">
+                        <!-- Sahte altyazı önizlemesi -->
+                        <div class="text-center transition-all duration-300"
+                          :style="`font-size: ${({'32px':'11px','48px':'13px','64px':'16px','80px':'20px'}[settings.REMOTION_SUBTITLE_SIZE||'64px'])}; font-family: '${settings.REMOTION_SUBTITLE_FONT||'Bebas Neue'}', sans-serif; font-weight: ${settings.REMOTION_SUBTITLE_FONT_WEIGHT||'900'}; color: white; text-shadow: 0 0 8px rgba(0,0,0,0.8); -webkit-text-stroke: ${({'none':'0','1px black':'0.5px black','2px black':'1px black','4px black':'2px black'}[settings.REMOTION_SUBTITLE_STROKE||'2px black'])}`">
+                          <span class="opacity-80">Bu bir </span><span :style="`color: ${settings.REMOTION_SUBTITLE_HIGHLIGHT_COLOR||'#FFD700'}`">örnek</span><span class="opacity-80"> altyazı</span>
+                        </div>
+                      </div>
+                      <!-- Ken Burns göstergesi -->
+                      <div class="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded-md text-[8px] font-bold text-amber-400 flex items-center gap-1">
+                        <span>🎥</span>
+                        <span x-text="{'center':'Zoom In','pan-left':'Pan →','pan-right':'← Pan','random':'Random'}[settings.KEN_BURNS_DIRECTION||'center']"></span>
+                        <span class="text-slate-400" x-text="'+'+({'none':'0','subtle':'5','normal':'10','strong':'20'}[settings.KEN_BURNS_INTENSITY||'normal'])+'%'"></span>
+                      </div>
+                      <!-- Composer badge -->
+                      <div class="absolute top-2 right-2 px-2 py-0.5 bg-violet-600/80 rounded-md text-[8px] font-bold text-white flex items-center gap-1">
+                        <span x-text="settings.COMPOSER_PROVIDER==='remotion' ? '⚛️ Remotion' : '🐍 MoviePy'"></span>
+                      </div>
+                    </div>
+                    <!-- Özet bilgiler -->
+                    <div class="space-y-1.5">
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Efekt</span>
+                        <span class="text-white font-bold capitalize" x-text="settings.VIDEO_EFFECT||'none'"></span>
+                      </div>
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Geçiş</span>
+                        <span class="text-white font-bold" x-text="(settings.REMOTION_TRANSITION_DURATION||10)+' kare'"></span>
+                      </div>
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Ken Burns</span>
+                        <span class="text-white font-bold" x-text="(settings.KEN_BURNS_DIRECTION||'center')+' / '+(settings.KEN_BURNS_INTENSITY||'normal')"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ TAB: ALTYAZI & KARAOKE ══ -->
+          <div x-show="veTab==='subtitle'" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+              <!-- Sol: Altyazı Ayarları -->
+              <div class="lg:col-span-3 space-y-4">
+
+                <!-- Altyazı Provider Seçimi -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-purple-600/15 rounded-lg flex items-center justify-center text-purple-400 text-sm">⚙️</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Altyazı Motoru</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <button @click="settings.SUBTITLE_PROVIDER='remotion'; triggerAutoSave()"
+                      class="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all"
+                      :class="(settings.SUBTITLE_PROVIDER||'remotion')==='remotion' ? 'bg-purple-950/40 border-purple-500/60 shadow-lg' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                      <span class="text-2xl">⚛️</span>
+                      <span class="text-xs font-black text-white">Remotion</span>
+                      <span class="text-[9px] text-slate-500">React Tabanlı (Önerilen)</span>
+                    </button>
+                    <button @click="settings.SUBTITLE_PROVIDER='pycaps'; triggerAutoSave()"
+                      class="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all"
+                      :class="(settings.SUBTITLE_PROVIDER||'remotion')==='pycaps' ? 'bg-purple-950/40 border-purple-500/60 shadow-lg' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                      <span class="text-2xl">🐍</span>
+                      <span class="text-xs font-black text-white">Pycaps</span>
+                      <span class="text-[9px] text-slate-500">Python Tabanlı</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Altyazı Animasyon Presetleri (Remotion) -->
+                <div x-show="(settings.SUBTITLE_PROVIDER||'remotion')==='remotion'" class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-indigo-600/15 rounded-lg flex items-center justify-center text-indigo-400 text-sm">🎭</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Altyazı Animasyonu (Remotion)</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 mb-4">
+                    <template x-for="preset in [
+                      {val:'hype',icon:'🔥',name:'Hype',desc:'Kayarak girer, kelime vurgusu büyük'},
+                      {val:'explosive',icon:'💥',name:'Explosive',desc:'Soldan hızlı giriş, gürültülü'},
+                      {val:'vibrant',icon:'🌈',name:'Vibrant',desc:'Pop animasyon, renkli vurgu'},
+                      {val:'minimal',icon:'✨',name:'Minimal',desc:'Sade, sadece renk değişimi'},
+                      {val:'none',icon:'⬜',name:'Yok',desc:'Animasyon olmadan düz metin'}
+                    ]" :key="preset.val">
+                      <button @click="settings.REMOTION_SUBTITLE_ANIMATION=preset.val; triggerAutoSave()"
+                        class="flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all"
+                        :class="(settings.REMOTION_SUBTITLE_ANIMATION||'hype')===preset.val ? 'bg-indigo-950/50 border-indigo-500/60 shadow-md' : 'bg-slate-950 border-slate-800 hover:border-slate-700'">
+                        <span class="text-lg leading-none" x-text="preset.icon"></span>
+                        <div>
+                          <div class="text-[11px] font-black text-white" x-text="preset.name"></div>
+                          <div class="text-[9px] text-slate-500 leading-tight" x-text="preset.desc"></div>
+                        </div>
+                        <div x-show="(settings.REMOTION_SUBTITLE_ANIMATION||'hype')===preset.val" class="ml-auto mt-0.5 shrink-0">
+                          <div class="w-3.5 h-3.5 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <svg class="w-2 h-2 text-white" fill="none" viewBox="0 0 8 8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1.5 4L3.5 6L6.5 2"/></svg>
+                          </div>
+                        </div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Altyazı Stil Presetleri (Pycaps) -->
+                <div x-show="(settings.SUBTITLE_PROVIDER||'remotion')==='pycaps'" class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-cyan-600/15 rounded-lg flex items-center justify-center text-cyan-400 text-sm">🎨</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Altyazı Stili (Pycaps)</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <template x-for="style in [
+                      {val:'hype',icon:'🔥',name:'Hype',desc:'MrBeast tarzı enerji'},
+                      {val:'classic',icon:'📺',name:'Classic',desc:'Geleneksel altyazı'},
+                      {val:'vibrant',icon:'🌈',name:'Vibrant',desc:'Canlı renkler'},
+                      {val:'explosive',icon:'💥',name:'Explosive',desc:'Dinamik giriş'},
+                      {val:'fast',icon:'⚡',name:'Fast',desc:'Hızlı & keskin'},
+                      {val:'retro-gaming',icon:'🎮',name:'Retro Gaming',desc:'8-bit nostalji'},
+                      {val:'minimalist',icon:'⬜',name:'Minimalist',desc:'Sade & modern'},
+                      {val:'neo-minimal',icon:'✨',name:'Neo Minimal',desc:'Yeni nesil minimal'},
+                      {val:'line-focus',icon:'━',name:'Line Focus',desc:'Satır odaklı'},
+                      {val:'word-focus',icon:'💬',name:'Word Focus',desc:'Kelime odaklı'},
+                      {val:'model',icon:'🎯',name:'Model',desc:'Profesyonel şablon'},
+                      {val:'default',icon:'📝',name:'Default',desc:'Varsayılan stil'}
+                    ]" :key="style.val">
+                      <button @click="settings.PYCAPS_STYLE=style.val; triggerAutoSave()"
+                        class="flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all"
+                        :class="(settings.PYCAPS_STYLE||'hype')===style.val ? 'bg-cyan-950/50 border-cyan-500/60 shadow-md' : 'bg-slate-950 border-slate-800 hover:border-slate-700'">
+                        <span class="text-lg leading-none" x-text="style.icon"></span>
+                        <div>
+                          <div class="text-[11px] font-black text-white" x-text="style.name"></div>
+                          <div class="text-[9px] text-slate-500 leading-tight" x-text="style.desc"></div>
+                        </div>
+                        <div x-show="(settings.PYCAPS_STYLE||'hype')===style.val" class="ml-auto mt-0.5 shrink-0">
+                          <div class="w-3.5 h-3.5 bg-cyan-500 rounded-full flex items-center justify-center">
+                            <svg class="w-2 h-2 text-white" fill="none" viewBox="0 0 8 8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1.5 4L3.5 6L6.5 2"/></svg>
+                          </div>
+                        </div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Font & Boyut -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-rose-600/15 rounded-lg flex items-center justify-center text-rose-400 text-sm">🔤</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Font & Boyut</span>
+                  </div>
+                  <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Font</label>
+                        <select x-model="settings.REMOTION_SUBTITLE_FONT" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none transition-colors">
+                          <option value="Bebas Neue">Bebas Neue — YouTube Style</option>
+                          <option value="Montserrat">Montserrat — Bold/Modern</option>
+                          <option value="Oswald">Oswald — Condensed</option>
+                          <option value="Roboto">Roboto — Clean</option>
+                          <option value="Inter">Inter — Premium</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Kalınlık</label>
+                        <div class="grid grid-cols-3 gap-1">
+                          <template x-for="fw in [{val:'400',label:'Normal'},{val:'700',label:'Bold'},{val:'900',label:'Black'}]" :key="fw.val">
+                            <button @click="settings.REMOTION_SUBTITLE_FONT_WEIGHT=fw.val; triggerAutoSave()"
+                              class="py-2 text-[9px] font-bold rounded-lg border transition-all text-center"
+                              :class="(settings.REMOTION_SUBTITLE_FONT_WEIGHT||'900')===fw.val ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'"
+                              x-text="fw.label"></button>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Font Boyutu</label>
+                        <span class="text-[10px] font-bold text-rose-400" x-text="settings.REMOTION_SUBTITLE_SIZE||'64px'"></span>
+                      </div>
+                      <div class="grid grid-cols-4 gap-2">
+                        <template x-for="sz in [{val:'32px',label:'XS'},{val:'48px',label:'SM'},{val:'64px',label:'MD'},{val:'80px',label:'LG'}]" :key="sz.val">
+                          <button @click="settings.REMOTION_SUBTITLE_SIZE=sz.val; triggerAutoSave()"
+                            class="py-2 rounded-xl border text-center transition-all"
+                            :class="(settings.REMOTION_SUBTITLE_SIZE||'64px')===sz.val ? 'bg-rose-950/40 border-rose-500/50 text-rose-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'">
+                            <div class="text-[10px] font-black" x-text="sz.label"></div>
+                            <div class="text-[8px] opacity-60" x-text="sz.val"></div>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Renk & Kontur -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center gap-2 mb-4">
+                    <div class="w-7 h-7 bg-yellow-600/15 rounded-lg flex items-center justify-center text-yellow-400 text-sm">🎨</div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Renk & Kontur</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Vurgu Rengi (Karaoke)</label>
+                      <div class="flex items-center gap-2">
+                        <input type="color" x-model="settings.REMOTION_SUBTITLE_HIGHLIGHT_COLOR" @change="triggerAutoSave()" class="w-10 h-10 rounded-lg border border-slate-700 cursor-pointer bg-transparent" />
+                        <div class="flex-1">
+                          <div class="text-[11px] font-bold text-white" x-text="settings.REMOTION_SUBTITLE_HIGHLIGHT_COLOR||'#FFD700'"></div>
+                          <div class="text-[9px] text-slate-500">Karaoke vurgu rengi</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Kenar Çizgisi</label>
+                      <div class="grid grid-cols-2 gap-1.5">
+                        <template x-for="stroke in [{val:'none',label:'Yok'},{val:'1px black',label:'İnce'},{val:'2px black',label:'Orta'},{val:'4px black',label:'Kalın'}]" :key="stroke.val">
+                          <button @click="settings.REMOTION_SUBTITLE_STROKE=stroke.val; triggerAutoSave()"
+                            class="py-1.5 text-[9px] font-bold rounded-lg border transition-all text-center"
+                            :class="(settings.REMOTION_SUBTITLE_STROKE||'2px black')===stroke.val ? 'bg-yellow-950/40 border-yellow-500/50 text-yellow-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'"
+                            x-text="stroke.label"></button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Subtitle Arka Plan -->
+                  <div class="mt-4 pt-4 border-t border-slate-800">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Altyazı Arka Planı</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="bg in [{val:'none',label:'Yok',preview:'border-2 border-dashed border-slate-700'},{val:'box',label:'Kutu',preview:'bg-black/60 border border-slate-700'},{val:'pill',label:'Hap',preview:'bg-black/60 rounded-full border border-slate-700'}]" :key="bg.val">
+                        <button @click="settings.REMOTION_SUBTITLE_BG=bg.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all"
+                          :class="(settings.REMOTION_SUBTITLE_BG||'none')===bg.val ? 'bg-yellow-950/30 border-yellow-500/50' : 'bg-slate-950 border-slate-800 hover:border-slate-700'">
+                          <div class="w-8 h-4 rounded" :class="bg.preview"></div>
+                          <span class="text-[9px] font-bold" :class="(settings.REMOTION_SUBTITLE_BG||'none')===bg.val ? 'text-yellow-300' : 'text-slate-500'" x-text="bg.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Karaoke Ayarları -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 bg-pink-600/15 rounded-lg flex items-center justify-center text-pink-400 text-sm">🎤</div>
+                      <span class="text-xs font-black text-white uppercase tracking-wider">Karaoke Modu</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" x-model="settings.KARAOKE_ENABLED" @change="triggerAutoSave()" class="sr-only peer">
+                      <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-pink-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                  </div>
+                  <div x-show="settings.KARAOKE_ENABLED" class="p-3 bg-pink-950/10 border border-pink-900/30 rounded-xl">
+                    <p class="text-[10px] text-pink-300/80">Kelimeler söylenirken yukarıdaki vurgu rengiyle aktif kelime işaretlenir. Ses zamanlama dosyası gereklidir.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sağ: Altyazı Önizleme -->
+              <div class="lg:col-span-2">
+                <div class="sticky top-4">
+                  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                      <div class="w-6 h-6 bg-indigo-600/20 rounded-lg flex items-center justify-center text-indigo-400 text-xs">💬</div>
+                      <span class="text-[10px] font-black text-white uppercase tracking-wider">Altyazı Önizleme</span>
+                    </div>
+                    <!-- Preview alanı -->
+                    <div class="relative rounded-xl overflow-hidden aspect-video bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-800 mb-3">
+                      <div class="absolute inset-0 flex flex-col justify-end p-3 pb-4">
+                        <!-- Animasyon sınıfı -->
+                        <div class="text-center"
+                          :class="{
+                            'prev-hype': (settings.REMOTION_SUBTITLE_ANIMATION||'hype')==='hype',
+                            'prev-explosive': (settings.REMOTION_SUBTITLE_ANIMATION||'hype')==='explosive',
+                            'prev-vibrant': (settings.REMOTION_SUBTITLE_ANIMATION||'hype')==='vibrant'
+                          }"
+                          :style="`font-size: ${({'32px':'10px','48px':'12px','64px':'15px','80px':'19px'}[settings.REMOTION_SUBTITLE_SIZE||'64px'])}; font-family: '${settings.REMOTION_SUBTITLE_FONT||'Bebas Neue'}', sans-serif; font-weight: ${settings.REMOTION_SUBTITLE_FONT_WEIGHT||'900'}; -webkit-text-stroke: ${({'none':'0','1px black':'0.5px','2px black':'1px black','4px black':'2px black'}[settings.REMOTION_SUBTITLE_STROKE||'2px black'])}`">
+                          <template x-if="(settings.REMOTION_SUBTITLE_BG||'none')!=='none'">
+                            <div class="inline-block px-2 py-0.5"
+                              :class="(settings.REMOTION_SUBTITLE_BG||'none')==='pill' ? 'bg-black/70 rounded-full' : 'bg-black/70 rounded'">
+                              <span class="text-white">Bu bir </span><span :style="`color: ${settings.REMOTION_SUBTITLE_HIGHLIGHT_COLOR||'#FFD700'}`">örnek</span><span class="text-white"> altyazı metni</span>
+                            </div>
+                          </template>
+                          <template x-if="(settings.REMOTION_SUBTITLE_BG||'none')==='none'">
+                            <div>
+                              <span class="text-white drop-shadow-lg">Bu bir </span><span :style="`color: ${settings.REMOTION_SUBTITLE_HIGHLIGHT_COLOR||'#FFD700'}`" class="drop-shadow-lg">örnek</span><span class="text-white drop-shadow-lg"> altyazı</span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                      <!-- Preset badge -->
+                      <div class="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded-md text-[8px] font-bold" :class="(settings.SUBTITLE_PROVIDER||'remotion')==='remotion' ? 'text-indigo-300' : 'text-cyan-300'">
+                        <span x-show="(settings.SUBTITLE_PROVIDER||'remotion')==='remotion'" x-text="'⚛️ '+(settings.REMOTION_SUBTITLE_ANIMATION||'hype').toUpperCase()"></span>
+                        <span x-show="(settings.SUBTITLE_PROVIDER||'remotion')==='pycaps'" x-text="'🐍 '+(settings.PYCAPS_STYLE||'hype').toUpperCase()"></span>
+                      </div>
+                    </div>
+                    <!-- Font bilgisi -->
+                    <div class="space-y-1.5">
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Font</span>
+                        <span class="text-white font-bold" x-text="settings.REMOTION_SUBTITLE_FONT||'Bebas Neue'"></span>
+                      </div>
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Boyut / Kalınlık</span>
+                        <span class="text-white font-bold" x-text="(settings.REMOTION_SUBTITLE_SIZE||'64px')+' / W'+(settings.REMOTION_SUBTITLE_FONT_WEIGHT||'900')"></span>
+                      </div>
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Animasyon</span>
+                        <span class="text-white font-bold capitalize" x-text="settings.REMOTION_SUBTITLE_ANIMATION||'hype'"></span>
+                      </div>
+                      <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">Karaoke</span>
+                        <span :class="settings.KARAOKE_ENABLED ? 'text-pink-400' : 'text-slate-600'" x-text="settings.KARAOKE_ENABLED ? 'Açık' : 'Kapalı'" class="font-bold"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ TAB: MODÜL OVERRIDE ══ -->
+          <div x-show="veTab==='overrides'" class="space-y-4">
+
+            <!-- YT Visual Override -->
+            <div x-data="{open:true}" class="bg-slate-900 border border-indigo-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-indigo-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-indigo-600/15 rounded-xl flex items-center justify-center text-indigo-400">▶</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider">YouTube Video</div>
+                    <div class="text-[9px] text-slate-500" x-text="(settings.YT_VISUALS_PROVIDER||settings.YT_COMPOSER_PROVIDER) ? '✓ Override aktif' : '↑ Globalden devralıyor'"></div>
+                  </div>
+                </div>
+                <svg :class="open?'rotate-180':''" class="w-4 h-4 text-indigo-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+              <div x-show="open" class="p-5 border-t border-indigo-900/20 space-y-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Kaynak</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="src in [{val:'',icon:'↑',name:'Global',desc:'Varsayılan'},{val:'pexels',icon:'🎞',name:'Pexels',desc:'Stok Video'},{val:'pixabay',icon:'📷',name:'Pixabay',desc:'Stok Görsel'},{val:'zimage',icon:'🤖',name:'ZImage',desc:'AI Görsel'}]" :key="src.val">
+                        <button @click="settings.YT_VISUALS_PROVIDER=src.val; triggerAutoSave()"
+                          class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.YT_VISUALS_PROVIDER||'')===src.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-base" x-text="src.icon"></span>
+                          <div>
+                            <div class="text-[10px] font-black text-white" x-text="src.name"></div>
+                            <div class="text-[8px] text-slate-500" x-text="src.desc"></div>
+                          </div>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Composer</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="cmp in [{val:'',icon:'↑',name:'Global'},{val:'moviepy',icon:'🐍',name:'MoviePy'},{val:'remotion',icon:'⚛️',name:'Remotion'}]" :key="cmp.val">
+                        <button @click="settings.YT_COMPOSER_PROVIDER=cmp.val; triggerAutoSave()"
+                          class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.YT_COMPOSER_PROVIDER||'')===cmp.val ? 'bg-indigo-950/50 border-indigo-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                          <span class="text-lg" x-text="cmp.icon"></span>
+                          <span class="text-[10px] font-black text-white" x-text="cmp.name"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Aspect Ratio</label>
+                    <div class="grid grid-cols-4 gap-2">
+                      <template x-for="ar in [{val:'',icon:'↑',label:'Global'},{val:'16:9',icon:'🖥',label:'16:9'},{val:'9:16',icon:'📱',label:'9:16'},{val:'1:1',icon:'⬜',label:'1:1'}]" :key="ar.val">
+                        <button @click="settings.YT_ZIMAGE_ASPECT_RATIO=ar.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.YT_ZIMAGE_ASPECT_RATIO||'')===ar.val ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="ar.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="ar.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Video Efekt</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="fx in [{val:'',icon:'↑',label:'Global'},{val:'none',icon:'⬛',label:'Yok'},{val:'vignette',icon:'🔲',label:'Vignette'},{val:'warm',icon:'🌅',label:'Sıcak'},{val:'cool',icon:'❄️',label:'Soğuk'},{val:'cinematic',icon:'🎬',label:'Sinema'}]" :key="fx.val">
+                        <button @click="settings.YT_REMOTION_VIDEO_EFFECT=fx.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.YT_REMOTION_VIDEO_EFFECT||'')===fx.val ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="fx.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="fx.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bulletin Visual Override -->
+            <div x-data="{open:true}" class="bg-slate-900 border border-red-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-red-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-red-600/15 rounded-xl flex items-center justify-center text-red-400">📺</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider">Haber Bülteni</div>
+                    <div class="text-[9px] text-slate-500" x-text="'Stil: '+(settings.BULLETIN_STYLE||'breaking')"></div>
+                  </div>
+                </div>
+                <svg :class="open?'rotate-180':''" class="w-4 h-4 text-red-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+              <div x-show="open" class="p-5 border-t border-red-900/20 space-y-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Stil</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template x-for="style in [{val:'breaking',icon:'🚨',name:'Breaking',desc:'Son Dakika',color:'bg-red-900/20 border-red-700/40'},{val:'tech',icon:'💻',name:'Tech',desc:'Teknoloji',color:'bg-blue-900/20 border-blue-700/40'},{val:'finance',icon:'💰',name:'Finance',desc:'Ekonomi',color:'bg-emerald-900/20 border-emerald-700/40'},{val:'dark',icon:'🌑',name:'Dark',desc:'Minimal',color:'bg-slate-900/40 border-slate-700/40'}]" :key="style.val">
+                        <button @click="settings.BULLETIN_STYLE=style.val; triggerAutoSave()"
+                          class="flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all"
+                          :class="(settings.BULLETIN_STYLE||'breaking')===style.val ? 'bg-red-950/50 border-red-500/60 shadow-md' : style.color+' hover:border-slate-600'">
+                          <span class="text-lg" x-text="style.icon"></span>
+                          <div>
+                            <div class="text-[10px] font-black text-white" x-text="style.name"></div>
+                            <div class="text-[8px] text-slate-500" x-text="style.desc"></div>
+                          </div>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Metin Teslim Modu</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="mode in [{val:'per_scene',icon:'🎬',label:'Sahne'},{val:'stream',icon:'⚡',label:'Akışkan'},{val:'word',icon:'🎤',label:'Karaoke'}]" :key="mode.val">
+                        <button @click="settings.bulletinTextMode=mode.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
+                          :class="(settings.bulletinTextMode||'per_scene')===mode.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-base" x-text="mode.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="mode.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Aspect Ratio</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="ar in [{val:'16:9',icon:'🖥',label:'16:9'},{val:'9:16',icon:'📱',label:'9:16'},{val:'1:1',icon:'⬜',label:'1:1'}]" :key="ar.val">
+                        <button @click="settings.BULLETIN_FORMAT=ar.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.BULLETIN_FORMAT||'16:9')===ar.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="ar.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="ar.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Video Efekt</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <template x-for="fx in [{val:'none',icon:'⬛',label:'Yok'},{val:'vignette',icon:'🔲',label:'Vignette'},{val:'warm',icon:'🌅',label:'Sıcak'},{val:'cool',icon:'❄️',label:'Soğuk'},{val:'cinematic',icon:'🎬',label:'Sinema'}]" :key="fx.val">
+                        <button @click="settings.BULLETIN_VIDEO_EFFECT=fx.val; triggerAutoSave()"
+                          class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                          :class="(settings.BULLETIN_VIDEO_EFFECT||'none')===fx.val ? 'bg-red-950/40 border-red-500/50 text-red-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                          <span class="text-sm" x-text="fx.icon"></span>
+                          <span class="text-[9px] font-bold" x-text="fx.label"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <!-- Kategori-Stil Eşleştirme -->
+                <div class="pt-3 border-t border-red-900/20">
+                  <div class="text-[11px] font-black text-red-300/60 uppercase tracking-widest mb-3">Kategori → Stil Eşleştirme</div>
+                  <div class="text-[9px] text-slate-500 mb-3">Her haber kategorisi için varsayılan görsel stil tanımlayın. Boş bırakılırsa "breaking" kullanılır.</div>
+                  <div class="grid grid-cols-1 gap-2">
+                    <template x-for="catItem in (settings.BULLETIN_CATEGORY_MAPPING ? JSON.parse(settings.BULLETIN_CATEGORY_MAPPING || '{}') : {})" :key="catItem">
+                      <!-- Dynamic display if mapping exists -->
+                    </template>
+                    <!-- Static editable category mapping -->
+                    <div class="space-y-2" x-data="{
+                      catMap: {},
+                      catStyles: ['breaking','tech','corporate','sport','finance','weather','science','entertainment','dark'],
+                      init() {
+                        try { this.catMap = JSON.parse($store?.settings?.BULLETIN_CATEGORY_MAPPING || '{}'); } catch(e) { this.catMap = {}; }
+                      },
+                      addCat() { if(!this.newCat) return; this.catMap[this.newCat.toLowerCase()] = 'breaking'; this.newCat=''; this.save(); },
+                      removeCat(k) { delete this.catMap[k]; this.catMap = {...this.catMap}; this.save(); },
+                      save() { settings.BULLETIN_CATEGORY_MAPPING = JSON.stringify(this.catMap); triggerAutoSave(); },
+                      newCat: ''
+                    }">
+                      <template x-for="(style, cat) in catMap" :key="cat">
+                        <div class="flex items-center gap-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl">
+                          <span class="text-[10px] font-black text-red-300 flex-1 uppercase" x-text="cat"></span>
+                          <select :value="style" @change="catMap[cat]=$event.target.value; save()"
+                            class="bg-slate-900 border border-red-900/30 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:border-red-500">
+                            <template x-for="s in catStyles" :key="s">
+                              <option :value="s" :selected="style===s" x-text="s.charAt(0).toUpperCase()+s.slice(1)"></option>
+                            </template>
+                          </select>
+                          <button @click="removeCat(cat)" class="text-[9px] px-2 py-1 bg-red-900/30 hover:bg-red-800/50 text-red-400 rounded-lg transition-colors">✕</button>
+                        </div>
+                      </template>
+                      <div class="flex gap-2">
+                        <input x-model="newCat" @keydown.enter="addCat()" placeholder="Kategori adı (ör: teknoloji)" class="flex-1 bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 transition-colors" />
+                        <button @click="addCat()" class="px-3 py-2 bg-red-900/40 hover:bg-red-800/60 border border-red-700/40 text-red-300 text-xs font-bold rounded-xl transition-all">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Visual Override -->
+            <div x-data="{open:true}" class="bg-slate-900 border border-amber-900/30 rounded-2xl overflow-hidden">
+              <div @click="open=!open" class="flex items-center justify-between p-5 cursor-pointer hover:bg-amber-950/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-amber-600/15 rounded-xl flex items-center justify-center text-amber-400">🛒</div>
+                  <div>
+                    <div class="text-xs font-black text-white uppercase tracking-wider">Ürün İnceleme</div>
+                    <div class="text-[9px] text-slate-500" x-text="'Tema: '+(settings.PR_STYLE||'modern')"></div>
+                  </div>
+                </div>
+                <svg :class="open?'rotate-180':''" class="w-4 h-4 text-amber-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+              <div x-show="open" class="p-5 border-t border-amber-900/20 space-y-4">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                  <!-- Ayarlar (Sol) -->
+                  <div class="lg:col-span-3 space-y-3">
+                    <div>
+                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Görsel Tema</label>
+                      <div class="grid grid-cols-3 gap-2">
+                        <template x-for="theme in [{val:'modern',icon:'🎨',name:'Modern',desc:'Çağdaş tasarım'},{val:'premium',icon:'👑',name:'Premium',desc:'Altın tonlar'},{val:'minimal',icon:'✨',name:'Minimal',desc:'Sade & şık'}]" :key="theme.val">
+                          <button @click="settings.PR_STYLE=theme.val; triggerAutoSave()"
+                            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all"
+                            :class="(settings.PR_STYLE||'modern')===theme.val ? 'bg-amber-950/50 border-amber-500/60 shadow-md' : 'bg-slate-950 border-slate-800 hover:border-slate-600'">
+                            <span class="text-xl" x-text="theme.icon"></span>
+                            <div class="text-[10px] font-black text-white" x-text="theme.name"></div>
+                            <div class="text-[8px] text-slate-500" x-text="theme.desc"></div>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5">Aspect Ratio</label>
+                      <div class="grid grid-cols-4 gap-2">
+                        <template x-for="ar in [{val:'',icon:'↑',label:'Global'},{val:'16:9',icon:'🖥',label:'16:9'},{val:'9:16',icon:'📱',label:'9:16'},{val:'1:1',icon:'⬜',label:'1:1'}]" :key="ar.val">
+                          <button @click="settings.PR_ASPECT_RATIO=ar.val; triggerAutoSave()"
+                            class="flex flex-col items-center gap-1 py-2 rounded-xl border transition-all"
+                            :class="(settings.PR_ASPECT_RATIO||'')===ar.val ? 'bg-amber-950/40 border-amber-500/50 text-amber-300' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'">
+                            <span class="text-sm" x-text="ar.icon"></span>
+                            <span class="text-[9px] font-bold" x-text="ar.label"></span>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Preview (Sağ) -->
+                  <div class="lg:col-span-2">
+                    <div class="bg-slate-950 border border-amber-900/20 rounded-xl p-3">
+                      <div class="text-[9px] font-bold text-amber-400 uppercase tracking-wider mb-2">Tema Önizleme</div>
+                      <div class="aspect-video rounded-lg flex items-center justify-center relative overflow-hidden"
+                        :class="{
+                          'bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900': (settings.PR_STYLE||'modern')==='modern',
+                          'bg-gradient-to-br from-amber-950 via-yellow-900 to-amber-950': (settings.PR_STYLE||'modern')==='premium',
+                          'bg-gradient-to-br from-slate-950 to-slate-900': (settings.PR_STYLE||'modern')==='minimal'
+                        }">
+                        <!-- Simulated Product Card -->
+                        <div class="text-center p-3">
+                          <div class="w-12 h-12 mx-auto mb-2 rounded-lg"
+                            :class="{
+                              'bg-indigo-600/30 border-2 border-indigo-500/40': (settings.PR_STYLE||'modern')==='modern',
+                              'bg-yellow-600/30 border-2 border-yellow-500/40': (settings.PR_STYLE||'modern')==='premium',
+                              'bg-slate-700/30 border-2 border-slate-500/40': (settings.PR_STYLE||'modern')==='minimal'
+                            }"></div>
+                          <div class="text-[8px] font-bold text-white mb-1" x-text="(settings.PR_STYLE||'modern').toUpperCase()+' THEME'"></div>
+                          <div class="text-[7px] text-slate-400">Ürün önizleme kartı</div>
+                        </div>
+                        <!-- Theme Badge -->
+                        <div class="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold text-white"
+                          :class="{
+                            'bg-indigo-600/80': (settings.PR_STYLE||'modern')==='modern',
+                            'bg-yellow-600/80': (settings.PR_STYLE||'modern')==='premium',
+                            'bg-slate-600/80': (settings.PR_STYLE||'modern')==='minimal'
+                          }"
+                          x-text="(settings.PR_STYLE||'modern').toUpperCase()"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ══ AI TAB ══════════════════════════════════════════════════ -->
+
+        <!-- AI — Section 1: Global AI Ayarları (open) -->
+        <div x-show="settingsModule==='ai'" x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-4">
+          <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🧠</span>
+              <span class="font-semibold text-white" x-text="t('ai_default_section')"></span>
+            </div>
+            <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <div x-show="open" class="mt-4 space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5" x-text="t('target_audience_label')"></label>
+              <textarea x-model="settings.TARGET_AUDIENCE" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none" :placeholder="t('target_audience_placeholder')"></textarea>
+              <p class="text-xs text-slate-500 mt-1" x-text="t('target_audience_hint')"></p>
+            </div>
+            <div class="flex items-start justify-between gap-4 p-3.5 border border-slate-700/60 rounded-xl bg-slate-800/30">
+              <div>
+                <div class="text-xs font-semibold text-slate-300 mb-0.5" x-text="t('script_humanize_label')"></div>
+                <p class="text-xs text-slate-500" x-text="t('script_humanize_hint')"></p>
+              </div>
+              <select x-model="settings.SCRIPT_HUMANIZE_WITH_LLM" class="shrink-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                <option value="false" x-text="t('toggle_off')"></option>
+                <option value="true" x-text="t('toggle_on')"></option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI — Section 2: Modül Bazlı Kapsamlı Ayarlar -->
+        <div x-show="settingsModule==='ai'" class="space-y-4">
+          <!-- YT Video Config -->
+          <div x-data="{open:false}" class="bg-slate-900 border border-indigo-500/30 rounded-2xl overflow-hidden shadow-lg shadow-indigo-950/20">
+            <div @click="open=!open" class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-slate-800/50 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center text-indigo-400">📽</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs">YouTube Video Modülü</span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" x-transition class="px-6 pb-6 space-y-5 border-t border-slate-800/50 pt-5">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">YT Master Prompt (Senaryo Planlayıcı)</label>
+                <textarea x-model="settings.YT_MASTER_PROMPT" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all resize-none" placeholder="AI'nın senaryo oluştururken izleyeceği ana talimatlar..."></textarea>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex items-center justify-between p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+                  <div>
+                    <div class="text-[10px] font-bold text-white uppercase tracking-wider">AI Görsel Geliştirici</div>
+                    <p class="text-[9px] text-slate-500">Daha sanatsal ve tutarlı görseller</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="settings.YT_IMAGE_PRO_ENABLED" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+                <div class="flex items-center justify-between p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+                  <div>
+                    <div class="text-[10px] font-bold text-white uppercase tracking-wider">Duygusal TTS Analizi</div>
+                    <p class="text-[9px] text-slate-500">Metne göre ses tonlamasını ayarlar</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="settings.YT_TTS_ENHANCE_ENABLED" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulletin Config -->
+          <div x-data="{open:false}" class="bg-slate-900 border border-red-500/30 rounded-2xl overflow-hidden shadow-lg shadow-red-950/20">
+            <div @click="open=!open" class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-slate-800/50 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-red-600/10 rounded-lg flex items-center justify-center text-red-500">📺</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs">Haber Bülteni Modülü</span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" x-transition class="px-6 pb-6 space-y-5 border-t border-slate-800/50 pt-5">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Bülten Haber Promptu</label>
+                <textarea x-model="settings.BULLETIN_MASTER_PROMPT" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition-all resize-none" placeholder="Haberlerin nasıl özetleneceğini belirtin..."></textarea>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Varsayılan Haber Dili</label>
+                  <select x-model="settings.BULLETIN_DEFAULT_LANG" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                    <option value="tr">Türkçe</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+                <div class="flex items-center justify-between p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+                  <div>
+                    <div class="text-[10px] font-bold text-white uppercase tracking-wider">Otomatik Kaynak Yenile</div>
+                    <p class="text-[9px] text-slate-500">Her render öncesi RSS kontrolü</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="settings.BULLETIN_AUTO_REFRESH" class="sr-only peer">
+                    <div class="w-10 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Review Config -->
+          <div x-data="{open:false}" class="bg-slate-900 border border-amber-500/30 rounded-2xl overflow-hidden shadow-lg shadow-amber-950/20">
+            <div @click="open=!open" class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-slate-800/50 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-amber-600/10 rounded-lg flex items-center justify-center text-amber-500">🛒</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs">Ürün İnceleme Modülü</span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" x-transition class="px-6 pb-6 space-y-5 border-t border-slate-800/50 pt-5">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">İnceleme Tonu & Stratejisi</label>
+                <textarea x-model="settings.PR_MASTER_PROMPT" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition-all resize-none" placeholder="Ürün özelliklerinin nasıl vurgulanacağını belirtin..."></textarea>
+              </div>
+              <div class="flex items-center justify-between p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+                <div>
+                  <div class="text-[10px] font-bold text-white uppercase tracking-wider">Otomatik Fiyat Çekme</div>
+                  <p class="text-[9px] text-slate-500">Link üzerinden güncel fiyat bilgisi yakala</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="settings.PR_AUTO_PRICE" class="sr-only peer">
+                  <div class="w-10 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kategori Master Promptları -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 bg-purple-600/10 rounded-xl flex items-center justify-center text-purple-400 text-lg">📝</div>
+              <div>
+                <h2 class="text-sm font-black text-white uppercase tracking-widest">Kategori Master Promptları</h2>
+                <p class="text-xs text-slate-500">Her içerik kategorisi için özelleştirilmiş AI talimatları</p>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <template x-for="[key, label, icon] in [
+                ['general','Genel','🎬'], ['true_crime','Gerçek Suç','🔍'], ['history','Tarih','📜'],
+                ['science','Bilim','🔬'], ['motivation','Motivasyon','💪'], ['luxury','Lüks Yaşam','💎'],
+                ['dark_psychology','Karanlık Psikoloji','🧠'], ['spiritual','Ruhani/Din','🕊️'],
+                ['tech','Teknoloji','💻'], ['health','Sağlık','🏥'], ['travel','Gezi/Seyahat','✈️'],
+                ['documentary','Belgesel','🎥'], ['conspiracy','Komplo','👁️'], ['animal','Hayvanlar','🐾'],
+                ['space','Uzay','🚀'], ['economy','Ekonomi','📊']
+              ]" :key="key">
+                <div class="border border-slate-800 rounded-xl overflow-hidden">
+                  <button @click="categoryPromptOpen === key ? categoryPromptOpen = '' : categoryPromptOpen = key"
+                          class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-all">
+                    <div class="flex items-center gap-2">
+                      <span x-text="icon"></span>
+                      <span class="text-sm font-semibold text-white" x-text="label"></span>
+                      <span x-show="settings['CATEGORY_PROMPT_' + key.toUpperCase()]" class="w-2 h-2 bg-green-400 rounded-full"></span>
+                    </div>
+                    <span class="text-slate-500 text-sm transition-transform duration-200" :class="categoryPromptOpen === key ? 'rotate-180' : ''">▾</span>
+                  </button>
+                  <div x-show="categoryPromptOpen === key" x-transition.duration.200ms class="px-4 pb-4">
+                    <textarea x-model="settings['CATEGORY_PROMPT_' + key.toUpperCase()]" rows="4"
+                              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition-all resize-y"
+                              :placeholder="'Bu kategorideki videolar için AI talimatları... Örn: ' + label + ' konularında detaylı ve bilgilendirici bir anlatım kullan.'"></textarea>
+                    <p class="text-[10px] text-slate-600 mt-1">Bu prompt video üretilirken seçilen kategoriye göre otomatik uygulanır. Boş bırakılırsa genel master prompt kullanılır.</p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- AI İşlev Promptları -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-400 text-lg">🤖</div>
+              <div>
+                <h2 class="text-sm font-black text-white uppercase tracking-widest">AI İşlev Promptları</h2>
+                <p class="text-xs text-slate-500">Farklı AI işlevleri için master talimatlar</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <template x-for="[key, label, desc] in [
+                ['SCRIPT_MASTER_PROMPT','Senaryo Üretimi','Video senaryosu oluştururken kullanılacak master prompt'],
+                ['SEO_MASTER_PROMPT','SEO & Metadata','Başlık, açıklama ve tag üretimi için AI talimatları'],
+                ['SOCIAL_META_MASTER_PROMPT','Sosyal Medya','Sosyal medya paylaşım metinleri için AI talimatları'],
+                ['BULLETIN_MASTER_PROMPT','Bülten Üretimi','Haber bülteni senaryosu için master prompt'],
+                ['PR_MASTER_PROMPT','Ürün İnceleme','Ürün inceleme senaryosu için master prompt'],
+                ['THUMBNAIL_PROMPT','Thumbnail','Thumbnail AI üretimi için talimatlar']
+              ]" :key="key">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="label"></label>
+                  <textarea x-model="settings[key]" rows="3"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all resize-y"
+                            :placeholder="desc"></textarea>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SYSTEM TAB ══════════════════════════════════════════════ -->
+        <div x-show="settingsModule==='system'" class="space-y-6">
+          <!-- System Section 1: Output & Quality -->
+          <div x-data="{open:true}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+            <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-amber-600/10 rounded-lg flex items-center justify-center text-amber-400">📁</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs" x-text="t('system_output_section')"></span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('output_dir_label')"></label>
+                  <input x-model="settings.OUTPUT_DIR" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                   <div>
+                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('resolution_label')"></label>
+                     <select x-model="settings.VIDEO_RESOLUTION" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                       <option value="1920x1080">1920x1080 (HD)</option>
+                       <option value="1280x720">1280x720 (720p)</option>
+                       <option value="3840x2160">3840x2160 (4K)</option>
+                     </select>
+                   </div>
+                   <div>
+                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('fps_label')"></label>
+                     <select x-model="settings.VIDEO_FPS" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                       <option value="24">24 FPS</option>
+                       <option value="30">30 FPS</option>
+                       <option value="60">60 FPS</option>
+                     </select>
+                   </div>
+                </div>
+              </div>
+              <div class="bg-slate-950/40 border border-slate-800/50 rounded-2xl p-4 flex flex-col justify-center gap-3">
+                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistem Bakımı</h4>
+                 <div class="flex items-center justify-between">
+                    <div>
+                      <p class="text-[10px] text-slate-500">Geçici dosyaları temizle</p>
+                    </div>
+                    <button @click="cleanupSystem()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold rounded-lg transition-all shadow-lg shadow-red-900/20">SİSTEMİ TEMİZLE</button>
+                 </div>
+                 <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <div>
+                      <p class="text-[10px] text-slate-500">Tüm API Anahtarları</p>
+                    </div>
+                    <button @click="view='api-keys'" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded-lg transition-all">API ANAHTARLARI 🔑</button>
+                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Section 2: Altyazı & Subtitles -->
+          <div x-data="{open:false}" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/10">
+            <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-violet-600/10 rounded-lg flex items-center justify-center text-violet-400">💬</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs" x-text="t('system_subtitle_section')"></span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" class="mt-6 space-y-4">
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('subtitle_provider_label')"></label>
+                  <select x-model="settings.SUBTITLE_PROVIDER" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                    <option value="ffmpeg">FFmpeg (Geleneksel)</option>
+                    <option value="pycaps">PyCaps (Dinamik/Hype)</option>
+                  </select>
+                </div>
+                <div x-show="settings.SUBTITLE_PROVIDER==='pycaps'">
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5" x-text="t('pycaps_style_label')"></label>
+                  <select x-model="settings.PYCAPS_STYLE" @change="triggerAutoSave()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                    <option value="hype">Hype — modern pop</option>
+                    <option value="vibrant">Vibrant — renkli</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="neo-minimal">Neo-Minimal</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Section 3: Master Prompt Yönetimi -->
+          <div x-data="masterPromptPanel()" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/10">
+            <div @click="open=!open" class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center text-indigo-400">📝</div>
+                <span class="font-black text-white uppercase tracking-wider text-xs">Master Prompt Yönetimi</span>
+              </div>
+              <svg :class="open?'rotate-180':''" class="w-4 h-4 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div x-show="open" class="mt-6 space-y-4">
+              <!-- Modül Sekme Seçici -->
+              <div class="flex gap-1 p-1 bg-slate-950/60 rounded-xl border border-slate-800 w-fit flex-wrap">
+                <template x-for="mod in [{id:'yt',icon:'📽',label:'YT Video'},{id:'bulletin',icon:'📺',label:'Bülten'},{id:'pr',icon:'🛒',label:'Ürün İnceleme'},{id:'social',icon:'📱',label:'Sosyal Meta'},{id:'tts',icon:'🎙',label:'TTS İşleme'}]" :key="mod.id">
+                  <button @click="activePrompt=mod.id"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    :class="activePrompt===mod.id ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+                    <span x-text="mod.icon"></span>
+                    <span x-text="mod.label"></span>
+                  </button>
+                </template>
+              </div>
+
+              <!-- YT Video Master Prompt -->
+              <div x-show="activePrompt==='yt'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">YouTube Video — Senaryo Master Promptu</label>
+                  <div class="flex gap-1.5">
+                    <button @click="showPrompt('yt_script')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.YT_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
+                </div>
+                <textarea x-model="settings.YT_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-indigo-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-all resize-none font-mono"
+                  placeholder="AI'nın senaryo oluştururken izleyeceği ana talimatlar... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.YT_MASTER_PROMPT='Türkçe, akıcı ve bilgilendirici bir ton kullan. Her sahne 15-20 saniye olsun. Görsel açıklamalar somut ve canlı olsun.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/40 text-indigo-300 rounded-lg transition-all">📋 Türkçe Standart</button>
+                  <button @click="settings.YT_MASTER_PROMPT='Write in English with an engaging, educational tone. Each scene should be 15-20 seconds. Use vivid, concrete visual descriptions.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/40 text-indigo-300 rounded-lg transition-all">📋 English Standard</button>
+                </div>
+              </div>
+
+              <!-- Bülten Master Prompt -->
+              <div x-show="activePrompt==='bulletin'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Haber Bülteni — Haber Özet Promptu</label>
+                  <div class="flex gap-1.5">
+                    <button @click="showPrompt('bulletin_narration')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.BULLETIN_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
+                </div>
+                <textarea x-model="settings.BULLETIN_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-red-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-red-500 transition-all resize-none font-mono"
+                  placeholder="Haberlerin nasıl özetleneceğini belirtin... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.BULLETIN_MASTER_PROMPT='Haberleri tarafsız, kısa ve net özetle. Başlık max 10 kelime, özet max 30 kelime. Canlı yayın tonu kullan.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 text-red-300 rounded-lg transition-all">📋 Haber Ajansı</button>
+                  <button @click="settings.BULLETIN_MASTER_PROMPT='Summarize news in neutral broadcast style. Title max 8 words, summary max 25 words. Professional tone.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 text-red-300 rounded-lg transition-all">📋 Broadcast EN</button>
+                </div>
+              </div>
+
+              <!-- Ürün İnceleme Master Prompt -->
+              <div x-show="activePrompt==='pr'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ürün İnceleme — İnceleme Tonu Promptu</label>
+                  <div class="flex gap-1.5">
+                    <button @click="showPrompt('pr_info')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.PR_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
+                </div>
+                <textarea x-model="settings.PR_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-amber-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 transition-all resize-none font-mono"
+                  placeholder="Ürün özelliklerinin nasıl vurgulanacağını belirtin... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.PR_MASTER_PROMPT='Ürünün güçlü yönlerini ön plana çıkar. Fiyat-performans dengesini vurgula. İzleyiciyi satın almaya teşvik et.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/40 text-amber-300 rounded-lg transition-all">📋 Satış Odaklı</button>
+                  <button @click="settings.PR_MASTER_PROMPT='Ürünü objektif değerlendir. Artıları ve eksileri dengeli şekilde sun. Teknik detayları sade dille açıkla.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/40 text-amber-300 rounded-lg transition-all">📋 Tarafsız İnceleme</button>
+                </div>
+              </div>
+
+              <!-- Sosyal Meta Master Prompt -->
+              <div x-show="activePrompt==='social'" class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sosyal Medya Meta — İçerik Promptu</label>
+                  <div class="flex gap-1.5">
+                    <button @click="showPrompt('social_meta')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Yerleşik Prompt</button>
+                    <button @click="settings.SOCIAL_META_MASTER_PROMPT=''; triggerAutoSave()" class="text-[9px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Sıfırla</button>
+                  </div>
+                </div>
+                <textarea x-model="settings.SOCIAL_META_MASTER_PROMPT" @change="triggerAutoSave()" rows="6"
+                  class="w-full bg-slate-950 border border-violet-900/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500 transition-all resize-none font-mono"
+                  placeholder="Sosyal medya başlık/açıklama/etiket nasıl oluşturulsun... (Boş bırakılırsa sistem varsayılanı kullanılır)"></textarea>
+                <div class="flex gap-2 flex-wrap">
+                  <button @click="settings.SOCIAL_META_MASTER_PROMPT='YouTube SEO için optimize başlık ve açıklama oluştur. Arama trafığini artıracak anahtar kelimeler kullan. Max 5 hashtag ekle.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 YouTube SEO</button>
+                  <button @click="settings.SOCIAL_META_MASTER_PROMPT='Create engaging social media metadata. Compelling title under 60 chars, SEO description under 150 chars, 10 relevant hashtags.'; triggerAutoSave()"
+                    class="text-[9px] px-2.5 py-1.5 bg-violet-950/40 hover:bg-violet-900/50 border border-violet-800/40 text-violet-300 rounded-lg transition-all">📋 Social EN</button>
+                </div>
+              </div>
+
+              <!-- TTS İşleme Promptları (Tüm Modüller) -->
+              <div x-show="activePrompt==='tts'" class="space-y-4">
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                  <p class="text-[10px] text-slate-400 leading-relaxed">Bu promptlar <strong class="text-slate-200">tüm modüllerde</strong> (YT Video, Bülten, Ürün İnceleme) ortak kullanılır. TTS sekmesindeki "Gelişmiş İşleme" checkbox'ları aktifleştirildiğinde devreye girer.</p>
+                </div>
+
+                <!-- TTS Vurgu Promptu -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">TTS Vurgu Promptu</div>
+                      <div class="text-[9px] text-slate-500">"TTS İyileştirme" checkbox'ı aktif olduğunda kullanılır</div>
+                    </div>
+                    <button @click="showPrompt('tts_enhance')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
+                </div>
+
+                <!-- Humanize + Enhance Promptu -->
+                <div class="space-y-2 pt-3 border-t border-slate-800">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">Humanize + TTS Vurgu (Birleşik)</div>
+                      <div class="text-[9px] text-slate-500">"Script İnsanlaştırma" + "TTS İyileştirme" birlikte aktif olduğunda kullanılır</div>
+                    </div>
+                    <button @click="showPrompt('humanize_enhance')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
+                </div>
+
+                <!-- Script Humanize (tek başına) Promptu -->
+                <div class="space-y-2 pt-3 border-t border-slate-800">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-black text-slate-300 uppercase tracking-wider">Script İnsanlaştırma (Tek Başına)</div>
+                      <div class="text-[9px] text-slate-500">Sadece "Script İnsanlaştırma" aktif, TTS iyileştirme kapalı olduğunda kullanılır</div>
+                    </div>
+                    <button @click="showPrompt('humanize_only')" class="text-[9px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all">👁 Görüntüle</button>
+                  </div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 bg-indigo-950/40 border border-indigo-800/30 rounded text-[9px] text-indigo-400">YT Video</span>
+                    <span class="px-2 py-0.5 bg-red-950/40 border border-red-800/30 rounded text-[9px] text-red-400">Bülten</span>
+                    <span class="px-2 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded text-[9px] text-amber-400">Ürün İnceleme</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Webhook Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Webhook Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Slack/Discord/özel URL'e render bildirimleri gönder</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.WEBHOOK_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.WEBHOOK_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Webhook URL</label>
+                <input x-model="settings.WEBHOOK_URL" type="text"
+                  placeholder="https://hooks.slack.com/... veya Discord webhook"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mention (isteğe bağlı)</label>
+                <input x-model="settings.WEBHOOK_MENTION" type="text"
+                  placeholder="@channel veya Discord User ID"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500" />
+              </div>
+              <div class="flex gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" x-model="settings.WEBHOOK_ON_COMPLETE" class="accent-violet-500 w-4 h-4">
+                  <span class="text-xs text-slate-300">Tamamlandığında</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" x-model="settings.WEBHOOK_ON_FAILURE" class="accent-violet-500 w-4 h-4">
+                  <span class="text-xs text-slate-300">Başarısız olunca</span>
+                </label>
+              </div>
+              <button @click="testWebhook()"
+                class="px-4 py-2 bg-violet-800 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all">
+                🔔 Test Bildirimi Gönder
+              </button>
+            </div>
+          </div>
+
+          <!-- Telegram Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Telegram Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Telegram bot ile render bildirimleri al</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.TELEGRAM_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.TELEGRAM_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bot Token</label>
+                <input x-model="settings.TELEGRAM_BOT_TOKEN" type="password"
+                  placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" />
+                <p class="text-[9px] text-slate-600 mt-1">@BotFather'dan alabilirsiniz</p>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Chat ID</label>
+                <input x-model="settings.TELEGRAM_CHAT_ID" type="text"
+                  placeholder="-1001234567890 veya kişisel chat ID"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" />
+              </div>
+              <button @click="testNotifChannel('telegram')"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test Telegram
+              </button>
+            </div>
+          </div>
+
+          <!-- Email Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">E-posta Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Render tamamlandığında e-posta al</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.EMAIL_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.EMAIL_ENABLED">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Host</label>
+                  <input x-model="settings.EMAIL_SMTP_HOST" type="text" placeholder="smtp.gmail.com"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Port</label>
+                  <input x-model="settings.EMAIL_SMTP_PORT" type="number" placeholder="587"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Kullanıcı</label>
+                <input x-model="settings.EMAIL_SMTP_USER" type="email" placeholder="you@gmail.com"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Şifre</label>
+                <input x-model="settings.EMAIL_SMTP_PASSWORD" type="password" placeholder="App password"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                <p class="text-[9px] text-slate-600 mt-1">Gmail: Uygulama Şifresi oluşturun (2FA aktifken)</p>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Alıcı(lar)</label>
+                <input x-model="settings.EMAIL_TO" type="text" placeholder="user@example.com, team@company.com"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+              </div>
+              <button @click="testNotifChannel('email')"
+                class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test E-posta
+              </button>
+            </div>
+          </div>
+
+          <!-- WhatsApp Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">WhatsApp Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">WhatsApp Business API / Twilio ile bildirim</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.WHATSAPP_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.WHATSAPP_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">API URL</label>
+                <input x-model="settings.WHATSAPP_API_URL" type="text"
+                  placeholder="https://api.twilio.com/2010-04-01/..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">API Token</label>
+                <input x-model="settings.WHATSAPP_API_TOKEN" type="password"
+                  placeholder="Bearer token"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Alıcı Numara</label>
+                <input x-model="settings.WHATSAPP_TO" type="text"
+                  placeholder="+905551234567"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <button @click="testNotifChannel('whatsapp')"
+                class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <!-- YouTube OAuth Status -->
+          <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white uppercase tracking-widest">YouTube</h3>
+              <span x-show="youtubeConnected" class="text-xs px-2 py-1 bg-green-900/40 text-green-400 rounded-lg border border-green-700/50" x-text="t('youtube_connected')"></span>
+              <span x-show="!youtubeConnected" class="text-xs px-2 py-1 bg-red-900/40 text-red-400 rounded-lg border border-red-700/50">Bağlı Değil</span>
+            </div>
+            <div x-show="youtubeChannelInfo" class="text-sm text-slate-300 mb-3">
+              <span x-text="youtubeChannelInfo?.title"></span>
+            </div>
+            <button @click="connectYouTube()"
+                    class="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-all"
+                    x-text="youtubeConnected ? 'Yeniden Bağla' : t('youtube_connect')"></button>
+          </div>
+        </div>
+
+        <!-- ══ SOCIAL META TAB ══════════════════════════════════════════ -->
+        <div x-show="settingsModule==='social_meta'" class="space-y-6">
+
+          <!-- Header -->
+          <div class="mb-2">
+            <h1 class="text-2xl font-black text-white tracking-tight">Sosyal Medya & Otonom Paylaşım</h1>
+            <p class="text-slate-500 text-sm mt-1">Video üretiminden sonra otomatik dağıtım kanalları</p>
+          </div>
+
+          <!-- YouTube Otonom + Reels/Shorts -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 bg-red-600/10 rounded-xl flex items-center justify-center text-red-500">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest">YouTube Otonom</h3>
+                    <p class="text-[10px] text-slate-500">Video bittiğinde kanala yükle</p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="settings.AUTOPUBLISH_YOUTUBE" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
+              </div>
+              <div class="space-y-4" x-show="settings.AUTOPUBLISH_YOUTUBE">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Gizlilik Durumu</label>
+                  <select x-model="settings.YT_PRIVACY_STATUS" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                    <option value="private">Private (Özel)</option>
+                    <option value="unlisted">Unlisted (Liste Dışı)</option>
+                    <option value="public">Public (Herkese Açık)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Kategori</label>
+                  <select x-model="settings.YT_CATEGORY_ID" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                    <option value="22">People & Blogs</option>
+                    <option value="27">Education</option>
+                    <option value="28">Science & Technology</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 bg-violet-600/10 rounded-xl flex items-center justify-center text-violet-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Reels/Shorts Dağıtım</h3>
+                    <p class="text-[10px] text-slate-500">Dikey formatları çapraz paylaş</p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="settings.AUTOPUBLISH_REELS" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                </label>
+              </div>
+              <div class="space-y-3" x-show="settings.AUTOPUBLISH_REELS">
+                <label class="flex items-center gap-2 group cursor-pointer">
+                  <input type="checkbox" x-model="settings.SHARE_ON_INSTAGRAM" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-violet-600 focus:ring-violet-500">
+                  <span class="text-xs text-slate-300 group-hover:text-white transition-colors">Instagram Business API</span>
+                </label>
+                <label class="flex items-center gap-2 group cursor-pointer">
+                  <input type="checkbox" x-model="settings.SHARE_ON_TIKTOK" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-violet-600 focus:ring-violet-500">
+                  <span class="text-xs text-slate-300 group-hover:text-white transition-colors">TikTok Developer API</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Meta Engine Settings -->
+          <div class="border-t border-slate-800 pt-8 mt-4">
+            <h2 class="text-xl font-bold text-white mb-4">Meta Engine Ayarları</h2>
+            <div class="mb-6">
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('social_meta_master_prompt_label')"></label>
+              <textarea x-model="settings.SOCIAL_META_MASTER_PROMPT" rows="3"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500 resize-none"
+                :placeholder="t('social_meta_prompt_placeholder')"></textarea>
+              <p class="text-xs text-slate-500 mt-1" x-text="t('social_meta_prompt_hint')"></p>
+            </div>
+            <div class="mb-6">
+              <label class="block text-xs font-semibold text-slate-400 mb-2" x-text="t('social_meta_fields_title')"></label>
+              <div class="flex flex-wrap gap-3">
+                <template x-for="f in ['title','description','tags','source','link']" :key="f">
+                  <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:border-violet-600 transition-colors"
+                         :class="(settings.SOCIAL_META_FIELDS||'title,description,tags').split(',').includes(f) ? 'border-violet-600 bg-violet-900/20' : ''">
+                    <input type="checkbox" class="accent-violet-500 cursor-pointer"
+                           :checked="(settings.SOCIAL_META_FIELDS||'title,description,tags').split(',').includes(f)"
+                           @change="toggleSocialField(f)" />
+                    <span class="text-sm text-slate-300 font-medium" x-text="t('social_meta_field_'+f)"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-3 mb-8">
+              <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Modül Otonom Tetikleyiciler</div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="p-3 bg-slate-800/40 border border-slate-700 rounded-xl">
+                  <div class="text-xs font-bold text-indigo-400 mb-1">YT Video</div>
+                  <select x-model="settings.SOCIAL_META_ENABLED_YT_VIDEO" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px]">
+                    <option value="false">Kapalı</option>
+                    <option value="true">Açık</option>
+                  </select>
+                </div>
+                <div class="p-3 bg-slate-800/40 border border-slate-700 rounded-xl">
+                  <div class="text-xs font-bold text-red-400 mb-1">Bülten</div>
+                  <select x-model="settings.SOCIAL_META_ENABLED_BULLETIN" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px]">
+                    <option value="false">Kapalı</option>
+                    <option value="true">Açık</option>
+                  </select>
+                </div>
+                <div class="p-3 bg-slate-800/40 border border-slate-700 rounded-xl">
+                  <div class="text-xs font-bold text-amber-400 mb-1">İnceleme</div>
+                  <select x-model="settings.SOCIAL_META_ENABLED_PR" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px]">
+                    <option value="false">Kapalı</option>
+                    <option value="true">Açık</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paylaşım Geçmişi -->
+          <div class="border-t border-slate-800 pt-8 mt-8">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <span class="w-2 h-2 bg-slate-500 rounded-full"></span> Paylaşım Geçmişi
+              </h2>
+              <button @click="loadSocialLog()" class="text-[10px] text-slate-500 hover:text-white transition-colors">Yenile</button>
+            </div>
+            <div x-show="socialLog.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
+              <template x-for="event in [...socialLog].reverse().slice(0,20)" :key="event.ts">
+                <div class="flex items-center gap-3 p-2.5 bg-slate-800/40 border border-slate-700/50 rounded-lg">
+                  <svg x-show="event.platform==='youtube'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/></svg>
+                  <svg x-show="event.platform!=='youtube'" class="w-4 h-4 text-violet-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-slate-300 truncate" x-text="event.title||event.video||'Başlıksız'"></p>
+                    <p class="text-[10px] text-slate-600 font-mono" x-text="formatTs(event.ts)"></p>
+                  </div>
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                    :class="event.status==='success' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
+                    x-text="event.status==='success' ? '✓' : '✗'"></span>
+                </div>
+              </template>
+            </div>
+            <div x-show="socialLog.length===0" class="py-8 text-center">
+              <span class="text-[10px] text-slate-600 uppercase tracking-widest">Henüz Paylaşım Yok</span>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ══ SECURE STORAGE TAB ═════════════════════════════════════ -->
+        <div x-show="settingsModule==='secure'" class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 bg-amber-600/10 rounded-xl flex items-center justify-center text-amber-400 text-lg">🔐</div>
+              <div>
+                <h2 class="text-lg font-black text-white uppercase tracking-tight" x-text="t('secure_title')"></h2>
+                <p class="text-xs text-slate-500">Encrypted key-value storage</p>
+              </div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6">
+              <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3" x-text="t('secure_add_key')"></h3>
+              <div class="flex items-end gap-3">
+                <div class="flex-1">
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('secure_key_name')"></label>
+                  <input x-model="newSecureKey" type="text" placeholder="e.g. MY_API_KEY"
+                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" />
+                </div>
+                <div class="flex-1">
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('secure_value')"></label>
+                  <input x-model="newSecureValue" type="password" placeholder="secret value"
+                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" />
+                </div>
+                <button @click="storeSecureKey()" :disabled="!newSecureKey || !newSecureValue"
+                        class="px-5 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shrink-0"
+                        x-text="t('secure_add_key')"></button>
+              </div>
+            </div>
+            <div x-show="secureKeys.length === 0" class="text-center py-10">
+              <div class="text-2xl mb-2 opacity-20">🔐</div>
+              <div class="text-slate-500 text-sm" x-text="t('secure_no_keys')"></div>
+            </div>
+            <div x-show="secureKeys.length > 0" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-800">
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('secure_key_name')"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('secure_masked')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="sk in secureKeys" :key="sk.key">
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                      <td class="py-3 pr-4"><span class="text-xs text-white font-mono font-bold" x-text="sk.key"></span></td>
+                      <td class="py-3 pr-4"><span class="text-xs text-slate-400 font-mono" x-text="sk.masked_value || '****'"></span></td>
+                      <td class="py-3 text-right">
+                        <button @click="if(confirm(t('secure_delete_confirm'))) deleteSecureKey(sk.key)"
+                                class="px-3 py-1 bg-red-900/30 hover:bg-red-900/50 border border-red-800/50 text-red-400 text-[10px] font-bold rounded-lg transition-all">
+                          <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>

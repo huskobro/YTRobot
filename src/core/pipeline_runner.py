@@ -163,6 +163,7 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
                     s["metadata"] = json.loads(meta_path.read_text())
                 _write_session(sid, s)
                 _emit_progress(sid, "compose", 100, "Video tamamlandı!")
+                _update_lifecycle(sid, "completed")
             else:
                 s["status"] = "failed"
                 # Provide meaningful error context from pipeline output
@@ -171,6 +172,7 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
                 else:
                     s["error"] = f"Process exited with code {proc.returncode}"
                 _write_session(sid, s)
+                _update_lifecycle(sid, "failed")
         else:
             _write_session(sid, s)
 
@@ -181,3 +183,36 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
             s["status"] = "failed"
             s["error"] = str(e)
             _write_session(sid, s)
+            _update_lifecycle(sid, "failed")
+
+
+def _update_lifecycle(sid: str, status: str):
+    """Update linked calendar entries and channel analytics after pipeline finishes."""
+    try:
+        s = _read_session(sid)
+        channel_id = s.get("channel_id", "_default")
+
+        # Update any calendar entry linked to this session
+        from src.core.content_calendar import content_calendar
+        for entry in content_calendar.get_entries():
+            if entry.get("session_id") == sid:
+                new_status = "produced" if status == "completed" else "planned"
+                content_calendar.update_entry(entry["id"], {"status": new_status})
+                break
+
+        # Log render to channel analytics
+        from src.core.channel_hub import channel_hub
+        started = s.get("started_at", "")
+        completed = s.get("completed_at", "")
+        duration = 0.0
+        if started and completed:
+            try:
+                t0 = datetime.fromisoformat(started)
+                t1 = datetime.fromisoformat(completed)
+                duration = (t1 - t0).total_seconds()
+            except Exception:
+                pass
+        channel_hub.log_channel_render(channel_id, duration, status)
+
+    except Exception as e:
+        logger.warning(f"[Lifecycle] Failed to update lifecycle for {sid}: {e}")

@@ -86,6 +86,73 @@ async def import_json_to_db():
     result = db.import_from_json()
     return result
 
+@router.get("/api/stats/dashboard-summary")
+async def get_dashboard_summary():
+    """Enriched dashboard data: this-week stats, upcoming calendar, channel breakdown."""
+    import json
+    from pathlib import Path
+    from datetime import datetime, timedelta
+    from src.core.utils import _all_sessions
+
+    now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())  # Monday
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    sessions = _all_sessions()
+    week_sessions = []
+    for s in sessions:
+        try:
+            started = datetime.fromisoformat(s.get("started_at", ""))
+            if started >= week_start:
+                week_sessions.append(s)
+        except Exception:
+            pass
+
+    # This-week breakdown
+    week_completed = sum(1 for s in week_sessions if s.get("status") == "completed")
+    week_failed = sum(1 for s in week_sessions if s.get("status") == "failed")
+    week_running = sum(1 for s in week_sessions if s.get("status") in ("running", "queued"))
+
+    # Channel breakdown (all time)
+    channel_stats = {}
+    for s in sessions:
+        ch = s.get("channel_id", "_default")
+        ch_name = s.get("channel_name", ch)
+        if ch not in channel_stats:
+            channel_stats[ch] = {"id": ch, "name": ch_name, "total": 0, "completed": 0, "failed": 0}
+        channel_stats[ch]["total"] += 1
+        if s.get("status") == "completed":
+            channel_stats[ch]["completed"] += 1
+        elif s.get("status") == "failed":
+            channel_stats[ch]["failed"] += 1
+
+    # Upcoming calendar entries (next 7 days)
+    upcoming = []
+    try:
+        from src.core.content_calendar import content_calendar
+        all_entries = content_calendar.get_entries()
+        cutoff = (now + timedelta(days=7)).isoformat()[:10]
+        today = now.isoformat()[:10]
+        for e in all_entries:
+            pd = e.get("planned_date", "")
+            if pd and today <= pd <= cutoff and e.get("status") not in ("published",):
+                upcoming.append(e)
+        upcoming.sort(key=lambda x: x.get("planned_date", ""))
+    except Exception:
+        pass
+
+    return {
+        "week": {
+            "total": len(week_sessions),
+            "completed": week_completed,
+            "failed": week_failed,
+            "running": week_running,
+        },
+        "channels": list(channel_stats.values()),
+        "upcoming_calendar": upcoming[:10],
+    }
+
+
 @router.get("/api/stats/social-log")
 async def get_social_log():
     from pathlib import Path

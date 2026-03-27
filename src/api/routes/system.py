@@ -139,7 +139,7 @@ def delete_preset(name: str):
 
 @router.get("/prompts/defaults")
 def get_prompt_defaults():
-    # TODO: Provide actual defaults from a core file
+    # Reference prompts shown in UI prompt editor as placeholder examples
     return {
         "script": "Generate a 10-scene YouTube script for {audience}...",
         "humanize": "Rewrite this script to sound more natural...",

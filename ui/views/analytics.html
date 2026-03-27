@@ -1,0 +1,535 @@
+{# View: analytics #}
+    <div x-show="view==='analytics'" class="p-6">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-3xl font-black text-white tracking-tight" x-text="t('analytics_title')"></h1>
+          <p class="text-slate-500 text-sm mt-1" x-text="t('analytics_subtitle')"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="downloadStatsCsv()" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-emerald-500 text-xs font-bold transition-all flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            CSV
+          </button>
+          <button @click="loadAnalytics(); loadQueueStatus(); loadErrorDetails()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+            <svg class="w-5 h-5" :class="analyticsLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Analytics Sub-tabs -->
+      <div class="flex gap-2 mb-6 border-b border-slate-800 pb-3">
+        <button @click="analyticsTab='pipeline'; loadAnalytics(); loadQueueStatus(); loadErrorDetails()"
+                class="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+                :class="analyticsTab==='pipeline' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+          📊 Pipeline
+        </button>
+        <button @click="analyticsTab='youtube'; loadYTAnalytics()"
+                class="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+                :class="analyticsTab==='youtube' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+          📺 YouTube
+        </button>
+        <button @click="analyticsTab='competitor'; loadCompetitors()"
+                class="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+                :class="analyticsTab==='competitor' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
+          🎯 <span x-text="t('competitor_title') || 'Rakip Analizi'"></span>
+        </button>
+      </div>
+
+      <!-- Pipeline Analytics Content -->
+      <div x-show="analyticsTab==='pipeline'">
+
+      <!-- Channel Filter -->
+      <div class="mb-6 flex items-center gap-3">
+        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Kanal Filtresi</label>
+        <select x-model="analyticsChannel" @change="if(analyticsChannel) loadChannelAnalytics(analyticsChannel); else channelAnalytics=null"
+                class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 appearance-none min-w-[180px]">
+          <option value="">Tüm Kanallar</option>
+          <template x-for="ch in channelsData" :key="ch.id">
+            <option :value="ch.id" x-text="ch.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <!-- Channel-Specific Stats -->
+      <div x-show="channelAnalytics" class="mb-6 glass-card p-5 rounded-2xl border border-emerald-800/40 bg-emerald-900/10">
+        <h3 class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span x-text="(channelsData.find(c=>c.id===analyticsChannel)?.name || 'Kanal') + ' Analizi'"></span>
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-slate-900/60 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Video Sayısı</div>
+            <div class="text-xl font-black text-white" x-text="channelAnalytics?.total_videos ?? 0"></div>
+          </div>
+          <div class="bg-slate-900/60 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Başarılı</div>
+            <div class="text-xl font-black text-emerald-400" x-text="channelAnalytics?.success_count ?? 0"></div>
+          </div>
+          <div class="bg-slate-900/60 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Başarısız</div>
+            <div class="text-xl font-black text-red-400" x-text="channelAnalytics?.fail_count ?? 0"></div>
+          </div>
+          <div class="bg-slate-900/60 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Ort. Süre</div>
+            <div class="text-xl font-black text-amber-400" x-text="((channelAnalytics?.avg_render_time??0)/60).toFixed(1)+' dk'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channel Comparison -->
+      <div x-show="channelsData.length > 1 && !analyticsChannel" class="mb-6 glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/50">
+        <h3 class="text-xs font-black text-white uppercase tracking-widest mb-4">Kanal Karşılaştırması</h3>
+        <div class="space-y-2">
+          <template x-for="ch in channelsData" :key="ch.id">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-300 font-bold w-32 truncate" x-text="ch.name"></span>
+              <div class="flex-1 h-5 bg-slate-800 rounded-full overflow-hidden relative">
+                <div class="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-700"
+                     :style="`width:${Math.min(100, ((ch.video_count||0)/Math.max(...channelsData.map(c=>c.video_count||1)))*100)}%`"></div>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 w-12 text-right" x-text="(ch.video_count||0)+' vid'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Queue Monitor Widget -->
+      <div class="mb-6 glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" :class="queueStatus?.running_count > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'"></span>
+            Kuyruk Monitörü
+          </h2>
+          <span class="text-[10px] font-mono text-slate-500" x-text="queueStatus ? queueStatus.running_count + '/' + queueStatus.max_concurrent + ' Worker Aktif' : '...'"></span>
+        </div>
+        <template x-if="queueStatus && (queueStatus.running.length > 0 || queueStatus.queued.length > 0)">
+          <div class="space-y-1">
+            <template x-for="job in queueStatus.running" :key="job.id">
+              <div class="flex items-center justify-between px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                  <span class="text-[10px] font-mono text-emerald-300" x-text="job.id.substring(0,20)+'...'"></span>
+                  <span class="text-[10px] text-slate-500 uppercase" x-text="job.type"></span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-400" x-text="job.elapsed+'s'"></span>
+              </div>
+            </template>
+            <template x-for="job in queueStatus.queued" :key="job.id">
+              <div class="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                <span class="text-[10px] font-mono text-amber-300" x-text="job.id.substring(0,20)+'...'"></span>
+                <span class="text-[10px] text-slate-500 uppercase" x-text="job.type+' — bekliyor'"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div x-show="!queueStatus || (queueStatus.running.length === 0 && queueStatus.queued.length === 0)" class="text-center py-2">
+          <span class="text-[10px] text-slate-600 uppercase tracking-widest">Kuyruk Boş — Sistem Hazır</span>
+        </div>
+      </div>
+
+      <template x-if="analyticsData">
+        <div class="space-y-8">
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900 relative overflow-hidden">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Toplam Video</div>
+              <div class="text-3xl font-black text-white" x-text="analyticsData.summary.total_renders"></div>
+              <div class="text-[10px] text-indigo-400 font-mono mt-1">OTONOM DÖNGÜ</div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900 relative overflow-hidden">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Başarı Oranı</div>
+              <div class="text-3xl font-black text-emerald-400" x-text="((analyticsData.summary.success_rate||0)*100).toFixed(1)+'%'"></div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-emerald-500 transition-all duration-1000" :style="`width:${(analyticsData.summary.success_rate||0)*100}%`"></div>
+              </div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ort. Süre</div>
+              <div class="text-3xl font-black text-amber-400" x-text="(analyticsData.summary.avg_render_time/60).toFixed(1)+' dk'"></div>
+              <div class="text-[10px] text-slate-600 mt-1">İŞLEM BAŞINA</div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Tahmini Maliyet</div>
+              <div class="text-3xl font-black text-violet-400" x-text="'$'+(analyticsData.cost_tracking?.total_estimated_usd||0).toFixed(3)"></div>
+              <div class="text-[10px] text-slate-600 mt-1">API TAHMİNİ</div>
+            </div>
+          </div>
+
+          <!-- Chart + Module distribution -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Son 14 Gün
+              </h2>
+              <div class="h-48 relative">
+                <canvas id="dailyRenderChart"></canvas>
+                <div x-show="!analyticsData?.daily_history?.length" x-cloak class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span class="text-[10px] text-slate-600 uppercase tracking-widest">Henüz Veri Yok</span>
+                </div>
+              </div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-indigo-500 rounded-full"></span> Modül Dağılımı
+              </h2>
+              <div class="space-y-4">
+                <template x-for="[mod, label, color] in [['yt_video','Normal Video','indigo'],['bulletin','Haber Bülteni','red'],['product_review','Ürün İnceleme','amber']]" :key="mod">
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-xs text-slate-300" x-text="label"></span>
+                      <span class="text-xs font-mono" :class="`text-${color}-400`" x-text="(analyticsData.modules[mod]||0)+' Adet'"></span>
+                    </div>
+                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full" :class="`bg-${color}-500`" :style="`width:${((analyticsData.modules[mod]||0)/Math.max(analyticsData.summary.total_renders,1))*100}%`"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error patterns + drilldown -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Hata Analitiği
+              </h2>
+              <div class="space-y-2">
+                <template x-for="(count, error) in analyticsData.error_patterns" :key="error">
+                  <div class="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex justify-between hover:bg-red-500/10 transition-all cursor-pointer" @click="loadErrorDetails()">
+                    <span class="text-xs text-red-200 truncate pr-4" x-text="error"></span>
+                    <span class="shrink-0 px-2 py-0.5 bg-red-900/30 text-red-400 text-[10px] font-bold rounded-lg" x-text="count+' Kez'"></span>
+                  </div>
+                </template>
+                <div x-show="Object.keys(analyticsData.error_patterns).length===0" class="py-8 text-center">
+                  <span class="text-emerald-500 text-xs font-bold uppercase">✓ Sistem Stabil</span>
+                </div>
+              </div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <div class="flex justify-between mb-4">
+                <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Hata Detayları
+                </h2>
+                <button @click="loadErrorDetails()" class="text-[10px] text-slate-500 hover:text-white">Yenile</button>
+              </div>
+              <div class="space-y-2 max-h-56 overflow-y-auto">
+                <template x-for="err in errorDetails.slice(0,10)" :key="err.ts">
+                  <div class="p-2.5 bg-red-500/5 border border-red-500/10 rounded-lg">
+                    <div class="flex justify-between mb-1">
+                      <span class="text-[9px] font-bold uppercase text-slate-400" x-text="err.module||'unknown'"></span>
+                      <span class="text-[9px] font-mono text-slate-600" x-text="formatTs(err.ts)"></span>
+                    </div>
+                    <p class="text-[10px] text-red-200 truncate" x-text="err.error"></p>
+                    <span x-show="err.session_id" class="text-[9px] font-mono text-slate-600" x-text="err.session_id"></span>
+                  </div>
+                </template>
+                <div x-show="errorDetails.length===0" class="py-6 text-center">
+                  <span class="text-[10px] text-slate-600 uppercase">Detaylı hata kaydı yok</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost breakdown -->
+          <template x-if="analyticsData.cost_tracking && Object.keys(analyticsData.cost_tracking.by_provider||{}).length>0">
+            <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-violet-500 rounded-full"></span> API Maliyet Dağılımı
+              </h2>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <template x-for="(cost, provider) in analyticsData.cost_tracking.by_provider" :key="provider">
+                  <div class="p-3 bg-violet-500/5 border border-violet-500/10 rounded-xl text-center">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-1" x-text="provider"></div>
+                    <div class="text-lg font-black text-violet-300" x-text="'$'+cost.toFixed(3)"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      </div><!-- /pipeline tab -->
+
+      <!-- YouTube Analytics tab (inline) -->
+      <div x-show="analyticsTab==='youtube'" x-init="$watch('analyticsTab', v => { if(v==='youtube') loadYtAnalytics() })">
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h1 class="text-3xl font-black text-white tracking-tight" x-text="t('yt_analytics_title')"></h1>
+            <p class="text-slate-500 text-sm mt-1">YouTube channel & video performance</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- Channel selector -->
+            <select x-model="ytAnalyticsChannel" @change="loadYtAnalytics()"
+                    class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+              <template x-for="ch in channelsData" :key="ch.id">
+                <option :value="ch.id" x-text="ch.name"></option>
+              </template>
+              <option value="_default" x-show="channelsData.length===0">Default</option>
+            </select>
+            <button @click="loadYtAnalytics()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+              <svg class="w-5 h-5" :class="ytAnalyticsLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Connect YouTube First Message -->
+        <div x-show="!youtubeConnected" class="flex flex-col items-center justify-center py-20">
+          <div class="w-20 h-20 bg-red-600/10 rounded-3xl flex items-center justify-center mb-6">
+            <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </div>
+          <p class="text-slate-400 text-sm font-medium" x-text="t('yt_analytics_connect_first')"></p>
+          <button @click="loadSettings();view='settings';settingsModule='system'"
+                  class="mt-4 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-all">
+            YouTube Settings
+          </button>
+        </div>
+
+        <!-- Analytics Content -->
+        <div x-show="youtubeConnected">
+          <!-- Top Stats Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-red-600/10 rounded-xl flex items-center justify-center">
+                  <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-text="t('yt_analytics_subscribers')"></span>
+              </div>
+              <div class="text-3xl font-black text-white" x-text="ytAnalytics.channel?.subscriberCount?.toLocaleString() || '—'"></div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-text="t('yt_analytics_views')"></span>
+              </div>
+              <div class="text-3xl font-black text-white" x-text="ytAnalytics.channel?.viewCount?.toLocaleString() || '—'"></div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-emerald-600/10 rounded-xl flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
+                </div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" x-text="t('yt_analytics_videos')"></span>
+              </div>
+              <div class="text-3xl font-black text-white" x-text="ytAnalytics.channel?.videoCount?.toLocaleString() || '—'"></div>
+            </div>
+          </div>
+
+          <!-- Recent Videos Table -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+            <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4" x-text="t('yt_analytics_recent')"></h2>
+            <div x-show="ytAnalytics.videos.length === 0" class="text-center py-8 text-slate-500 text-sm" x-text="t('yt_analytics_no_videos')"></div>
+            <div x-show="ytAnalytics.videos.length > 0" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-800">
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('yt_analytics_title_col')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 px-3" x-text="t('yt_analytics_views_col')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 px-3" x-text="t('yt_analytics_likes_col')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 px-3" x-text="t('yt_analytics_comments_col')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pl-3" x-text="t('yt_analytics_published')"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="vid in ytAnalytics.videos" :key="vid.video_id">
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 cursor-pointer transition-colors" @click="loadYtVideoDetail(vid.video_id)">
+                      <td class="py-3 pr-3">
+                        <img :src="vid.thumbnail" class="w-24 h-14 object-cover rounded-lg" x-show="vid.thumbnail" />
+                      </td>
+                      <td class="py-3 pr-4">
+                        <div class="text-white font-medium truncate max-w-xs" x-text="vid.title"></div>
+                      </td>
+                      <td class="py-3 px-3 text-right text-slate-300 font-mono" x-text="(vid.viewCount||0).toLocaleString()"></td>
+                      <td class="py-3 px-3 text-right text-slate-300 font-mono" x-text="(vid.likeCount||0).toLocaleString()"></td>
+                      <td class="py-3 px-3 text-right text-slate-300 font-mono" x-text="(vid.commentCount||0).toLocaleString()"></td>
+                      <td class="py-3 pl-3 text-right text-slate-500 text-xs" x-text="vid.publishedAt ? new Date(vid.publishedAt).toLocaleDateString() : ''"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Video Detail Panel -->
+          <div x-show="ytVideoDetail" class="mt-6 bg-slate-900 border border-red-800/30 rounded-2xl p-6 shadow-xl shadow-black/20">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest" x-text="t('yt_analytics_video_detail')"></h2>
+              <button @click="ytVideoDetail=null" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="bg-slate-950 rounded-xl p-4 text-center">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('yt_analytics_views_col')"></div>
+                <div class="text-xl font-black text-white" x-text="(ytVideoDetail?.viewCount||0).toLocaleString()"></div>
+              </div>
+              <div class="bg-slate-950 rounded-xl p-4 text-center">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('yt_analytics_likes_col')"></div>
+                <div class="text-xl font-black text-white" x-text="(ytVideoDetail?.likeCount||0).toLocaleString()"></div>
+              </div>
+              <div class="bg-slate-950 rounded-xl p-4 text-center">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('yt_analytics_comments_col')"></div>
+                <div class="text-xl font-black text-white" x-text="(ytVideoDetail?.commentCount||0).toLocaleString()"></div>
+              </div>
+              <div class="bg-slate-950 rounded-xl p-4 text-center">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('yt_analytics_subscribers')"></div>
+                <div class="text-xl font-black text-white" x-text="(ytVideoDetail?.favoriteCount||0).toLocaleString()"></div>
+              </div>
+            </div>
+            <div x-show="ytVideoDetail?.title" class="mt-4 text-sm text-slate-300">
+              <span class="font-bold text-white" x-text="ytVideoDetail?.title"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitor tab (inline) -->
+      <div x-show="analyticsTab==='competitor'" x-init="$watch('analyticsTab', v => { if(v==='competitor') loadCompetitor() })">
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h1 class="text-3xl font-black text-white tracking-tight">🎯 Rakip Analizi</h1>
+            <p class="text-slate-500 text-sm mt-1">Rakip kanal analizi ve viral başlık motoru</p>
+          </div>
+          <button @click="loadCompetitor()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+            <svg class="w-5 h-5" :class="competitorLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Channel Management -->
+          <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+            <h2 class="text-xs font-black text-white uppercase tracking-widest mb-4">Kanallarım</h2>
+
+            <!-- Add Channel Form -->
+            <div class="space-y-3 mb-6 pb-6 border-b border-slate-800">
+              <input x-model="agNewChannel.id" placeholder="YouTube Kanal ID (UCxxx...)"
+                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500" />
+              <input x-model="agNewChannel.name" placeholder="Kanal Adı"
+                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500" />
+              <div class="grid grid-cols-2 gap-2">
+                <select x-model="agNewChannel.language" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
+                  <option>Turkish</option><option>English</option><option>German</option><option>Spanish</option>
+                </select>
+                <select x-model="agNewChannel.dna" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none">
+                  <option>Documentary</option><option>Dark Psychology</option><option>Motivation</option>
+                  <option>Luxury</option><option>Calm Story</option><option>Science</option>
+                </select>
+              </div>
+              <button @click="saveAgChannel()" :disabled="!agNewChannel.id||!agNewChannel.name"
+                class="w-full py-2 bg-rose-700 hover:bg-rose-600 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all">
+                + Kanal Ekle
+              </button>
+            </div>
+
+            <!-- Channel List -->
+            <div class="space-y-2">
+              <template x-for="ch in competitorData?.channels||[]" :key="ch.id">
+                <div @click="agActiveChannel=ch" class="p-3 rounded-xl cursor-pointer transition-all border"
+                  :class="agActiveChannel?.id===ch.id ? 'border-rose-600 bg-rose-900/20' : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="text-xs font-bold text-white" x-text="ch.name"></p>
+                      <p class="text-[10px] text-slate-500" x-text="ch.language+' · '+ch.dna"></p>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button @click.stop="scanAgChannel(ch.id)"
+                        :disabled="competitorScanning[ch.id]"
+                        class="px-2 py-1 bg-rose-800 hover:bg-rose-700 disabled:opacity-40 text-white rounded text-[10px] font-bold transition-all">
+                        <span x-text="competitorScanning[ch.id] ? '...' : '▶ Tara'"></span>
+                      </button>
+                      <button @click.stop="deleteAgChannel(ch.id)" class="p-1 text-slate-600 hover:text-red-400 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div x-show="!competitorData?.channels?.length" class="py-6 text-center">
+                <span class="text-[10px] text-slate-600 uppercase">Kanal eklenmedi</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Title Pool -->
+          <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/50">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xs font-black text-white uppercase tracking-widest">Başlık Havuzu</h2>
+              <div class="flex gap-1">
+                <template x-for="f in ['all','new','approved','in_queue','used']" :key="f">
+                  <button @click="agStatusFilter=f"
+                    class="px-2 py-1 rounded-lg text-[10px] font-bold transition-all uppercase"
+                    :class="agStatusFilter===f ? 'bg-rose-700 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'"
+                    x-text="f==='all'?'Tümü':f==='new'?'Yeni':f==='approved'?'Onaylı':f==='used'?'Kullanıldı':'Kuyrukta'">
+                  </button>
+                </template>
+                <span class="text-slate-700">|</span>
+                <select x-model="agMinScore" @change="loadCompetitor()"
+                  class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-300 focus:outline-none">
+                  <option value="0">Min Skor: Tümü</option>
+                  <option value="6">Min Skor: 6+</option>
+                  <option value="7">Min Skor: 7+</option>
+                  <option value="8">Min Skor: 8+</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+              <template x-for="entry in agFilteredTitles.slice(0,30)" :key="entry.id">
+                <div class="p-4 bg-slate-800/40 border border-slate-700/50 rounded-2xl hover:border-slate-600 transition-all">
+                  <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-bold text-white leading-tight" x-text="entry.rewritten_title||entry.original_title"></p>
+                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="entry.source_channel+' · '+new Date(entry.published_at||Date.now()).toLocaleDateString()"></p>
+                    </div>
+                    <div class="text-right shrink-0">
+                      <div class="text-lg font-black" :class="(entry.viral_score||0)>=8?'text-emerald-400':(entry.viral_score||0)>=6.5?'text-amber-400':'text-red-400'" x-text="(entry.viral_score||0).toFixed(1)"></div>
+                      <div class="text-[9px] text-slate-500">viral</div>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-5 gap-1 mb-3">
+                    <template x-for="[key, label] in [['curiosity','Merak'],['emotion','Duygu'],['psychology','Psikoloji'],['ctr','CTR'],['trend','Trend']]" :key="key">
+                      <div class="text-center">
+                        <div class="text-[8px] text-slate-500 mb-0.5" x-text="label"></div>
+                        <div class="h-1 bg-slate-700 rounded-full overflow-hidden">
+                          <div class="h-full bg-rose-500 rounded-full" :style="`width:${(entry.scores?.[key]||0)*10}%`"></div>
+                        </div>
+                        <div class="text-[8px] text-slate-400 mt-0.5" x-text="entry.scores?.[key]||0"></div>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="flex gap-2">
+                    <button @click="agSendToQueue(entry)"
+                      class="flex-1 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-lg text-[10px] font-bold transition-all">
+                      ▶ Kuyruğa Gönder
+                    </button>
+                    <button @click="agUseTitle(entry)"
+                      x-show="entry.status!=='used'"
+                      class="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold transition-all"
+                      title="Başlığı kullanıp video oluştur">
+                      🎬 Kullan
+                    </button>
+                    <button @click="updateAgTitle(entry.id, {status:'approved'})"
+                      x-show="entry.status==='new'"
+                      class="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-all">
+                      ✓
+                    </button>
+                    <button @click="deleteAgTitle(entry.id)"
+                      class="px-3 py-1.5 bg-slate-700 hover:bg-red-800 text-white rounded-lg text-[10px] transition-all">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <div x-show="agFilteredTitles.length===0" class="py-12 text-center">
+                <span class="text-[10px] text-slate-600 uppercase tracking-widest">Başlık havuzu boş — bir kanalı tarayın</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>

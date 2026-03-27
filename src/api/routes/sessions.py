@@ -66,12 +66,24 @@ async def start_run(req: RunReq):
     }
     _write_session(sid, session)
 
+    # Attach active channel config to job data
+    try:
+        from src.core.channel_hub import channel_hub
+        ch = channel_hub.get_active_channel()
+        channel_config = ch or {}
+        channel_id = channel_config.get("id", "_default")
+    except Exception:
+        channel_config = {}
+        channel_id = "_default"
+
     # Use queue manager instead of raw thread
     await queue_manager.add_job("yt_video", {
         "topic": req.topic,
         "script_file": req.script_file,
         "preset_env": preset_env,
         "content_category": req.content_category or "general",
+        "channel_config": channel_config,
+        "channel_id": channel_id,
     }, sid)
     
     return {"session_id": sid, "status": "queued"}
@@ -85,6 +97,11 @@ async def run_pipeline_task(sid: str, data: dict, job_type: str):
     content_category = data.get("content_category", "general")
     if content_category and content_category != "general":
         preset_env = {**preset_env, "CONTENT_CATEGORY": content_category}
+
+    # Inject channel master_prompt into env so main.py subprocess can read it
+    channel_prompt = data.get("channel_config", {}).get("master_prompt", "")
+    if channel_prompt:
+        preset_env = {**preset_env, "CHANNEL_MASTER_PROMPT": channel_prompt}
 
     await asyncio.to_thread(_run, sid, topic, script_file, preset_env)
 

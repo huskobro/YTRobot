@@ -153,7 +153,7 @@ class QueueManager:
                         platforms = []
                         if job.data.get("publish_youtube"): platforms.append("youtube")
                         if job.data.get("publish_instagram"): platforms.append("instagram")
-                        stats_manager.log_render(duration, job.status, platforms, None, module=job.type, session_id=job.id)
+                        stats_manager.log_render(duration, job.status, platforms, None, module=job.type, session_id=job.id, channel_id=job.data.get("channel_id", "_default"))
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 
@@ -211,7 +211,7 @@ class QueueManager:
                     # Log failure to analytics
                     try:
                         from src.core.analytics import stats_manager
-                        stats_manager.log_render(0, job.status, [], str(e), module=job.type, session_id=job.id)
+                        stats_manager.log_render(0, job.status, [], str(e), module=job.type, session_id=job.id, channel_id=job.data.get("channel_id", "_default"))
                     except Exception as analytics_err:
                         logger.warning(f"Analytics log failed: {analytics_err}")
 

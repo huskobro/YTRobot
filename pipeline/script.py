@@ -195,7 +195,8 @@ def _load_custom_prompt(name: str) -> str | None:
     return p.read_text(encoding="utf-8").strip() if p.exists() else None
 
 
-def _build_script_prompt(content_category: str = "general", lang: str = "tr") -> str:
+def _build_script_prompt(content_category: str = "general", lang: str = "tr",
+                         channel_prompt: str = "") -> str:
     audience = settings.target_audience.strip()
     if audience:
         audience_block = f"Target audience: {audience}"
@@ -214,6 +215,10 @@ def _build_script_prompt(content_category: str = "general", lang: str = "tr") ->
 
     # Add narrative arc structure
     system_prompt += NARRATIVE_ARC
+
+    # Append channel voice & style guidelines (lowest priority — after presets/category)
+    if channel_prompt:
+        system_prompt += f"\n\nChannel voice & style guidelines:\n{channel_prompt}"
 
     return system_prompt
 
@@ -354,8 +359,9 @@ def _fix_scene(s: dict) -> dict:
     return {k: v for k, v in s.items() if k in valid}
 
 
-def generate_from_topic(topic: str, content_category: str = "general") -> list[Scene]:
-    prompt = _build_script_prompt(content_category=content_category)
+def generate_from_topic(topic: str, content_category: str = "general",
+                        channel_prompt: str = "") -> list[Scene]:
+    prompt = _build_script_prompt(content_category=content_category, channel_prompt=channel_prompt)
     raw = _chat(prompt, f"Topic: {topic}")
     data = json.loads(raw)
     scenes_data = (

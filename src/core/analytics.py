@@ -68,7 +68,8 @@ class StatsManager:
                    error: Optional[str] = None,
                    module: Optional[str] = None,
                    session_id: Optional[str] = None,
-                   providers: Optional[List[str]] = None):
+                   providers: Optional[List[str]] = None,
+                   channel_id: str = "_default"):
         self.stats["total_renders"] += 1
         if module and module in self.stats.get("modules", {}):
             self.stats["modules"][module] += 1
@@ -130,6 +131,23 @@ class StatsManager:
                 cost["by_provider"][p] = round(
                     cost["by_provider"].get(p, 0.0) + estimate, 4
                 )
+        # Write to per-channel analytics
+        try:
+            from src.core.channel_hub import channel_hub
+            import json as _json
+            analytics = channel_hub.get_channel_analytics(channel_id)
+            if analytics is not None:
+                analytics["total_renders"] = analytics.get("total_renders", 0) + 1
+                if status == "completed":
+                    analytics["success_count"] = analytics.get("success_count", 0) + 1
+                else:
+                    analytics["fail_count"] = analytics.get("fail_count", 0) + 1
+                analytics["total_duration"] = analytics.get("total_duration", 0) + duration
+                path = channel_hub._channel_dir(channel_id) / "analytics.json"
+                path.write_text(_json.dumps(analytics, indent=2, ensure_ascii=False))
+        except Exception:
+            pass
+
         self.save_stats()
 
     def get_stats(self) -> Dict[str, Any]:

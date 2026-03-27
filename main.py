@@ -33,8 +33,10 @@ def run_full_pipeline(topic: str = None, script_file: Path = None) -> Path:
         if topic:
             import os as _os
             content_category = _os.environ.get("CONTENT_CATEGORY", "general")
+            channel_prompt = _os.environ.get("CHANNEL_MASTER_PROMPT", "")
             print(f"  Generating script for topic: {topic!r} (category: {content_category})")
-            scenes = generate_from_topic(topic, content_category=content_category)
+            scenes = generate_from_topic(topic, content_category=content_category,
+                                         channel_prompt=channel_prompt)
         else:
             print(f"  Loading script from: {script_file}")
             scenes = load_from_file(script_file)

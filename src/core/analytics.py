@@ -135,6 +135,7 @@ class StatsManager:
         try:
             from src.core.channel_hub import channel_hub
             import json as _json
+            from datetime import date as _date
             analytics = channel_hub.get_channel_analytics(channel_id)
             if analytics is not None:
                 analytics["total_renders"] = analytics.get("total_renders", 0) + 1
@@ -143,6 +144,27 @@ class StatsManager:
                 else:
                     analytics["fail_count"] = analytics.get("fail_count", 0) + 1
                 analytics["total_duration"] = analytics.get("total_duration", 0) + duration
+                # Update cost estimate from providers
+                if providers:
+                    for p in providers:
+                        analytics["cost_estimate"] = round(
+                            analytics.get("cost_estimate", 0) + PROVIDER_COST_ESTIMATES.get(p, 0.0), 4
+                        )
+                # Update daily_history for this channel
+                today = _date.today().isoformat()
+                history = analytics.get("daily_history", [])
+                if history and history[-1].get("date") == today:
+                    history[-1]["renders"] = history[-1].get("renders", 0) + 1
+                else:
+                    history.append({"date": today, "renders": 1, "success": 0, "fail": 0})
+                if status == "completed" and history:
+                    history[-1]["success"] = history[-1].get("success", 0) + 1
+                elif history:
+                    history[-1]["fail"] = history[-1].get("fail", 0) + 1
+                # Keep last 90 days
+                if len(history) > 90:
+                    history = history[-90:]
+                analytics["daily_history"] = history
                 path = channel_hub._channel_dir(channel_id) / "analytics.json"
                 path.write_text(_json.dumps(analytics, indent=2, ensure_ascii=False))
         except Exception:

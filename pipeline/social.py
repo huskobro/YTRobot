@@ -16,25 +16,44 @@ class SocialPoster:
 
     def _log_publish(self, platform: str, status: str, video_path: Path,
                      metadata: Dict[str, Any]):
-        log_file = Path("social_log.json")
-        try:
-            events = json.loads(log_file.read_text()) if log_file.exists() else []
-        except Exception:
-            events = []
-        events.append({
+        event = {
             "ts": time.time(),
             "platform": platform,
             "status": status,
             "video": str(video_path.name) if video_path else "",
             "title": metadata.get("title", ""),
             "session_id": metadata.get("session_id", ""),
-        })
+        }
+
+        # Write to global social_log.json
+        log_file = Path("social_log.json")
+        try:
+            events = json.loads(log_file.read_text()) if log_file.exists() else []
+        except Exception:
+            events = []
+        events.append(event)
         if len(events) > 500:
             events = events[-500:]
         try:
             log_file.write_text(json.dumps(events, indent=2))
         except Exception as e:
             logger.warning(f"[Social] Could not write social_log.json: {e}")
+
+        # Write to channel-specific social_log.json
+        channel_id = metadata.get("channel_id", "_default")
+        try:
+            channel_log = Path(f"channels/{channel_id}/social_log.json")
+            if channel_log.parent.exists():
+                try:
+                    ch_events = json.loads(channel_log.read_text()) if channel_log.exists() else []
+                except Exception:
+                    ch_events = []
+                ch_events.append(event)
+                if len(ch_events) > 200:
+                    ch_events = ch_events[-200:]
+                channel_log.write_text(json.dumps(ch_events, indent=2))
+        except Exception:
+            pass
 
     async def post_to_youtube(self, video_path: Path,
                                metadata: Dict[str, Any]) -> Dict[str, Any]:

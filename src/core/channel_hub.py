@@ -63,6 +63,47 @@ class ChannelHub:
             }
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
 
+        # Create default analytics.json if missing
+        analytics_path = default_dir / "analytics.json"
+        if not analytics_path.exists():
+            analytics_path.write_text(json.dumps({
+                "total_renders": 0, "success_count": 0, "fail_count": 0,
+                "total_duration": 0, "cost_estimate": 0, "daily_history": [],
+                "platform_publishes": {
+                    "youtube": {"count": 0, "last_at": None},
+                    "instagram": {"count": 0, "last_at": None},
+                    "tiktok": {"count": 0, "last_at": None}
+                }
+            }, indent=2, ensure_ascii=False))
+        else:
+            # Migrate existing analytics.json to ensure all required fields exist
+            try:
+                existing = json.loads(analytics_path.read_text())
+                changed = False
+                for key, default_val in [
+                    ("total_renders", 0), ("success_count", 0), ("fail_count", 0),
+                    ("total_duration", 0), ("cost_estimate", 0), ("daily_history", []),
+                ]:
+                    if key not in existing:
+                        existing[key] = default_val
+                        changed = True
+                if "platform_publishes" not in existing:
+                    existing["platform_publishes"] = {
+                        "youtube": {"count": 0, "last_at": None},
+                        "instagram": {"count": 0, "last_at": None},
+                        "tiktok": {"count": 0, "last_at": None}
+                    }
+                    changed = True
+                else:
+                    for platform in ("youtube", "instagram", "tiktok"):
+                        if platform not in existing["platform_publishes"]:
+                            existing["platform_publishes"][platform] = {"count": 0, "last_at": None}
+                            changed = True
+                if changed:
+                    analytics_path.write_text(json.dumps(existing, indent=2, ensure_ascii=False))
+            except Exception:
+                pass
+
     def _read_index(self) -> dict:
         return json.loads(CHANNELS_INDEX.read_text())
 
@@ -231,7 +272,25 @@ class ChannelHub:
         path = self._channel_dir(channel_id) / "analytics.json"
         if not path.exists():
             return None
-        return json.loads(path.read_text())
+        data = json.loads(path.read_text())
+        # Ensure all required fields exist (migration-safe)
+        for key, default_val in [
+            ("total_renders", 0), ("success_count", 0), ("fail_count", 0),
+            ("total_duration", 0), ("cost_estimate", 0), ("daily_history", []),
+        ]:
+            if key not in data:
+                data[key] = default_val
+        if "platform_publishes" not in data:
+            data["platform_publishes"] = {
+                "youtube": {"count": 0, "last_at": None},
+                "instagram": {"count": 0, "last_at": None},
+                "tiktok": {"count": 0, "last_at": None}
+            }
+        else:
+            for platform in ("youtube", "instagram", "tiktok"):
+                if platform not in data["platform_publishes"]:
+                    data["platform_publishes"][platform] = {"count": 0, "last_at": None}
+        return data
 
     def get_all_analytics(self) -> List[dict]:
         result = []

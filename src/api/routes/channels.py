@@ -67,7 +67,25 @@ def set_active(body: SetActiveReq):
 
 @router.get("/analytics/all")
 def get_all_analytics():
-    return {"channels": channel_hub.get_all_analytics()}
+    channels = channel_hub.get_channels()
+    result = []
+    for ch in channels:
+        ch_id = ch.get("id", ch.get("slug", "_default"))
+        analytics = channel_hub.get_channel_analytics(ch_id)
+        result.append({
+            "channel_id": ch_id,
+            "name": ch.get("name", ""),
+            "analytics": analytics or {
+                "total_renders": 0, "success_count": 0, "fail_count": 0,
+                "total_duration": 0, "cost_estimate": 0, "daily_history": [],
+                "platform_publishes": {
+                    "youtube": {"count": 0, "last_at": None},
+                    "instagram": {"count": 0, "last_at": None},
+                    "tiktok": {"count": 0, "last_at": None}
+                }
+            }
+        })
+    return {"channels": result}
 
 
 @router.post("")

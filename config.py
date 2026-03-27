@@ -40,13 +40,14 @@ class Settings(BaseSettings):
     script_humanize_with_llm: bool = False  # Gemini pass to rewrite script for natural human speech
 
     # TTS
-    tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio", "qwen3"] = "openai"
+    tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio", "qwen3", "edge", "dubvoice"] = "openai"
     tts_enhance_with_llm: bool = False  # Run Gemini to add TTS emphasis/pauses before synthesis
     tts_speed: float = 1.0             # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
     tts_remove_apostrophes: bool = True  # strip ' to prevent micro-pause glitches (safe for Turkish)
     tts_trim_silence: bool = False      # trim leading/trailing silence from each TTS audio clip
 
     openai_tts_voice: str = "onyx"  # alloy | ash | coral | echo | fable | nova | onyx | sage | shimmer
+    edge_tts_voice: str = "tr-TR-AhmetNeural"  # run `edge-tts --list-voices` for full list
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
     speshaudio_api_key: str = ""

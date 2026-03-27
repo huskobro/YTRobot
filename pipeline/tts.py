@@ -21,6 +21,12 @@ def _load_provider(provider_name: str | None = None) -> BaseTTSProvider:
     elif name == "qwen3":
         from providers.tts.qwen3 import Qwen3TTSProvider
         return Qwen3TTSProvider()
+    elif name == "edge":
+        from providers.tts.edge_tts import EdgeTTSProvider
+        return EdgeTTSProvider()
+    elif name == "dubvoice":
+        from providers.tts.dubvoice import DubVoiceTTSProvider
+        return DubVoiceTTSProvider()
     else:
         raise ValueError(f"Unknown TTS provider: {name!r}")
 

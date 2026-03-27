@@ -1,12 +1,15 @@
 import os
 import json
+import shutil
 import signal
 import threading
 import platform
 from datetime import datetime
 from pathlib import Path
+from typing import List
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from src.api.models.schemas import RunReq
 from src.core.utils import (
     _read_session, _write_session, _all_sessions, _session_dir, PRESETS_DIR
@@ -16,6 +19,11 @@ from src.core.pipeline_runner import _run, STEPS
 from src.core.queue import queue_manager
 from src.core.progress import progress_manager
 import asyncio
+
+
+class BulkActionRequest(BaseModel):
+    session_ids: List[str]
+    action: str  # "delete" | "archive" | "rerender"
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 
@@ -84,6 +92,38 @@ async def video_gallery(status: str = "", search: str = "", limit: int = 20, off
     unique = [r for r in results if r["session_id"] not in seen and not seen.add(r["session_id"])]
     total = len(unique)
     return {"videos": unique[offset:offset + limit], "total": total, "limit": limit, "offset": offset}
+
+
+@router.post("/sessions/bulk")
+async def bulk_action(req: BulkActionRequest):
+    results = []
+    for sid in req.session_ids:
+        try:
+            if req.action == "delete":
+                for base in ["sessions", "output"]:
+                    path = Path(base) / sid
+                    if path.exists():
+                        shutil.rmtree(path)
+                        results.append({"session_id": sid, "status": "deleted"})
+                        break
+                else:
+                    results.append({"session_id": sid, "status": "not_found"})
+            elif req.action == "archive":
+                archive_dir = Path("archive")
+                archive_dir.mkdir(exist_ok=True)
+                for base in ["sessions", "output"]:
+                    path = Path(base) / sid
+                    if path.exists():
+                        shutil.move(str(path), str(archive_dir / sid))
+                        results.append({"session_id": sid, "status": "archived"})
+                        break
+                else:
+                    results.append({"session_id": sid, "status": "not_found"})
+            else:
+                results.append({"session_id": sid, "status": "unknown_action"})
+        except Exception as e:
+            results.append({"session_id": sid, "status": "error", "error": str(e)})
+    return {"results": results, "action": req.action}
 
 
 @router.get("/sessions/{sid}")

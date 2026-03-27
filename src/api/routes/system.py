@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import urllib.request as urllib_req
+from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from src.api.models.schemas import SettingsReq, PromptsReq, PresetReq
@@ -10,6 +12,27 @@ from src.core.cache import api_cache
 
 router = APIRouter(prefix="/api", tags=["system"])
 logger = logging.getLogger("ytrobot.system")
+
+SETTINGS_HISTORY_FILE = Path("data/settings_history.json")
+MAX_HISTORY = 20
+
+
+def _save_settings_snapshot(settings_dict: dict):
+    """Save a snapshot of current settings for undo."""
+    SETTINGS_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    history = []
+    if SETTINGS_HISTORY_FILE.exists():
+        try:
+            history = json.loads(SETTINGS_HISTORY_FILE.read_text())
+        except Exception:
+            pass
+    history.append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "settings": settings_dict,
+    })
+    if len(history) > MAX_HISTORY:
+        history = history[-MAX_HISTORY:]
+    SETTINGS_HISTORY_FILE.write_text(json.dumps(history, indent=2, ensure_ascii=False))
 
 
 def _mask_value(key: str, value: str) -> str:
@@ -46,9 +69,38 @@ def get_settings():
 
 @router.post("/settings")
 def update_settings(body: SettingsReq):
+    from config import settings
+    _save_settings_snapshot(settings.model_dump())
     _write_env(body.values)
     api_cache.invalidate("settings")
     return {"ok": True}
+
+
+@router.get("/settings/history")
+async def settings_history():
+    if SETTINGS_HISTORY_FILE.exists():
+        try:
+            return {"history": json.loads(SETTINGS_HISTORY_FILE.read_text())}
+        except Exception:
+            pass
+    return {"history": []}
+
+
+@router.post("/settings/undo")
+async def undo_settings():
+    if not SETTINGS_HISTORY_FILE.exists():
+        raise HTTPException(400, "No settings history")
+    history = json.loads(SETTINGS_HISTORY_FILE.read_text())
+    if not history:
+        raise HTTPException(400, "No settings history")
+    last = history.pop()
+    SETTINGS_HISTORY_FILE.write_text(json.dumps(history, indent=2, ensure_ascii=False))
+    from config import settings, reload_settings
+    reload_settings()
+    for key, value in last["settings"].items():
+        if hasattr(settings, key):
+            setattr(settings, key, value)
+    return {"status": "undone", "restored_to": last["timestamp"]}
 
 @router.get("/prompts")
 def get_prompts():

@@ -204,6 +204,7 @@ class Settings(BaseSettings):
     webhook_on_complete: bool = True
     webhook_on_failure: bool = True
     webhook_mention: str = ""          # e.g. "@channel" or Discord user ID
+    webhook_secret: str = ""           # HMAC secret for webhook signature verification
 
     # Social Media Metadata Tool
     social_meta_enabled_yt_video: bool = False

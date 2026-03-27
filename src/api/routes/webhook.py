@@ -1,3 +1,5 @@
+import hmac
+import hashlib
 import json
 import logging
 import urllib.request as urllib_req
@@ -6,6 +8,14 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 logger = logging.getLogger("ytrobot.webhook")
+
+
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """Verify HMAC-SHA256 webhook signature."""
+    if not secret or not signature:
+        return True  # No secret configured = skip verification
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(f"sha256={expected}", signature)
 
 
 class WebhookTestReq(BaseModel):

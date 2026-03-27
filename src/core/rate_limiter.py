@@ -16,12 +16,14 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         self._hits = defaultdict(list)  # ip -> [timestamps]
 
     async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for WebSocket and static files
+        # Skip rate limiting for WebSocket, static files, and localhost
         path = request.url.path
-        if path.startswith("/ws/") or path.startswith("/ui/") or path.endswith((".js", ".css", ".html", ".ico")):
+        ip = request.client.host if request.client else "unknown"
+        if (path.startswith("/ws/") or path.startswith("/ui/")
+            or path.endswith((".js", ".css", ".html", ".ico"))
+            or ip in ("127.0.0.1", "::1", "localhost")):
             return await call_next(request)
 
-        ip = request.client.host if request.client else "unknown"
         now = time.time()
         window = 60.0  # 1 minute window
 

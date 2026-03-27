@@ -152,6 +152,9 @@ function app() {
     agNewCompetitorId: '',
     agNewCompetitorName: '',
     soundEnabled: localStorage.getItem('ytrobot-sound') !== 'false',
+    // ── Video Preview ──
+    videoPreviewOpen: false,
+    videoPreviewUrl: '',
     // ── Toast Bildirim Sistemi ──
     toasts: [],
     _toastIdCounter: 0,
@@ -278,6 +281,12 @@ function app() {
       } else if (e.key === 'Escape') {
         this.showCommandPalette = false;
       }
+    },
+
+    // ── Video Preview ──
+    previewVideo(sessionId) {
+      this.videoPreviewUrl = `/api/sessions/${sessionId}/video`;
+      this.videoPreviewOpen = true;
     },
 
     // ── Toast API ──
@@ -1726,7 +1735,7 @@ function app() {
       try {
         const data = await this.apiFetch('/api/system/cleanup', { method: 'POST' });
         if (data.status === 'success') {
-          alert(this.t('cleanup_success'));
+          this.showToast(this.t('cleanup_success'), 'success');
         }
       } catch (e) {
         console.error('Cleanup error:', e);

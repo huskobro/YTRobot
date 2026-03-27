@@ -208,10 +208,10 @@
               :class="view==='analytics'?'bg-emerald-600 text-white shadow-md shadow-emerald-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📈</span> <span x-text="t('nav_analytics')"></span>
       </button>
-        <button @click="view='antigravity'; loadAntigravity()"
+        <button @click="view='competitor'; loadCompetitor()"
                 class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
-                :class="view==='antigravity'?'bg-rose-700 text-white shadow-md shadow-rose-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <span>🎯</span> <span x-text="t('nav_antigravity')"></span>
+                :class="view==='competitor'?'bg-rose-700 text-white shadow-md shadow-rose-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <span>🎯</span> <span x-text="t('competitor_title')"></span>
         </button>
     </nav>
 
@@ -3224,15 +3224,15 @@
       </div>
     </div>
 
-    <!-- ══ ANTİGRAVİTY ══════════════════════════════════════════════ -->
-    <div x-show="view==='antigravity'" class="p-6">
+    <!-- ══ COMPETITOR INTELLIGENCE ══════════════════════════════════ -->
+    <div x-show="view==='competitor'" class="p-6">
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-3xl font-black text-white tracking-tight">🎯 AntiGravity</h1>
+          <h1 class="text-3xl font-black text-white tracking-tight">🎯 Rakip Analizi</h1>
           <p class="text-slate-500 text-sm mt-1">Rakip kanal analizi ve viral başlık motoru</p>
         </div>
-        <button @click="loadAntigravity()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
-          <svg class="w-5 h-5" :class="antigravityLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <button @click="loadCompetitor()" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+          <svg class="w-5 h-5" :class="competitorLoading?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         </button>
       </div>
 
@@ -3264,7 +3264,7 @@
 
           <!-- Channel List -->
           <div class="space-y-2">
-            <template x-for="ch in antigravityData?.channels||[]" :key="ch.id">
+            <template x-for="ch in competitorData?.channels||[]" :key="ch.id">
               <div @click="agActiveChannel=ch" class="p-3 rounded-xl cursor-pointer transition-all border"
                 :class="agActiveChannel?.id===ch.id ? 'border-rose-600 bg-rose-900/20' : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'">
                 <div class="flex items-center justify-between">
@@ -3274,9 +3274,9 @@
                   </div>
                   <div class="flex items-center gap-1">
                     <button @click.stop="scanAgChannel(ch.id)"
-                      :disabled="antigravityScanning[ch.id]"
+                      :disabled="competitorScanning[ch.id]"
                       class="px-2 py-1 bg-rose-800 hover:bg-rose-700 disabled:opacity-40 text-white rounded text-[10px] font-bold transition-all">
-                      <span x-text="antigravityScanning[ch.id] ? '...' : '▶ Tara'"></span>
+                      <span x-text="competitorScanning[ch.id] ? '...' : '▶ Tara'"></span>
                     </button>
                     <button @click.stop="deleteAgChannel(ch.id)" class="p-1 text-slate-600 hover:text-red-400 transition-colors">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -3285,7 +3285,7 @@
                 </div>
               </div>
             </template>
-            <div x-show="!antigravityData?.channels?.length" class="py-6 text-center">
+            <div x-show="!competitorData?.channels?.length" class="py-6 text-center">
               <span class="text-[10px] text-slate-600 uppercase">Kanal eklenmedi</span>
             </div>
           </div>

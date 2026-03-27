@@ -141,9 +141,9 @@ function app() {
     socialLog: [],
     thumbnailGenerating: false,
     _chartInstance: null,
-    antigravityData: null,
-    antigravityLoading: false,
-    antigravityScanning: {},
+    competitorData: null,
+    competitorLoading: false,
+    competitorScanning: {},
     agActiveChannel: null,
     agStatusFilter: 'all',
     agNewChannel: { id: '', name: '', language: 'Turkish', dna: 'Documentary', pull_count: 10, competitors: [] },
@@ -542,59 +542,59 @@ function app() {
       } catch(e) { console.warn('[social] log error:', e); }
     },
 
-    async loadAntigravity() {
-      this.antigravityLoading = true;
-      try { this.antigravityData = await this.apiFetch('/api/antigravity'); }
-      catch(e) { console.error('[ag] load error:', e); }
-      finally { this.antigravityLoading = false; }
+    async loadCompetitor() {
+      this.competitorLoading = true;
+      try { this.competitorData = await this.apiFetch('/api/competitor'); }
+      catch(e) { console.error('[competitor] load error:', e); }
+      finally { this.competitorLoading = false; }
     },
 
     async saveAgChannel() {
       if (!this.agNewChannel.id || !this.agNewChannel.name) return;
       try {
-        await this.apiFetch('/api/antigravity/channels', {
+        await this.apiFetch('/api/competitor/channels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.agNewChannel),
         });
-        await this.loadAntigravity();
+        await this.loadCompetitor();
         this.agNewChannel = { id: '', name: '', language: 'Turkish', dna: 'Documentary', pull_count: 10, competitors: [] };
-      } catch(e) { console.error('[ag] save channel error:', e); }
+      } catch(e) { console.error('[competitor] save channel error:', e); }
     },
 
     async deleteAgChannel(id) {
       try {
-        await this.apiFetch(`/api/antigravity/channels/${id}`, { method: 'DELETE' });
-        await this.loadAntigravity();
+        await this.apiFetch(`/api/competitor/channels/${id}`, { method: 'DELETE' });
+        await this.loadCompetitor();
         if (this.agActiveChannel?.id === id) this.agActiveChannel = null;
-      } catch(e) { console.error('[ag] delete channel error:', e); }
+      } catch(e) { console.error('[competitor] delete channel error:', e); }
     },
 
     async scanAgChannel(channelId) {
-      this.antigravityScanning[channelId] = true;
+      this.competitorScanning[channelId] = true;
       try {
-        await this.apiFetch(`/api/antigravity/channels/${channelId}/scan`, { method: 'POST' });
-        await this.loadAntigravity();
-      } catch(e) { console.error('[ag] scan error:', e); }
-      finally { delete this.antigravityScanning[channelId]; }
+        await this.apiFetch(`/api/competitor/channels/${channelId}/scan`, { method: 'POST' });
+        await this.loadCompetitor();
+      } catch(e) { console.error('[competitor] scan error:', e); }
+      finally { delete this.competitorScanning[channelId]; }
     },
 
     async updateAgTitle(id, updates) {
       try {
-        await this.apiFetch(`/api/antigravity/titles/${id}`, {
+        await this.apiFetch(`/api/competitor/titles/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updates),
         });
-        await this.loadAntigravity();
-      } catch(e) { console.error('[ag] update title error:', e); }
+        await this.loadCompetitor();
+      } catch(e) { console.error('[competitor] update title error:', e); }
     },
 
     async deleteAgTitle(id) {
       try {
-        await this.apiFetch(`/api/antigravity/titles/${id}`, { method: 'DELETE' });
-        await this.loadAntigravity();
-      } catch(e) { console.error('[ag] delete title error:', e); }
+        await this.apiFetch(`/api/competitor/titles/${id}`, { method: 'DELETE' });
+        await this.loadCompetitor();
+      } catch(e) { console.error('[competitor] delete title error:', e); }
     },
 
     agSendToQueue(entry) {
@@ -606,8 +606,8 @@ function app() {
     },
 
     get agFilteredTitles() {
-      if (!this.antigravityData?.title_pool) return [];
-      const pool = this.antigravityData.title_pool;
+      if (!this.competitorData?.title_pool) return [];
+      const pool = this.competitorData.title_pool;
       const filtered = this.agStatusFilter === 'all'
         ? pool
         : pool.filter(t => t.status === this.agStatusFilter);

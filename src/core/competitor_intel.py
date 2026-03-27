@@ -6,57 +6,76 @@ import urllib.request as urllib_req
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger("ytrobot.antigravity")
-DATA_FILE = Path("antigravity_data.json")
+logger = logging.getLogger("ytrobot.competitor_intel")
+
+# Global fallback data file (backward compat with antigravity_data.json)
+GLOBAL_DATA_FILE = Path("antigravity_data.json")
+CHANNELS_DIR = Path("channels")
 
 
-def _load_data() -> Dict[str, Any]:
-    if DATA_FILE.exists():
+def _channel_data_file(channel_slug: Optional[str]) -> Path:
+    """Return channel-specific competitors.json, or global fallback."""
+    if channel_slug:
+        path = CHANNELS_DIR / channel_slug / "competitors.json"
+        if path.exists():
+            return path
+    return GLOBAL_DATA_FILE
+
+
+def _load_data(channel_slug: Optional[str] = None) -> Dict[str, Any]:
+    data_file = _channel_data_file(channel_slug)
+    if data_file.exists():
         try:
-            return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+            return json.loads(data_file.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {"channels": [], "title_pool": [], "used_titles": []}
 
 
-def _save_data(data: Dict[str, Any]):
-    DATA_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+def _save_data(data: Dict[str, Any], channel_slug: Optional[str] = None):
+    data_file = _channel_data_file(channel_slug)
+    # If no channel-specific file exists yet and slug provided, write to channel dir
+    if channel_slug and not data_file.exists():
+        channel_dir = CHANNELS_DIR / channel_slug
+        if channel_dir.exists():
+            data_file = channel_dir / "competitors.json"
+    data_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def get_data() -> Dict[str, Any]:
-    return _load_data()
+def get_data(channel_slug: Optional[str] = None) -> Dict[str, Any]:
+    return _load_data(channel_slug)
 
 
-def save_channel(channel: Dict[str, Any]) -> Dict[str, Any]:
-    data = _load_data()
+def save_channel(channel: Dict[str, Any], channel_slug: Optional[str] = None) -> Dict[str, Any]:
+    data = _load_data(channel_slug)
     existing = next((c for c in data["channels"] if c["id"] == channel["id"]), None)
     if existing:
         existing.update(channel)
     else:
         data["channels"].append(channel)
-    _save_data(data)
+    _save_data(data, channel_slug)
     return channel
 
 
-def delete_channel(channel_id: str):
-    data = _load_data()
+def delete_channel(channel_id: str, channel_slug: Optional[str] = None):
+    data = _load_data(channel_slug)
     data["channels"] = [c for c in data["channels"] if c["id"] != channel_id]
-    _save_data(data)
+    _save_data(data, channel_slug)
 
 
-def update_title(title_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    data = _load_data()
+def update_title(title_id: str, updates: Dict[str, Any], channel_slug: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    data = _load_data(channel_slug)
     entry = next((t for t in data["title_pool"] if t["id"] == title_id), None)
     if entry:
         entry.update(updates)
-        _save_data(data)
+        _save_data(data, channel_slug)
     return entry
 
 
-def delete_title(title_id: str):
-    data = _load_data()
+def delete_title(title_id: str, channel_slug: Optional[str] = None):
+    data = _load_data(channel_slug)
     data["title_pool"] = [t for t in data["title_pool"] if t["id"] != title_id]
-    _save_data(data)
+    _save_data(data, channel_slug)
 
 
 def _youtube_search(channel_id: str, max_results: int, api_key: str) -> List[Dict]:
@@ -132,13 +151,13 @@ def _rewrite_title(title: str, language: str, dna: str, api_key: str) -> str:
         return title
 
 
-def scan_channel(channel_id: str) -> Dict[str, Any]:
+def scan_channel(channel_id: str, channel_slug: Optional[str] = None) -> Dict[str, Any]:
     """Run a competitor scan for a registered channel."""
     from config import settings
     api_key = getattr(settings, "kieai_api_key", "") or os.environ.get("KIEAI_API_KEY", "")
     yt_key = getattr(settings, "youtube_api_key", "") or os.environ.get("YOUTUBE_API_KEY", "")
 
-    data = _load_data()
+    data = _load_data(channel_slug)
     channel = next((c for c in data["channels"] if c["id"] == channel_id), None)
     if not channel:
         return {"error": "Channel not found"}
@@ -167,7 +186,7 @@ def scan_channel(channel_id: str) -> Dict[str, Any]:
             }
             rewritten = _rewrite_title(t, language, dna, api_key) if api_key else t
             entry = {
-                "id": f"ag_{int(time.time()*1000)}_{len(new_entries)}",
+                "id": f"ci_{int(time.time()*1000)}_{len(new_entries)}",
                 "original_title": t,
                 "rewritten_title": rewritten,
                 "source_channel": v["channel_title"],
@@ -186,5 +205,40 @@ def scan_channel(channel_id: str) -> Dict[str, Any]:
         data["title_pool"] = sorted(
             data["title_pool"], key=lambda x: x.get("scanned_at", 0), reverse=True
         )[:500]
-    _save_data(data)
+    _save_data(data, channel_slug)
     return {"added": len(new_entries), "total_pool": len(data["title_pool"])}
+
+
+def get_title_pool(channel_slug: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Return the title pool, optionally scoped to a channel."""
+    return _load_data(channel_slug).get("title_pool", [])
+
+
+# Module-level convenience: CompetitorIntelEngine class for structured usage
+class CompetitorIntelEngine:
+    """Competitor intelligence engine — wraps module-level functions."""
+
+    def get_data(self, channel_slug: Optional[str] = None) -> Dict[str, Any]:
+        return get_data(channel_slug)
+
+    def save_channel(self, channel: Dict[str, Any], channel_slug: Optional[str] = None) -> Dict[str, Any]:
+        return save_channel(channel, channel_slug)
+
+    def delete_channel(self, channel_id: str, channel_slug: Optional[str] = None):
+        return delete_channel(channel_id, channel_slug)
+
+    def update_title(self, title_id: str, updates: Dict[str, Any], channel_slug: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        return update_title(title_id, updates, channel_slug)
+
+    def delete_title(self, title_id: str, channel_slug: Optional[str] = None):
+        return delete_title(title_id, channel_slug)
+
+    def scan_channel(self, channel_id: str, channel_slug: Optional[str] = None) -> Dict[str, Any]:
+        return scan_channel(channel_id, channel_slug)
+
+    def get_title_pool(self, channel_slug: Optional[str] = None) -> List[Dict[str, Any]]:
+        return get_title_pool(channel_slug)
+
+
+# Singleton
+competitor_intel_engine = CompetitorIntelEngine()

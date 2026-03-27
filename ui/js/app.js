@@ -508,8 +508,73 @@ function app() {
         .catch(e => console.error('YouTube auth error:', e));
     },
 
+    initDragDrop() {
+        const dropZone = document.getElementById('drop-zone') || document.body;
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            document.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        document.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer?.files;
+            if (!files || files.length === 0) return;
+
+            const file = files[0];
+            if (!file.name.endsWith('.txt') && !file.name.endsWith('.json') && !file.name.endsWith('.srt')) {
+                if (this.showToast) this.showToast('Sadece .txt, .json, .srt dosyaları desteklenir', 'warning');
+                return;
+            }
+
+            const text = await file.text();
+            if (this.topic !== undefined) {
+                this.topic = text.substring(0, 5000);
+                if (this.showToast) this.showToast(`${file.name} yüklendi`, 'success');
+            }
+        });
+    },
+
+    initKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+            // Ctrl+Enter or Cmd+Enter: Start video generation
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (typeof this.startGeneration === 'function') this.startGeneration();
+                return;
+            }
+
+            // Alt+1-9: Quick view switching
+            if (e.altKey && e.key >= '1' && e.key <= '9') {
+                e.preventDefault();
+                const views = ['home', 'wizard', 'gallery', 'channels', 'competitor', 'settings'];
+                const idx = parseInt(e.key) - 1;
+                if (idx < views.length) {
+                    this.view = views[idx];
+                    if (views[idx] === 'home' && this.loadDashboard) this.loadDashboard();
+                    if (views[idx] === 'gallery' && this.loadGallery) this.loadGallery();
+                }
+                return;
+            }
+
+            // Escape: Close modals
+            if (e.key === 'Escape') {
+                if (this.videoPreviewOpen) { this.videoPreviewOpen = false; return; }
+                if (this.channelFormOpen) { this.channelFormOpen = false; return; }
+            }
+        });
+    },
+
     async init() {
       // 1. Register Global Listeners First (Immune to API failures)
+      this.initDragDrop();
+      this.initKeyboardShortcuts();
       window.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
           e.preventDefault();

@@ -859,6 +859,19 @@
                   </template>
                 </select>
               </div>
+
+              <!-- Channel Selector -->
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('nav_channels')"></label>
+                <select x-model="wizardChannelId"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none transition-all">
+                  <option value="_default">Varsayılan Kanal</option>
+                  <template x-for="ch in channelsData" :key="ch.id">
+                    <option :value="ch.id" x-text="ch.name + (ch.language ? ' (' + ch.language.toUpperCase() + ')' : '')"></option>
+                  </template>
+                </select>
+                <p class="text-[10px] text-slate-600 mt-1.5">Bu video için kullanılacak kanal ayarları ve master prompt.</p>
+              </div>
             </div>
           </div>
 

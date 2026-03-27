@@ -43,7 +43,7 @@ def _get_whisper_model():
     global _whisper_model
     if _whisper_model is None:
         print("  [Subtitles] Loading Whisper model (base)...")
-        _whisper_model = whisper.load_model("base")
+        _whisper_model = whisper.load_model("base", device="cpu")
     return _whisper_model
 
 
@@ -88,6 +88,7 @@ def _get_transcription(audio_path: Path, scene: Scene, session_dir: Path) -> dic
                 str(audio_path),
                 word_timestamps=True,
                 initial_prompt=scene.narration,
+                fp16=False,
             )
             result_container.append(r)
         except Exception as e:

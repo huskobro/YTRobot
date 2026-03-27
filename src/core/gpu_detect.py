@@ -56,7 +56,7 @@ def get_ffmpeg_codec_args(gpu_setting: str = "auto") -> dict:
         Dict with keys: codec, extra_args (list of ffmpeg CLI args)
     """
     if gpu_setting == "disabled":
-        return {"codec": "libx264", "extra_args": ["-preset", "fast", "-crf", "23"]}
+        return {"codec": "libx264", "extra_args": ["-preset", "medium", "-crf", "18", "-b:a", "192k"]}
 
     encoder = detect_gpu_encoder()
 
@@ -66,16 +66,16 @@ def get_ffmpeg_codec_args(gpu_setting: str = "auto") -> dict:
     if encoder == "h264_nvenc":
         return {
             "codec": "h264_nvenc",
-            "extra_args": ["-preset", "p1", "-rc", "vbr", "-cq", "24",
-                           "-b:v", "10M", "-maxrate", "12M"],
+            "extra_args": ["-preset", "p4", "-rc", "vbr", "-cq", "20",
+                           "-b:v", "12M", "-maxrate", "15M", "-b:a", "192k"],
         }
     elif encoder == "h264_videotoolbox":
         return {
             "codec": "h264_videotoolbox",
-            "extra_args": ["-b:v", "8M", "-maxrate", "10M"],
+            "extra_args": ["-b:v", "12M", "-maxrate", "15M", "-b:a", "192k"],
         }
     else:
-        return {"codec": "libx264", "extra_args": ["-preset", "fast", "-crf", "23"]}
+        return {"codec": "libx264", "extra_args": ["-preset", "medium", "-crf", "18", "-b:a", "192k"]}
 
 
 def get_moviepy_codec_kwargs(gpu_setting: str = "auto") -> dict:

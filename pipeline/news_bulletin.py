@@ -59,7 +59,7 @@ def _get_whisper():
     global _whisper_model
     if _whisper_model is None:
         print("  [NewsBulletin] Loading Whisper model (base)...")
-        _whisper_model = whisper.load_model("base")
+        _whisper_model = whisper.load_model("base", device="cpu")
     return _whisper_model
 
 
@@ -234,6 +234,7 @@ def _align_subtitles(narration: str, audio_path: Path, fps: int) -> list:
         word_timestamps=True,
         initial_prompt=narration,
         language=None,
+        fp16=False,
     )
     
     segs = result.get("segments", [])

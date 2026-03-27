@@ -97,6 +97,35 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
     return audio_paths
 
 
+_FALLBACK_PROVIDERS = ["edge", "openai", "elevenlabs"]
+
+
+def _synthesize_with_fallback(
+    narration: str,
+    out: Path,
+    provider_name: str,
+    voice_id: str | None,
+    syn_kwargs: dict,
+    scene_idx: int,
+) -> bool:
+    """Try primary provider, then fallback providers. Returns True if audio was generated."""
+    providers_to_try = [provider_name] + [p for p in _FALLBACK_PROVIDERS if p != provider_name]
+    for pname in providers_to_try:
+        try:
+            prov = _load_provider(pname)
+            if pname == provider_name and voice_id and hasattr(prov, "voice_id"):
+                prov.voice_id = voice_id
+            prov.synthesize(narration, out, **syn_kwargs)
+            if out.exists() and out.stat().st_size > 1000:
+                if pname != provider_name:
+                    logger.warning(f"Scene {scene_idx}: primary TTS '{provider_name}' failed, used fallback '{pname}'")
+                return True
+        except Exception as e:
+            logger.warning(f"Scene {scene_idx}: TTS provider '{pname}' failed: {e}")
+            continue
+    return False
+
+
 def _synthesize_sequential(
     scenes: list[Scene],
     narrations: list[str],
@@ -105,23 +134,16 @@ def _synthesize_sequential(
     voice_id: str | None,
     syn_kwargs: dict,
 ) -> list[Path]:
-    """Process scenes one by one (original behaviour)."""
-    provider = _load_provider(provider_name)
-    if voice_id and hasattr(provider, "voice_id"):
-        provider.voice_id = voice_id
-
+    """Process scenes one by one with automatic fallback."""
     audio_paths: list[Path] = []
     for i, (scene, narration) in enumerate(zip(scenes, narrations)):
         out = audio_dir / f"scene_{i:03d}.mp3"
-        if out.exists():
+        if out.exists() and out.stat().st_size > 1000:
             logger.info(f"Scene {i} already exists, skipping.")
         else:
             logger.info(f"Synthesizing scene {i}...")
-            try:
-                provider.synthesize(narration, out, **syn_kwargs)
-            except Exception as e:
-                logger.error(f"TTS synthesis failed for scene {i}: {e}")
-                logger.warning(f"Generating silent placeholder for scene {i}...")
+            if not _synthesize_with_fallback(narration, out, provider_name, voice_id, syn_kwargs, i):
+                logger.error(f"All TTS providers failed for scene {i}, generating silent placeholder.")
                 _generate_silent_audio(out, duration=3.0)
 
         if out.exists():
@@ -150,20 +172,13 @@ def _synthesize_concurrent(
 
     def process_scene(idx: int, narration: str) -> tuple[int, Path | None]:
         out = audio_dir / f"scene_{idx:03d}.mp3"
-        if out.exists():
+        if out.exists() and out.stat().st_size > 1000:
             logger.info("Scene %d already exists, skipping.", idx)
             return idx, out
-        try:
-            # Each thread gets its own provider instance to avoid shared-state issues
-            thread_prov = _load_provider(provider_name)
-            if voice_id and hasattr(thread_prov, "voice_id"):
-                thread_prov.voice_id = voice_id
-            thread_prov.synthesize(narration, out, **syn_kwargs)
+        if _synthesize_with_fallback(narration, out, provider_name, voice_id, syn_kwargs, idx):
             return idx, out
-        except Exception as exc:
-            logger.error("Concurrent TTS failed for scene %d: %s", idx, exc)
-            logger.error(f"TTS synthesis failed for scene {idx}: {exc}")
-            logger.warning(f"Generating silent placeholder for scene {idx}...")
+        else:
+            logger.error(f"All TTS providers failed for scene {idx}, generating silent placeholder.")
             _generate_silent_audio(out, duration=3.0)
             return idx, out if out.exists() else None
 

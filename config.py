@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     tts_speed: float = 1.0             # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
     tts_remove_apostrophes: bool = True  # strip ' to prevent micro-pause glitches (safe for Turkish)
     tts_trim_silence: bool = False      # trim leading/trailing silence from each TTS audio clip
+    tts_concurrent_workers: int = 1    # 1 = sequential (default), 2-5 = concurrent scene synthesis
 
     openai_tts_voice: str = "onyx"  # alloy | ash | coral | echo | fable | nova | onyx | sage | shimmer
     edge_tts_voice: str = "tr-TR-AhmetNeural"  # run `edge-tts --list-voices` for full list

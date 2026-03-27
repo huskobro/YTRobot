@@ -1,10 +1,15 @@
 """Visuals stage: fetches or generates a clip/image for each scene."""
+import concurrent.futures
+import logging
+import urllib.request
 from pathlib import Path
 from config import settings
 from pipeline.script import Scene
 from providers.visuals.base import BaseVisualsProvider
 from pipeline.visuals.broll import broll_manager
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 def _load_provider() -> BaseVisualsProvider:
@@ -98,3 +103,59 @@ def fetch_visuals(scenes: list[Scene], session_dir: Path) -> list[Path]:
             _generate_placeholder_image(placeholder)
             visual_paths.append(placeholder)
     return visual_paths
+
+
+def predownload_assets(scenes: list[Scene], output_dir: Path, max_workers: int = 5) -> dict:
+    """Pre-download visual assets in parallel for faster composition.
+
+    Scans ``scenes`` for HTTP URLs stored in ``scene.visual_url`` and downloads
+    them concurrently into *output_dir*.  Returns a mapping of
+    ``{scene_index: local_path_str}`` for every successfully downloaded asset.
+    Scenes without a ``visual_url`` or with a local path are silently skipped.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    urls_to_download: list[tuple[int, str]] = []
+    for i, scene in enumerate(scenes):
+        url = getattr(scene, "visual_url", None)
+        if url and isinstance(url, str) and url.startswith("http"):
+            urls_to_download.append((i, url))
+
+    if not urls_to_download:
+        logger.info("predownload_assets: no remote URLs found, nothing to pre-download.")
+        return {}
+
+    downloaded: dict[int, str] = {}
+
+    def download_one(idx: int, url: str) -> tuple[int, str | None]:
+        try:
+            # Keep at most 5 chars of suffix to handle query-string-less URLs
+            raw_suffix = Path(url.split("?")[0]).suffix[:5]
+            ext = raw_suffix if raw_suffix else ".mp4"
+            local_path = output_dir / f"predownload_{idx:03d}{ext}"
+            if local_path.exists():
+                logger.debug("Scene %d: pre-download cache hit %s", idx, local_path)
+                return idx, str(local_path)
+            urllib.request.urlretrieve(url, str(local_path))
+            logger.debug("Scene %d: downloaded %s → %s", idx, url, local_path)
+            return idx, str(local_path)
+        except Exception as exc:
+            logger.warning("Pre-download failed for scene %d (%s): %s", idx, url, exc)
+            return idx, None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_map = {
+            executor.submit(download_one, i, url): i
+            for i, url in urls_to_download
+        }
+        for future in concurrent.futures.as_completed(future_map):
+            idx, path = future.result()
+            if path:
+                downloaded[idx] = path
+
+    logger.info(
+        "predownload_assets: pre-downloaded %d/%d assets.",
+        len(downloaded), len(urls_to_download),
+    )
+    return downloaded

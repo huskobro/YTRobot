@@ -157,6 +157,17 @@ function app() {
     // ── Video Preview ──
     videoPreviewOpen: false,
     videoPreviewUrl: '',
+    // ── Video Gallery ──
+    galleryVideos: [],
+    gallerySearch: '',
+    galleryFilter: '',
+    galleryOffset: 0,
+    galleryHasMore: false,
+    // ── Settings Search ──
+    settingsSearch: '',
+    settingsSearchResults: [],
+    // ── Scheduler ──
+    scheduledVideos: [],
     // ── Toast Bildirim Sistemi ──
     toasts: [],
     _toastIdCounter: 0,
@@ -289,6 +300,53 @@ function app() {
     previewVideo(sessionId) {
       this.videoPreviewUrl = `/api/sessions/${sessionId}/video`;
       this.videoPreviewOpen = true;
+    },
+
+    // ── Video Gallery ──
+    async loadGallery() {
+      this.galleryOffset = 0;
+      const params = new URLSearchParams();
+      if (this.galleryFilter) params.set('status', this.galleryFilter);
+      if (this.gallerySearch) params.set('search', this.gallerySearch);
+      params.set('limit', '20');
+      try {
+        const resp = await fetch(`/api/sessions/gallery?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.galleryVideos = d.videos||[]; this.galleryHasMore = d.total > 20; this.galleryOffset = 20; }
+      } catch(e) {}
+    },
+    async loadMoreGallery() {
+      const params = new URLSearchParams();
+      if (this.galleryFilter) params.set('status', this.galleryFilter);
+      if (this.gallerySearch) params.set('search', this.gallerySearch);
+      params.set('limit', '20'); params.set('offset', String(this.galleryOffset));
+      try {
+        const resp = await fetch(`/api/sessions/gallery?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.galleryVideos = [...this.galleryVideos, ...(d.videos||[])]; this.galleryHasMore = d.total > this.galleryOffset + 20; this.galleryOffset += 20; }
+      } catch(e) {}
+    },
+
+    // ── Settings Search ──
+    async searchSettings() {
+      if (!this.settingsSearch) { this.settingsSearchResults = []; return; }
+      try {
+        const resp = await fetch(`/api/settings/search?q=${encodeURIComponent(this.settingsSearch)}`);
+        if (resp.ok) { const d = await resp.json(); this.settingsSearchResults = d.results || []; }
+      } catch(e) {}
+    },
+
+    // ── Scheduler ──
+    async loadSchedule() {
+      try {
+        const resp = await fetch('/api/scheduler/');
+        if (resp.ok) { const d = await resp.json(); this.scheduledVideos = d.entries || []; }
+      } catch(e) {}
+    },
+    async cancelSchedule(sessionId) {
+      try {
+        await fetch(`/api/scheduler/${sessionId}`, { method: 'DELETE' });
+        this.loadSchedule();
+        if (this.showToast) this.showToast('Zamanlama iptal edildi', 'success');
+      } catch(e) {}
     },
 
     // ── Toast API ──
@@ -597,6 +655,7 @@ function app() {
         this.loadBulletinHistory();
         this.checkYouTubeStatus();
         this.loadDashboard();
+        this.loadSchedule();
       } catch (e) {
         console.error("Initialization error:", e);
       }

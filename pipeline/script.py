@@ -8,6 +8,7 @@ A "script" is a list of Scene objects. Each scene has:
 Uses Gemini 2.5 Flash via kie.ai (KIEAI_API_KEY required).
 """
 import json
+import random
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
@@ -41,6 +42,47 @@ CATEGORY_INSTRUCTIONS = {
     ),
     "general": "",
 }
+
+
+OPENING_HOOKS = {
+    "tr": [
+        "Bunu biliyor muydunuz?",
+        "Dikkat! Bu video hayatınızı değiştirebilir.",
+        "Çoğu kişinin bilmediği bir gerçek var...",
+        "Şok edici bir bilgiyle başlayalım.",
+        "Hazır mısınız? Çünkü bu konuda her şey sandığınızdan farklı.",
+        "İnanması güç ama bu tamamen gerçek.",
+        "Size bir sır vereyim — çok az kişi bunu biliyor.",
+        "Bu videoyu izledikten sonra hiçbir şey eskisi gibi olmayacak.",
+    ],
+    "en": [
+        "Did you know this surprising fact?",
+        "Warning! This video might change your perspective forever.",
+        "There's something most people don't know about this...",
+        "Let's start with a shocking revelation.",
+        "Are you ready? Because everything you thought you knew is wrong.",
+        "Hard to believe, but this is completely real.",
+        "Let me tell you a secret — very few people know this.",
+        "After watching this, nothing will ever be the same.",
+    ],
+}
+
+
+NARRATIVE_ARC = """
+Structure the script following this 5-phase narrative arc:
+
+1. **HOOK** (first 10-15 seconds): Start with a powerful, attention-grabbing statement or question. Make the viewer NEED to keep watching.
+
+2. **BUILDUP** (15 seconds to ~40% of the video): Set the context. Build curiosity and tension. Present the problem or topic from an interesting angle.
+
+3. **CLIMAX** (40% to ~70%): Deliver the main value, revelation, or core content. This is the "meat" of the video — the insights, facts, or story climax.
+
+4. **RESOLUTION** (70% to ~90%): Wrap up the insights. Connect the dots. Provide actionable takeaways or satisfying conclusions.
+
+5. **CTA** (last 10%): Call to action — ask viewers to like, subscribe, comment. End with a teaser for the next video if possible.
+
+Each scene should clearly belong to one of these phases. The transition between phases should feel natural and maintain viewer engagement.
+"""
 
 
 @dataclass
@@ -135,7 +177,7 @@ def _load_custom_prompt(name: str) -> str | None:
     return p.read_text(encoding="utf-8").strip() if p.exists() else None
 
 
-def _build_script_prompt(content_category: str = "general") -> str:
+def _build_script_prompt(content_category: str = "general", lang: str = "tr") -> str:
     audience = settings.target_audience.strip()
     if audience:
         audience_block = f"Target audience: {audience}"
@@ -146,6 +188,15 @@ def _build_script_prompt(content_category: str = "general") -> str:
     category_note = CATEGORY_INSTRUCTIONS.get(content_category or "general", "")
     if category_note:
         system_prompt += f"\n\nContent Category Guidelines:\n{category_note}"
+
+    # Add opening hook suggestion
+    hooks = OPENING_HOOKS.get(lang, OPENING_HOOKS["tr"])
+    selected_hook = random.choice(hooks)
+    system_prompt += f"\n\nStart the video with a strong hook. Here's a suggestion (you can adapt it): \"{selected_hook}\"\n"
+
+    # Add narrative arc structure
+    system_prompt += NARRATIVE_ARC
+
     return system_prompt
 
 

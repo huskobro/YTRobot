@@ -2,7 +2,7 @@
 function app() {
   return {
     lang: localStorage.getItem('ytrobot-lang') || 'en',
-    view: 'dashboard', mode: 'topic',
+    view: 'dashboard', mode: 'topic', sidebarOpen: false,
     videoModule: 'normal',
     sessions: [], currentSession: null, 
     settings: {
@@ -1295,7 +1295,7 @@ function app() {
         }
       } catch(e) { console.warn('Dashboard load failed:', e); }
       try {
-        const qResp = await fetch('/api/queue/status');
+        const qResp = await fetch('/api/stats/queue');
         if (qResp.ok) this.queueStatus = await qResp.json();
       } catch(e) { console.warn('[loadDashboard:queue]', e); }
     },

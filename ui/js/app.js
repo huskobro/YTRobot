@@ -170,6 +170,30 @@ function app() {
     settingsSearchResults: [],
     // ── Scheduler ──
     scheduledVideos: [],
+    // ── A/B Testing ──
+    abTests: [],
+    abTestModalOpen: false,
+    abTestForm: { video_id: '', variants: ['', ''] },
+    // ── Calendar ──
+    calendarEntries: [],
+    calendarMonth: new Date(),
+    calendarModalOpen: false,
+    calendarEditId: null,
+    calendarForm: { title: '', topic: '', planned_date: '', status: 'idea', notes: '', channel_id: '_default' },
+    // ── Playlists ──
+    playlists: [],
+    selectedPlaylist: null,
+    playlistModalOpen: false,
+    playlistForm: { name: '', description: '', channel_id: '_default' },
+    playlistAddVideoId: '',
+    // ── Templates ──
+    templates: [],
+    templateModalOpen: false,
+    templateForm: { name: '', description: '', settings: '{}', channel_id: '_default' },
+    templateFromSessionId: '',
+    // ── SEO ──
+    seoResult: null,
+    seoLoading: false,
     // ── Toast Bildirim Sistemi ──
     toasts: [],
     _toastIdCounter: 0,
@@ -192,6 +216,10 @@ function app() {
   this.loadQueueStatus();
   this.loadErrorDetails();
 } },
+      { id: 'nav_ab_testing', title: 'A/B Testing / A/B Test', icon: '🧪', action: function() { this.view = 'ab-testing'; this.loadAbTests(); } },
+      { id: 'nav_calendar', title: 'Calendar / Takvim', icon: '📅', action: function() { this.view = 'calendar'; this.loadCalendarEntries(); } },
+      { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', action: function() { this.view = 'playlists'; this.loadPlaylists(); } },
+      { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', action: function() { this.view = 'templates'; this.loadTemplates(); } },
       { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: function() { this.loadSessions(); } },
       { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: function() { this.globalError = null; } }
     ],
@@ -377,6 +405,282 @@ function app() {
         this.loadSchedule();
         if (this.showToast) this.showToast(this.t('schedule_cancelled') || 'Schedule cancelled', 'success');
       } catch(e) { console.warn('[cancelSchedule]', e); this.showToast(this.t('cancel_error') || 'Cancel failed', 'error'); }
+    },
+
+    // ── A/B Testing Methods ──
+    async loadAbTests() {
+      try {
+        const params = new URLSearchParams();
+        if (this.activeChannelId && this.activeChannelId !== '_default') params.set('channel_id', this.activeChannelId);
+        const resp = await fetch(`/api/ab-test/?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.abTests = d.tests || []; }
+      } catch(e) { console.warn('[loadAbTests]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
+    },
+    async createAbTest() {
+      const variants = this.abTestForm.variants.filter(v => v.trim());
+      if (variants.length < 2) { this.showToast(this.t('ab_test_min_variants'), 'warning'); return; }
+      try {
+        const resp = await fetch('/api/ab-test/', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video_id: this.abTestForm.video_id, variants, channel_id: this.activeChannelId || '_default' })
+        });
+        if (resp.ok) {
+          this.abTestModalOpen = false;
+          this.abTestForm = { video_id: '', variants: ['', ''] };
+          this.loadAbTests();
+          this.showToast(this.t('ab_test_create') + ' OK', 'success');
+        }
+      } catch(e) { console.warn('[createAbTest]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async completeAbTest(testId) {
+      try {
+        const resp = await fetch(`/api/ab-test/${testId}/complete`, { method: 'POST' });
+        if (resp.ok) { this.loadAbTests(); this.showToast(this.t('ab_test_complete') + ' OK', 'success'); }
+      } catch(e) { console.warn('[completeAbTest]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    abTestCtr(variant) {
+      if (!variant.impressions || variant.impressions === 0) return '0.0';
+      return ((variant.clicks / variant.impressions) * 100).toFixed(1);
+    },
+    abTestWinnerIndex(test) {
+      if (test.status !== 'completed' || !test.variants?.length) return -1;
+      let best = -1, bestCtr = -1;
+      test.variants.forEach((v, i) => {
+        const ctr = v.impressions > 0 ? v.clicks / v.impressions : 0;
+        if (ctr > bestCtr) { bestCtr = ctr; best = i; }
+      });
+      return best;
+    },
+    addAbVariant() { this.abTestForm.variants.push(''); },
+    removeAbVariant(idx) { if (this.abTestForm.variants.length > 2) this.abTestForm.variants.splice(idx, 1); },
+
+    // ── Calendar Methods ──
+    async loadCalendarEntries() {
+      try {
+        const params = new URLSearchParams();
+        if (this.activeChannelId && this.activeChannelId !== '_default') params.set('channel_id', this.activeChannelId);
+        const m = this.calendarMonth;
+        params.set('month', `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`);
+        const resp = await fetch(`/api/calendar/?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.calendarEntries = d.entries || []; }
+      } catch(e) { console.warn('[loadCalendarEntries]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
+    },
+    calendarDays() {
+      const y = this.calendarMonth.getFullYear(), m = this.calendarMonth.getMonth();
+      const first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+      const startDay = (first.getDay() + 6) % 7; // Mon=0
+      const days = [];
+      for (let i = 0; i < startDay; i++) days.push(null);
+      for (let d = 1; d <= last.getDate(); d++) days.push(d);
+      return days;
+    },
+    calendarMonthLabel() {
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const trMonths = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      const m = this.calendarMonth;
+      const names = this.lang === 'tr' ? trMonths : months;
+      return `${names[m.getMonth()]} ${m.getFullYear()}`;
+    },
+    calendarPrevMonth() { this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth()-1, 1); this.loadCalendarEntries(); },
+    calendarNextMonth() { this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth()+1, 1); this.loadCalendarEntries(); },
+    calendarEntriesForDay(day) {
+      if (!day) return [];
+      const y = this.calendarMonth.getFullYear(), m = this.calendarMonth.getMonth();
+      const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      return this.calendarEntries.filter(e => e.planned_date === dateStr);
+    },
+    calendarStatusColor(status) {
+      const colors = { idea: 'bg-slate-600', planned: 'bg-blue-600', recorded: 'bg-yellow-600', published: 'bg-green-600' };
+      return colors[status] || 'bg-slate-600';
+    },
+    openCalendarModal(day = null, entry = null) {
+      if (entry) {
+        this.calendarEditId = entry.id;
+        this.calendarForm = { title: entry.title||'', topic: entry.topic||'', planned_date: entry.planned_date||'', status: entry.status||'idea', notes: entry.notes||'', channel_id: entry.channel_id||'_default' };
+      } else {
+        this.calendarEditId = null;
+        const y = this.calendarMonth.getFullYear(), m = this.calendarMonth.getMonth();
+        const dateStr = day ? `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` : '';
+        this.calendarForm = { title: '', topic: '', planned_date: dateStr, status: 'idea', notes: '', channel_id: this.activeChannelId || '_default' };
+      }
+      this.calendarModalOpen = true;
+    },
+    async saveCalendarEntry() {
+      try {
+        if (this.calendarEditId) {
+          await fetch(`/api/calendar/${this.calendarEditId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.calendarForm)
+          });
+        } else {
+          await fetch('/api/calendar/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.calendarForm)
+          });
+        }
+        this.calendarModalOpen = false;
+        this.loadCalendarEntries();
+        this.showToast(this.calendarEditId ? 'Updated' : 'Created', 'success');
+      } catch(e) { console.warn('[saveCalendarEntry]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async deleteCalendarEntry(id) {
+      if (!confirm(this.t('confirm_delete'))) return;
+      try {
+        await fetch(`/api/calendar/${id}`, { method: 'DELETE' });
+        this.calendarModalOpen = false;
+        this.loadCalendarEntries();
+        this.showToast('Deleted', 'success');
+      } catch(e) { console.warn('[deleteCalendarEntry]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+
+    // ── Playlist Methods ──
+    async loadPlaylists() {
+      try {
+        const params = new URLSearchParams();
+        if (this.activeChannelId && this.activeChannelId !== '_default') params.set('channel_id', this.activeChannelId);
+        const resp = await fetch(`/api/playlists/?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.playlists = d.playlists || []; }
+      } catch(e) { console.warn('[loadPlaylists]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
+    },
+    async createPlaylist() {
+      try {
+        const resp = await fetch('/api/playlists/', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.playlistForm)
+        });
+        if (resp.ok) {
+          this.playlistModalOpen = false;
+          this.playlistForm = { name: '', description: '', channel_id: this.activeChannelId || '_default' };
+          this.loadPlaylists();
+          this.showToast(this.t('playlists_create') + ' OK', 'success');
+        }
+      } catch(e) { console.warn('[createPlaylist]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async openPlaylistDetail(playlistId) {
+      try {
+        const resp = await fetch(`/api/playlists/${playlistId}`);
+        if (resp.ok) { const d = await resp.json(); this.selectedPlaylist = d.playlist; }
+      } catch(e) { console.warn('[openPlaylistDetail]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async deletePlaylist(id) {
+      if (!confirm(this.t('confirm_delete'))) return;
+      try {
+        await fetch(`/api/playlists/${id}`, { method: 'DELETE' });
+        this.selectedPlaylist = null;
+        this.loadPlaylists();
+        this.showToast('Deleted', 'success');
+      } catch(e) { console.warn('[deletePlaylist]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async addVideoToPlaylist(playlistId) {
+      if (!this.playlistAddVideoId) return;
+      try {
+        const resp = await fetch(`/api/playlists/${playlistId}/videos`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: this.playlistAddVideoId })
+        });
+        if (resp.ok) { this.playlistAddVideoId = ''; this.openPlaylistDetail(playlistId); this.showToast(this.t('playlists_add_video') + ' OK', 'success'); }
+      } catch(e) { console.warn('[addVideoToPlaylist]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async removeVideoFromPlaylist(playlistId, sessionId) {
+      try {
+        await fetch(`/api/playlists/${playlistId}/videos/${sessionId}`, { method: 'DELETE' });
+        this.openPlaylistDetail(playlistId);
+        this.showToast('Removed', 'success');
+      } catch(e) { console.warn('[removeVideoFromPlaylist]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async syncPlaylistToYoutube(playlistId) {
+      try {
+        const resp = await fetch(`/api/playlists/${playlistId}/sync-youtube`, { method: 'POST' });
+        if (resp.ok) { this.showToast(this.t('playlists_sync') + ' OK', 'success'); this.openPlaylistDetail(playlistId); }
+        else { const d = await resp.json(); this.showToast(d.detail || 'Sync failed', 'error'); }
+      } catch(e) { console.warn('[syncPlaylistToYoutube]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+
+    // ── Template Methods ──
+    async loadTemplates() {
+      try {
+        const params = new URLSearchParams();
+        if (this.activeChannelId && this.activeChannelId !== '_default') params.set('channel_id', this.activeChannelId);
+        const resp = await fetch(`/api/templates/?${params}`);
+        if (resp.ok) { const d = await resp.json(); this.templates = d.templates || []; }
+      } catch(e) { console.warn('[loadTemplates]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
+    },
+    async createTemplate() {
+      let settings;
+      try { settings = JSON.parse(this.templateForm.settings); } catch(e) { this.showToast('Invalid JSON', 'error'); return; }
+      try {
+        const resp = await fetch('/api/templates/', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: this.templateForm.name, description: this.templateForm.description, settings, channel_id: this.templateForm.channel_id })
+        });
+        if (resp.ok) {
+          this.templateModalOpen = false;
+          this.templateForm = { name: '', description: '', settings: '{}', channel_id: this.activeChannelId || '_default' };
+          this.loadTemplates();
+          this.showToast(this.t('templates_create') + ' OK', 'success');
+        }
+      } catch(e) { console.warn('[createTemplate]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async applyTemplate(templateId) {
+      try {
+        const resp = await fetch(`/api/templates/${templateId}/apply`, { method: 'POST' });
+        if (resp.ok) {
+          const d = await resp.json();
+          if (d.settings) Object.assign(this.settings, d.settings);
+          this.showToast(this.t('templates_applied'), 'success');
+        }
+      } catch(e) { console.warn('[applyTemplate]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async deleteTemplate(id) {
+      if (!confirm(this.t('confirm_delete'))) return;
+      try {
+        await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+        this.loadTemplates();
+        this.showToast('Deleted', 'success');
+      } catch(e) { console.warn('[deleteTemplate]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async createTemplateFromSession() {
+      if (!this.templateFromSessionId) return;
+      try {
+        const resp = await fetch(`/api/templates/from-session/${this.templateFromSessionId}`, { method: 'POST' });
+        if (resp.ok) {
+          this.templateFromSessionId = '';
+          this.loadTemplates();
+          this.showToast(this.t('templates_from_session') + ' OK', 'success');
+        }
+      } catch(e) { console.warn('[createTemplateFromSession]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    templateSettingsSummary(tpl) {
+      if (!tpl.settings) return '';
+      const parts = [];
+      if (tpl.settings.TTS_PROVIDER || tpl.settings.tts_provider) parts.push('TTS: ' + (tpl.settings.TTS_PROVIDER || tpl.settings.tts_provider));
+      if (tpl.settings.VISUALS_PROVIDER || tpl.settings.visuals_provider) parts.push('Visuals: ' + (tpl.settings.VISUALS_PROVIDER || tpl.settings.visuals_provider));
+      if (tpl.settings.OUTPUT_QUALITY || tpl.settings.output_quality) parts.push(tpl.settings.OUTPUT_QUALITY || tpl.settings.output_quality);
+      return parts.join(' / ') || 'Custom settings';
+    },
+
+    // ── SEO Methods ──
+    async analyzeSeo() {
+      if (!this.currentSession?.metadata) { this.showToast(this.t('seo_no_metadata'), 'warning'); return; }
+      this.seoLoading = true;
+      try {
+        const resp = await fetch('/api/seo/analyze', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: this.currentSession.metadata.title || '',
+            description: this.currentSession.metadata.description || '',
+            tags: this.currentSession.metadata.tags || [],
+            language: 'tr'
+          })
+        });
+        if (resp.ok) { this.seoResult = await resp.json(); }
+      } catch(e) { console.warn('[analyzeSeo]', e); this.showToast(this.t('generic_error'), 'error'); }
+      finally { this.seoLoading = false; }
+    },
+    seoScoreColor(score) {
+      if (score >= 70) return 'bg-green-600 text-green-100';
+      if (score >= 40) return 'bg-yellow-600 text-yellow-100';
+      return 'bg-red-600 text-red-100';
     },
 
     // ── Toast API ──

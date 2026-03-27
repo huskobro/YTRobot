@@ -1,0 +1,13 @@
+{
+  "channels": [
+    {
+      "id": "_default",
+      "name": "Varsayılan Kanal",
+      "slug": "_default",
+      "language": "tr",
+      "created_at": "2026-03-27T00:00:00Z",
+      "active": true
+    }
+  ],
+  "active_channel": "_default"
+}

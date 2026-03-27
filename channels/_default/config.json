@@ -1,0 +1,19 @@
+{
+  "id": "_default",
+  "name": "Varsayılan Kanal",
+  "language": "tr",
+  "master_prompt": "",
+  "default_category": "general",
+  "preset_name": "",
+  "branding": {
+    "logo_path": "",
+    "thumbnail_template": "classic",
+    "color_primary": "#FF0000",
+    "color_secondary": "#FFFFFF"
+  },
+  "platforms": {
+    "youtube": { "enabled": false, "channel_id": "", "privacy_status": "private", "category_id": "22" },
+    "instagram": { "enabled": false },
+    "tiktok": { "enabled": false }
+  }
+}

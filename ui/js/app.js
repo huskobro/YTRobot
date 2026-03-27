@@ -209,6 +209,24 @@ function app() {
     // ── Toast Bildirim Sistemi ──
     toasts: [],
     _toastIdCounter: 0,
+    // ── YouTube Analytics ──
+    ytAnalytics: { channel: null, videos: [] },
+    ytAnalyticsChannel: '_default',
+    ytAnalyticsLoading: false,
+    ytVideoDetail: null,
+    // ── Audit Log ──
+    auditLogs: [],
+    auditCategory: '',
+    auditOffset: 0,
+    // ── Notifications ──
+    notifications: [],
+    unreadCount: 0,
+    notifOpen: false,
+    _notifPoll: null,
+    // ── Secure Storage ──
+    secureKeys: [],
+    newSecureKey: '',
+    newSecureValue: '',
     wizardStep: 1,
     wizardMaxSteps: 3,
     showCommandPalette: false,
@@ -232,6 +250,7 @@ function app() {
       { id: 'nav_calendar', title: 'Calendar / Takvim', icon: '📅', action: function() { this.view = 'calendar'; this.loadCalendarEntries(); } },
       { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', action: function() { this.view = 'playlists'; this.loadPlaylists(); } },
       { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', action: function() { this.view = 'templates'; this.loadTemplates(); } },
+      { id: 'nav_yt_analytics', title: 'YouTube Analytics / YouTube Analitik', icon: '📊', action: function() { this.view = 'yt-analytics'; this.loadYtAnalytics(); } },
       { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: function() { this.loadSessions(); } },
       { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: function() { this.globalError = null; } }
     ],
@@ -822,6 +841,126 @@ function app() {
     },
     clearError() { this.globalError = null; if (this._errorTimeout) clearTimeout(this._errorTimeout); },
 
+    // ── YouTube Analytics Methods ──
+    async loadYtAnalytics() {
+      this.ytAnalyticsLoading = true;
+      try {
+        const chId = this.ytAnalyticsChannel || '_default';
+        const [channelResp, videosResp] = await Promise.allSettled([
+          this.apiFetch(`/api/youtube/analytics/channel?channel_id=${chId}`),
+          this.apiFetch(`/api/youtube/analytics/videos?channel_id=${chId}&limit=10`)
+        ]);
+        if (channelResp.status === 'fulfilled') this.ytAnalytics.channel = channelResp.value;
+        if (videosResp.status === 'fulfilled') this.ytAnalytics.videos = videosResp.value.videos || [];
+      } catch(e) { console.warn('[ytAnalytics]', e); }
+      finally { this.ytAnalyticsLoading = false; }
+    },
+
+    async loadYtVideoDetail(videoId) {
+      try {
+        const chId = this.ytAnalyticsChannel || '_default';
+        this.ytVideoDetail = await this.apiFetch(`/api/youtube/analytics/video/${videoId}?channel_id=${chId}`);
+      } catch(e) { console.warn('[ytVideoDetail]', e); this.ytVideoDetail = null; }
+    },
+
+    // ── Audit Log Methods ──
+    async loadAuditLogs() {
+      try {
+        const params = new URLSearchParams({ limit: '50', offset: String(this.auditOffset) });
+        if (this.auditCategory) params.set('category', this.auditCategory);
+        const data = await this.apiFetch(`/api/audit/?${params}`);
+        if (this.auditOffset === 0) {
+          this.auditLogs = data.entries || [];
+        } else {
+          this.auditLogs = [...this.auditLogs, ...(data.entries || [])];
+        }
+      } catch(e) { console.warn('[auditLogs]', e); }
+    },
+
+    async loadMoreAuditLogs() {
+      this.auditOffset += 50;
+      await this.loadAuditLogs();
+    },
+
+    // ── Notification Methods ──
+    async loadNotifications() {
+      try {
+        const data = await fetch('/api/notifications/?limit=20');
+        if (data.ok) {
+          const json = await data.json();
+          this.notifications = json.notifications || [];
+          this.unreadCount = json.unread_count || 0;
+        }
+      } catch(e) { /* silent — notifications are non-critical */ }
+    },
+
+    async markNotifRead(notifId) {
+      try {
+        await fetch(`/api/notifications/${notifId}/read`, { method: 'POST' });
+        const n = this.notifications.find(n => n.id === notifId);
+        if (n) { n.read = true; this.unreadCount = Math.max(0, this.unreadCount - 1); }
+      } catch(e) { console.warn('[markNotifRead]', e); }
+    },
+
+    async markAllRead() {
+      try {
+        await fetch('/api/notifications/read-all', { method: 'POST' });
+        this.notifications.forEach(n => n.read = true);
+        this.unreadCount = 0;
+      } catch(e) { console.warn('[markAllRead]', e); }
+    },
+
+    timeAgo(dateStr) {
+      const now = Date.now();
+      const diff = now - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    },
+
+    // ── Secure Storage Methods ──
+    async loadSecureKeys() {
+      try {
+        const data = await this.apiFetch('/api/secure/keys');
+        const keys = data.keys || [];
+        // Fetch masked values for each key
+        const detailed = await Promise.allSettled(
+          keys.map(k => this.apiFetch(`/api/secure/retrieve/${k}`))
+        );
+        this.secureKeys = keys.map((k, i) => ({
+          key: k,
+          masked_value: detailed[i].status === 'fulfilled' ? detailed[i].value.masked_value : '****'
+        }));
+      } catch(e) { console.warn('[secureKeys]', e); this.secureKeys = []; }
+    },
+
+    async storeSecureKey() {
+      if (!this.newSecureKey || !this.newSecureValue) return;
+      try {
+        await this.apiFetch('/api/secure/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: this.newSecureKey, value: this.newSecureValue })
+        });
+        this.newSecureKey = '';
+        this.newSecureValue = '';
+        this.showSuccess('Key stored successfully');
+        await this.loadSecureKeys();
+      } catch(e) { console.warn('[storeSecureKey]', e); }
+    },
+
+    async deleteSecureKey(key) {
+      try {
+        await fetch(`/api/secure/${key}`, { method: 'DELETE' });
+        this.secureKeys = this.secureKeys.filter(sk => sk.key !== key);
+        this.showSuccess('Key deleted');
+      } catch(e) { console.warn('[deleteSecureKey]', e); }
+    },
+
     async apiFetch(url, options = {}) {
       try {
         const r = await fetch(url, options);
@@ -1125,6 +1264,10 @@ function app() {
         }
         if (this.view === 'social-meta') this.loadSocialLog();
       }, 3000);
+
+      // Notification polling every 30 seconds
+      this.loadNotifications();
+      this._notifPoll = setInterval(() => this.loadNotifications(), 30000);
     },
 
     async loadAnalytics() {

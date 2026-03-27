@@ -3756,6 +3756,133 @@
           </div>
         </div>
 
+        <!-- ══ AUDIT LOG TAB ══════════════════════════════════════════ -->
+        <div x-show="settingsModule==='audit'" class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-400 text-lg">📋</div>
+                <div>
+                  <h2 class="text-lg font-black text-white uppercase tracking-tight" x-text="t('audit_title')"></h2>
+                  <p class="text-xs text-slate-500">System activity log</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <select x-model="auditCategory" @change="auditOffset=0; loadAuditLogs()"
+                        class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                  <option value="" x-text="t('audit_all_categories')"></option>
+                  <option value="settings">Settings</option>
+                  <option value="render">Render</option>
+                  <option value="channel">Channel</option>
+                  <option value="auth">Auth</option>
+                  <option value="security">Security</option>
+                </select>
+                <button @click="auditOffset=0; loadAuditLogs()" class="p-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+              </div>
+            </div>
+            <div x-show="auditLogs.length === 0" class="text-center py-10 text-slate-500 text-sm">No audit entries found</div>
+            <div x-show="auditLogs.length > 0" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-800">
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('audit_date')"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('audit_category')"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('audit_action')"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3" x-text="t('audit_details')"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="entry in auditLogs" :key="entry.id || entry.timestamp">
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                      <td class="py-3 pr-4 text-xs text-slate-400 whitespace-nowrap" x-text="entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''"></td>
+                      <td class="py-3 pr-4">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase"
+                              :class="{
+                                'bg-blue-950/60 text-blue-400 border border-blue-800/30': entry.category==='settings',
+                                'bg-emerald-950/60 text-emerald-400 border border-emerald-800/30': entry.category==='render',
+                                'bg-purple-950/60 text-purple-400 border border-purple-800/30': entry.category==='channel',
+                                'bg-amber-950/60 text-amber-400 border border-amber-800/30': entry.category==='auth',
+                                'bg-red-950/60 text-red-400 border border-red-800/30': entry.category==='security',
+                              }"
+                              x-text="entry.category"></span>
+                      </td>
+                      <td class="py-3 pr-4 text-xs text-white font-medium" x-text="entry.action"></td>
+                      <td class="py-3 text-xs text-slate-400 max-w-xs truncate" x-text="entry.details || '—'"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-4 text-center" x-show="auditLogs.length >= 50">
+              <button @click="loadMoreAuditLogs()"
+                      class="px-6 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                      x-text="t('audit_load_more')"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SECURE STORAGE TAB ═════════════════════════════════════ -->
+        <div x-show="settingsModule==='secure'" class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 bg-amber-600/10 rounded-xl flex items-center justify-center text-amber-400 text-lg">🔐</div>
+              <div>
+                <h2 class="text-lg font-black text-white uppercase tracking-tight" x-text="t('secure_title')"></h2>
+                <p class="text-xs text-slate-500">Encrypted key-value storage</p>
+              </div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6">
+              <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3" x-text="t('secure_add_key')"></h3>
+              <div class="flex items-end gap-3">
+                <div class="flex-1">
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('secure_key_name')"></label>
+                  <input x-model="newSecureKey" type="text" placeholder="e.g. MY_API_KEY"
+                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" />
+                </div>
+                <div class="flex-1">
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" x-text="t('secure_value')"></label>
+                  <input x-model="newSecureValue" type="password" placeholder="secret value"
+                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono" />
+                </div>
+                <button @click="storeSecureKey()" :disabled="!newSecureKey || !newSecureValue"
+                        class="px-5 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shrink-0"
+                        x-text="t('secure_add_key')"></button>
+              </div>
+            </div>
+            <div x-show="secureKeys.length === 0" class="text-center py-10">
+              <div class="text-2xl mb-2 opacity-20">🔐</div>
+              <div class="text-slate-500 text-sm" x-text="t('secure_no_keys')"></div>
+            </div>
+            <div x-show="secureKeys.length > 0" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-800">
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('secure_key_name')"></th>
+                    <th class="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 pr-4" x-text="t('secure_masked')"></th>
+                    <th class="text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="sk in secureKeys" :key="sk.key">
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                      <td class="py-3 pr-4"><span class="text-xs text-white font-mono font-bold" x-text="sk.key"></span></td>
+                      <td class="py-3 pr-4"><span class="text-xs text-slate-400 font-mono" x-text="sk.masked_value || '****'"></span></td>
+                      <td class="py-3 text-right">
+                        <button @click="if(confirm(t('secure_delete_confirm'))) deleteSecureKey(sk.key)"
+                                class="px-3 py-1 bg-red-900/30 hover:bg-red-900/50 border border-red-800/50 text-red-400 text-[10px] font-bold rounded-lg transition-all">
+                          <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- ══ Zamanlanmış Yüklemeler ═══════════════════════════════════ -->
         <div class="bg-gray-800 rounded-xl p-5 border border-gray-700 mt-5">
           <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Zamanlanmış Yüklemeler</h3>

@@ -97,6 +97,8 @@ async def general_exception_handler(request, exc):
         content={"error": "Sunucu hatası: " + str(exc), "status_code": 500}
     )
 
+from starlette.middleware.gzip import GZipMiddleware
+
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -105,6 +107,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Mount Routers
 app.include_router(sessions_router)

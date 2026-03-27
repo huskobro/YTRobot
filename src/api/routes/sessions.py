@@ -41,6 +41,51 @@ async def ws_progress_global(websocket: WebSocket):
 def get_sessions():
     return _all_sessions()
 
+@router.get("/sessions/gallery")
+async def video_gallery(status: str = "", search: str = "", limit: int = 20, offset: int = 0):
+    """List all sessions that have generated videos."""
+    results = []
+    for base_dir in [Path("sessions"), Path("output")]:
+        if not base_dir.exists():
+            continue
+        for session_path in sorted(base_dir.iterdir(), reverse=True):
+            if not session_path.is_dir():
+                continue
+            session_id = session_path.name
+            video_file = None
+            for fn in ["final_video.mp4", "final_output.mp4"]:
+                if (session_path / fn).exists():
+                    video_file = fn
+                    break
+            session_data = {}
+            for sj in ["session.json", "metadata.json"]:
+                sjp = session_path / sj
+                if sjp.exists():
+                    try:
+                        session_data = json.loads(sjp.read_text())
+                        break
+                    except Exception:
+                        pass
+            entry = {
+                "session_id": session_id,
+                "has_video": video_file is not None,
+                "video_file": video_file,
+                "status": session_data.get("status", "unknown"),
+                "topic": session_data.get("topic", session_data.get("title", "")),
+                "created_at": session_data.get("created_at", ""),
+                "channel_id": session_data.get("channel_id", "_default"),
+            }
+            if status and entry["status"] != status:
+                continue
+            if search and search.lower() not in (entry.get("topic", "") or "").lower():
+                continue
+            results.append(entry)
+    seen = set()
+    unique = [r for r in results if r["session_id"] not in seen and not seen.add(r["session_id"])]
+    total = len(unique)
+    return {"videos": unique[offset:offset + limit], "total": total, "limit": limit, "offset": offset}
+
+
 @router.get("/sessions/{sid}")
 def get_session(sid: str):
     return _read_session(sid)

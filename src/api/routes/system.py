@@ -19,6 +19,20 @@ def _mask_value(key: str, value: str) -> str:
     return value
 
 
+@router.get("/settings/search")
+async def search_settings(q: str = ""):
+    """Search through settings fields."""
+    from config import settings
+    if not q:
+        return {"results": []}
+    q_lower = q.lower()
+    results = []
+    for field_name, field_value in settings.model_dump().items():
+        if q_lower in field_name.lower() or q_lower in str(field_value).lower():
+            results.append({"key": field_name, "value": str(field_value), "type": type(field_value).__name__})
+    return {"results": results, "query": q}
+
+
 @router.get("/settings")
 def get_settings():
     raw = _read_env()

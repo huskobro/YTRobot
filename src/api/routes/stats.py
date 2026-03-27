@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from src.core.analytics import stats_manager
 from src.core.cache import api_cache
+from src.core.database import db
 from typing import Dict, Any
 
 router = APIRouter(tags=["analytics"])
@@ -72,6 +73,18 @@ async def export_stats_csv():
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+@router.get("/api/stats/db")
+async def db_stats(channel_id: str = ""):
+    stats = db.get_stats(channel_id)
+    stats["recent"] = db.get_recent(10, channel_id)
+    stats["daily"] = db.get_daily_stats(channel_id, 30)
+    return stats
+
+@router.post("/api/stats/db/import")
+async def import_json_to_db():
+    result = db.import_from_json()
+    return result
 
 @router.get("/api/stats/social-log")
 async def get_social_log():

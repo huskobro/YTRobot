@@ -1,0 +1,17 @@
+{
+    "total_renders": 9,
+    "success_rate": 66.66666666666666,
+    "failed_renders": 3,
+    "completed_renders": 6,
+    "average_render_time": 74.54264704386394,
+    "total_render_time": 447.2558822631836,
+    "platform_stats": {
+        "youtube": 0,
+        "instagram": 0
+    },
+    "error_patterns": {
+        "argument should be a str or an os.PathLike object ": 2,
+        "FlashAttention2 has been toggled on, but it cannot": 1
+    },
+    "last_update": 1774559924.519913
+}

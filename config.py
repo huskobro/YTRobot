@@ -224,7 +224,22 @@ def reload_settings():
     """Reload settings from .env file into the singleton instance."""
     load_dotenv(override=True)
     new_settings = Settings()
-    # Update the existing settings object's dict
+
+    # Protected field patterns — don't overwrite non-empty values with empty strings
+    _PROTECTED_SUFFIXES = ('_api_key', '_voice_id', '_client_id', '_client_secret')
+    _PROTECTED_EXACT = ('webhook_url',)
+
     for key, value in new_settings.model_dump().items():
+        old_value = getattr(settings, key, None)
+
+        # Protect sensitive fields from accidental deletion
+        is_protected = (
+            any(key.endswith(s) for s in _PROTECTED_SUFFIXES)
+            or key in _PROTECTED_EXACT
+        )
+        if is_protected and isinstance(value, str) and value == "" and old_value and old_value != "":
+            print(f"  [Config] Protected non-empty value for {key}")
+            continue
+
         setattr(settings, key, value)
     print("  [Config] Settings reloaded from .env")

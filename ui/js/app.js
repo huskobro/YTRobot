@@ -113,6 +113,27 @@ function app() {
     showSaveModal: false,
     globalError: null,
     _errorTimeout: null,
+    // Channel Hub
+    channelsData: [],
+    channelsLoading: false,
+    activeChannelId: '_default',
+    activeChannelName: 'Varsayılan Kanal',
+    channelFormOpen: false,
+    channelEditId: null,
+    wizardChannelId: '_default',
+    channelForm: {
+      name: '',
+      language: 'tr',
+      master_prompt: '',
+      default_category: 'general',
+      preset_name: '',
+      branding: {
+        logo_path: '',
+        thumbnail_template: 'classic',
+        color_primary: '#FF0000',
+        color_secondary: '#FFFFFF'
+      }
+    },
     analyticsData: null,
     analyticsLoading: false,
     queueStatus: null,
@@ -360,6 +381,102 @@ function app() {
       } catch (e) { /* Ses desteklenmiyor veya engellendi */ }
     },
 
+    // ── Channel Hub Methods ──
+    async loadChannels() {
+      this.channelsLoading = true;
+      try {
+        const r = await fetch('/api/channels');
+        const data = await r.json();
+        this.channelsData = data.channels || [];
+        const ar = await fetch('/api/channels/active');
+        if (ar.ok) {
+          const active = await ar.json();
+          this.activeChannelId = active.id || '_default';
+          this.activeChannelName = active.name || 'Varsayılan Kanal';
+        }
+      } catch (e) {
+        console.error('Failed to load channels:', e);
+      }
+      this.channelsLoading = false;
+    },
+
+    async setActiveChannel(channelId) {
+      try {
+        await fetch('/api/channels/active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel_id: channelId })
+        });
+        await this.loadChannels();
+      } catch (e) {
+        console.error('Failed to set active channel:', e);
+      }
+    },
+
+    openChannelForm(channel = null) {
+      if (channel) {
+        this.channelEditId = channel.id;
+        this.channelForm = {
+          name: channel.name || '',
+          language: channel.language || 'tr',
+          master_prompt: channel.master_prompt || '',
+          default_category: channel.default_category || 'general',
+          preset_name: channel.preset_name || '',
+          branding: channel.branding || {
+            logo_path: '', thumbnail_template: 'classic',
+            color_primary: '#FF0000', color_secondary: '#FFFFFF'
+          }
+        };
+      } else {
+        this.channelEditId = null;
+        this.channelForm = {
+          name: '', language: 'tr', master_prompt: '',
+          default_category: 'general', preset_name: '',
+          branding: {
+            logo_path: '', thumbnail_template: 'classic',
+            color_primary: '#FF0000', color_secondary: '#FFFFFF'
+          }
+        };
+      }
+      this.channelFormOpen = true;
+    },
+
+    async saveChannel() {
+      try {
+        if (this.channelEditId) {
+          await fetch(`/api/channels/${this.channelEditId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.channelForm)
+          });
+        } else {
+          await fetch('/api/channels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.channelForm)
+          });
+        }
+        this.channelFormOpen = false;
+        await this.loadChannels();
+        this.showSuccess(this.channelEditId ? 'Kanal güncellendi.' : 'Kanal oluşturuldu.');
+      } catch (e) {
+        console.error('Failed to save channel:', e);
+        this.showError('Kanal kaydedilemedi.');
+      }
+    },
+
+    async deleteChannel(channelId) {
+      if (!confirm('Bu kanalı silmek istediğinize emin misiniz?')) return;
+      try {
+        await fetch(`/api/channels/${channelId}`, { method: 'DELETE' });
+        await this.loadChannels();
+        this.showSuccess('Kanal silindi.');
+      } catch (e) {
+        console.error('Failed to delete channel:', e);
+        this.showError('Kanal silinemedi.');
+      }
+    },
+
     async init() {
       // 1. Register Global Listeners First (Immune to API failures)
       window.addEventListener('keydown', (e) => {
@@ -377,7 +494,8 @@ function app() {
           this.loadPrompts(),
           this.loadBulletinSources(),
           this.loadSessions(),
-          this.loadPresets()
+          this.loadPresets(),
+          this.loadChannels()
         ]);
         this.loadBulletinPresets();
         this.loadBulletinHistory();

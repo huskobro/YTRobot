@@ -194,8 +194,9 @@ class QueueManager:
                                 payload["duration"] = job.finished_at - (job.started_at or job.created_at)
                             else:
                                 payload["error"] = job.error or ""
-                            results = dispatch_all_notifications(
-                                payload, mention=getattr(settings, "webhook_mention", ""))
+                            mention = getattr(settings, "webhook_mention", "")
+                            results = await asyncio.get_event_loop().run_in_executor(
+                                None, dispatch_all_notifications, payload, mention)
                             if results:
                                 logger.info(f"Notifications sent: {results}")
                     except Exception as wh_err:
@@ -251,6 +252,8 @@ class QueueManager:
                 finally:
                     async with self._count_lock:
                         self._running_count -= 1
+                    # Remove from active_jobs to prevent unbounded memory growth
+                    self.active_jobs.pop(job.id, None)
 
                 self.queue.task_done()
 

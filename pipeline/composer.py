@@ -91,14 +91,15 @@ def _compose_moviepy(
         try:
             if settings.subtitle_provider == "pycaps":
                 _burn_subtitles_pycaps(raw_output, srt_path, final_output)
-                raw_output.unlink(missing_ok=True)
             else:
                 _burn_subtitles_ffmpeg(raw_output, srt_path, final_output)
-                raw_output.unlink(missing_ok=True)
         except Exception as e:
             print(f"  [Composer] ⚠ Subtitle burn failed: {e} — using video without subtitles.")
             if raw_output.exists():
                 raw_output.rename(final_output)
+        finally:
+            # Always clean up the raw intermediate file to avoid disk accumulation
+            raw_output.unlink(missing_ok=True)
     else:
         raw_output.rename(final_output)
 

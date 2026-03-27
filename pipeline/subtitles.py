@@ -18,10 +18,11 @@ Turkish).  Each script word is assigned a timestamp by:
 This gives smooth, anchor-corrected timing that stays in sync even when
 Whisper word-splits differ from the script (very common in Turkish).
 """
+import concurrent.futures
 import json
+import logging
 import re
 import subprocess
-import threading
 from pathlib import Path
 from typing import Any, Optional
 
@@ -29,7 +30,9 @@ import whisper  # type: ignore  # pyre-ignore[21]
 
 from pipeline.script import Scene  # type: ignore  # pyre-ignore[21]
 
+logger = logging.getLogger("subtitles")
 _WHISPER_TIMEOUT = 120  # seconds per scene
+_whisper_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="whisper")
 
 
 def _r4(x: float) -> float:
@@ -71,41 +74,39 @@ def _audio_duration(path: Path) -> float:
 
 
 def _get_transcription(audio_path: Path, scene: Scene, session_dir: Path) -> dict:
-    """Run Whisper on a single scene audio and cache the result."""
-    cache_file = session_dir / f"{audio_path.stem}_transcription.json"
+    """Run Whisper on a single scene audio and cache the result.
+    Cache is invalidated if the audio file has been modified since caching.
+    """
+    audio_mtime = int(audio_path.stat().st_mtime)
+    cache_file = session_dir / f"{audio_path.stem}_transcription_{audio_mtime}.json"
+    # Remove stale caches (different mtime)
+    for stale in session_dir.glob(f"{audio_path.stem}_transcription_*.json"):
+        if stale != cache_file:
+            stale.unlink(missing_ok=True)
     if cache_file.exists():
         return json.loads(cache_file.read_text(encoding="utf-8"))
 
     model = _get_whisper_model()
 
-    # Run transcription with a timeout to prevent indefinite blocking
-    result_container: list = []
-    error_container: list = []
-
     def _transcribe():
-        try:
-            r = model.transcribe(
-                str(audio_path),
-                word_timestamps=True,
-                initial_prompt=scene.narration,
-                fp16=False,
-            )
-            result_container.append(r)
-        except Exception as e:
-            error_container.append(e)
+        return model.transcribe(
+            str(audio_path),
+            word_timestamps=True,
+            initial_prompt=scene.narration,
+            fp16=False,
+        )
 
-    t = threading.Thread(target=_transcribe, daemon=True)
-    t.start()
-    t.join(timeout=_WHISPER_TIMEOUT)
-
-    if t.is_alive():
+    # Use a shared ThreadPoolExecutor so we can enforce a timeout via Future.
+    # This avoids accumulating zombie daemon threads when Whisper hangs.
+    future = _whisper_executor.submit(_transcribe)
+    try:
+        result = future.result(timeout=_WHISPER_TIMEOUT)
+    except concurrent.futures.TimeoutError:
+        future.cancel()
         raise TimeoutError(f"Whisper transcription timed out after {_WHISPER_TIMEOUT}s for {audio_path.name}")
-    if error_container:
-        raise error_container[0]
-    if not result_container:
+    if result is None:
         raise RuntimeError(f"Whisper returned no result for {audio_path.name}")
 
-    result = result_container[0]
     cache_file.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
     return result
 
@@ -318,8 +319,9 @@ def generate_srt(audio_paths: list, scenes: list, session_dir: Path) -> Path:
             continue
         aligned: list[dict[str, Any]] = list(_align_words(scene.narration, result))
 
-        # Group into ~3-word chunks for one subtitle line at a time
-        chunk_size = 3
+        # Group into configurable-word chunks for one subtitle line at a time
+        from config import settings as _cfg
+        chunk_size = getattr(_cfg, "subtitle_chunk_size", 3)
         for ci in range(0, len(aligned), chunk_size):
             chunk: list[dict[str, Any]] = aligned[ci : ci + chunk_size]  # pyre-ignore[no-matching-overload]
             if not chunk:
@@ -374,7 +376,8 @@ def generate_word_timing(
     word_timing_path = session_dir / "word_timing.json"
     all_scenes = []
     time_offset = 0.0
-    chunk_size = 3  # must match generate_srt
+    from config import settings as _cfg
+    chunk_size = getattr(_cfg, "subtitle_chunk_size", 3)  # must match generate_srt
 
     for i, (audio_path, scene) in enumerate(zip(audio_paths, scenes)):
         duration = _audio_duration(audio_path)

@@ -27,8 +27,14 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         now = time.time()
         window = 60.0  # 1 minute window
 
-        # Clean old entries
+        # Clean old entries for this IP
         self._hits[ip] = [t for t in self._hits[ip] if now - t < window]
+
+        # Periodic cleanup of IPs not seen in last hour to prevent unbounded memory growth
+        if len(self._hits) > 1000:
+            stale_ips = [k for k, ts in self._hits.items() if not ts or now - ts[-1] > 3600]
+            for k in stale_ips:
+                del self._hits[k]
 
         if len(self._hits[ip]) >= self.rpm:
             logger.warning(f"Rate limit exceeded for {ip}")

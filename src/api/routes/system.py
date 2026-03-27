@@ -20,7 +20,7 @@ MAX_HISTORY = 20
 
 
 def _save_settings_snapshot(settings_dict: dict):
-    """Save a snapshot of current settings for undo."""
+    """Save a snapshot of current settings for undo — sensitive values are masked."""
     SETTINGS_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     history = []
     if SETTINGS_HISTORY_FILE.exists():
@@ -28,9 +28,10 @@ def _save_settings_snapshot(settings_dict: dict):
             history = json.loads(SETTINGS_HISTORY_FILE.read_text())
         except Exception:
             pass
+    masked = {k: _mask_value(k, str(v)) for k, v in settings_dict.items()}
     history.append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "settings": settings_dict,
+        "settings": masked,
     })
     if len(history) > MAX_HISTORY:
         history = history[-MAX_HISTORY:]
@@ -313,17 +314,20 @@ async def ai_assist(req: AiAssistReq):
     gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
     if gemini_key:
         try:
+            import asyncio
+            import urllib.request as _ur
             g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.7, "maxOutputTokens": req.max_tokens},
             }
-            import urllib.request as _ur
-            _req = _ur.Request(g_url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
-            with _ur.urlopen(_req, timeout=15) as r:
-                data = json.loads(r.read())
-                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                return {"text": text}
+            _req_obj = _ur.Request(g_url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+            def _call_gemini():
+                with _ur.urlopen(_req_obj, timeout=15) as r:
+                    return json.loads(r.read())
+            data = await asyncio.get_event_loop().run_in_executor(None, _call_gemini)
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return {"text": text}
         except Exception as e:
             logger.warning(f"Gemini ai/assist failed: {e}")
 

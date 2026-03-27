@@ -57,15 +57,31 @@ async def video_gallery(status: str = "", search: str = "", module: str = "",
     for base_dir in [Path("sessions"), Path("output")]:
         if not base_dir.exists():
             continue
-        for session_path in sorted(base_dir.iterdir(), reverse=True):
-            if not session_path.is_dir():
-                continue
+        # Collect and sort directories first — avoids stat() per-file
+        try:
+            all_dirs = sorted(
+                [p for p in base_dir.iterdir() if p.is_dir()],
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+        except OSError:
+            continue
+        for session_path in all_dirs:
             session_id = session_path.name
             video_file = None
             for fn in ["final_video.mp4", "final_output.mp4"]:
                 if (session_path / fn).exists():
                     video_file = fn
                     break
+            # Quick module filter from session_id prefix (no disk read needed)
+            if module:
+                quick_module = ""
+                if session_id.startswith("bul_"):
+                    quick_module = "bulletin"
+                elif session_id.startswith("pr_"):
+                    quick_module = "product_review"
+                if quick_module and quick_module != module:
+                    continue  # Skip disk read entirely for this dir
             session_data = {}
             metadata = {}
             for sj in ["session.json"]:

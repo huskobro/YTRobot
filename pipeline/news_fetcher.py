@@ -8,6 +8,8 @@ Usage:
 """
 from __future__ import annotations
 
+import concurrent.futures
+import logging
 import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,6 +18,8 @@ from typing import Any
 import feedparser  # type: ignore
 import requests
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger("news_fetcher")
 
 from config import settings
 
@@ -173,13 +177,30 @@ def _clean_html(text: str) -> str:
     return BeautifulSoup(text or "", "html.parser").get_text(" ", strip=True)
 
 
+_FEED_TIMEOUT_SECS = 10  # Max seconds to wait for a single RSS feed
+
+
+def _parse_feed_with_timeout(url: str) -> Any:
+    """Parse an RSS feed with a hard timeout to prevent blocking on slow/hung feeds."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            feedparser.parse,
+            url,
+            agent="Mozilla/5.0 (compatible; YTRobot/1.0)",
+            request_headers={"Accept": "application/rss+xml, application/xml, text/xml"},
+        )
+        try:
+            return future.result(timeout=_FEED_TIMEOUT_SECS)
+        except concurrent.futures.TimeoutError:
+            logger.warning(f"[NewsFetcher] Feed timed out after {_FEED_TIMEOUT_SECS}s: {url}")
+            return None
+
+
 def _fetch_feed(source: dict, max_items: int) -> list[FetchedItem]:
     """Fetch a single RSS feed and return up to max_items FetchedItems."""
-    feed = feedparser.parse(
-        source["url"],
-        agent="Mozilla/5.0 (compatible; YTRobot/1.0)",
-        request_headers={"Accept": "application/rss+xml, application/xml, text/xml"},
-    )
+    feed = _parse_feed_with_timeout(source["url"])
+    if feed is None:
+        return []  # Timed out — skip this source gracefully
 
     items: list[FetchedItem] = []
     for entry in feed.entries[:max_items]:

@@ -12,7 +12,8 @@ class ElevenLabsTTSProvider(BaseTTSProvider):
 
     def synthesize(self, text: str, output_path: Path) -> Path:
         text = clean_for_tts(text, remove_apostrophes=settings.tts_remove_apostrophes)
-        audio = self._generate(text)
+        speed = settings.tts_speed
+        audio = self._generate(text, speed)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "wb") as f:
             for chunk in audio:
@@ -20,13 +21,17 @@ class ElevenLabsTTSProvider(BaseTTSProvider):
         validate_output(output_path, min_size=1000, label="TTS/ElevenLabs")
         if settings.tts_trim_silence:
             trim_silence(output_path)
-        apply_speed(output_path, settings.tts_speed)
+        # NOTE: Speed is applied natively via ElevenLabs API — no post-hoc apply_speed()
         return output_path
 
     @retry_with_backoff(max_retries=3, base_delay=2.0)
-    def _generate(self, text: str):
+    def _generate(self, text: str, speed: float = 1.0):
+        # ElevenLabs v2+ supports native speed control (0.7–1.2 range)
+        # Clamp to supported range to avoid API errors
+        api_speed = max(0.7, min(1.2, speed))
         return self.client.generate(
             text=text,
             voice=self.voice_id,
             model="eleven_multilingual_v2",
+            voice_settings={"speed": api_speed},
         )

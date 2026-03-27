@@ -417,18 +417,22 @@ def run_bulletin(
             if not img_url:
                 print(f"  [NewsBulletin] No image for item {i}, searching B-Roll...")
                 try:
-                    # Search for an image (not video for headlines usually looks better)
                     found_url = broll_manager.get_auto_media(narration, media_type="image")
                     if found_url:
-                        # Download to work_dir
                         import requests
                         img_filename = f"broll_item_{i}.jpg"
                         img_path = Path(work_dir) / img_filename
                         resp = requests.get(found_url, timeout=15)
-                        with open(img_path, "wb") as f:
-                            f.write(resp.content)
-                        img_url = str(img_path.absolute())
-                        print(f"  [NewsBulletin] B-Roll image saved: {img_filename}")
+                        resp.raise_for_status()  # Raise on HTTP errors
+                        content = resp.content
+                        # Validate: ensure we got a non-trivially-small image (>1KB)
+                        if len(content) > 1024:
+                            with open(img_path, "wb") as f:
+                                f.write(content)
+                            img_url = str(img_path.absolute())
+                            print(f"  [NewsBulletin] B-Roll image saved: {img_filename}")
+                        else:
+                            print(f"  [NewsBulletin] B-Roll image too small ({len(content)} bytes), skipping.")
                 except Exception as e:
                     print(f"  [NewsBulletin] B-Roll search failed: {e}")
 
@@ -486,18 +490,55 @@ def run_bulletin(
             combined_audio = _synthesize(combined_item, work_dir, 0)
             combined_path = work_dir / "combined.mp3"
             combined_audio.rename(combined_path)
-            # Assign same combined audio to all items temporarily
             total_dur = _audio_duration(combined_path)
-            # Split audio proportionally by narration length for duration
-            total_chars = sum(len(item.narration) for item in bulletin_items)
-            offset_sec = 0.0
-            for i, item in enumerate(bulletin_items):
-                frac = len(item.narration) / max(total_chars, 1)
-                item_dur = total_dur * frac
-                item.audio_path = combined_path  # all point to same file
-                item.duration_frames = max(fps * 3, int(item_dur * fps))
-                pct = 5 + int((i + 1) / n * 28)
-                _prog(pct, "tts", f"Ses süreleri hesaplandı: {i+1}/{n}")
+            # Use Whisper to find actual per-item boundaries in combined audio
+            try:
+                wm = _get_whisper()
+                result = wm.transcribe(str(combined_path), word_timestamps=True, language=bulletin_items[0].language or None)
+                segs = result.get("segments", [])
+                # Map each item to the segment range that covers its narration
+                item_boundaries: list[tuple[float, float]] = []
+                seg_idx = 0
+                for item in bulletin_items:
+                    item_words = item.narration.split()
+                    word_count = len(item_words)
+                    words_found = 0
+                    start_t = segs[seg_idx]["start"] if seg_idx < len(segs) else 0.0
+                    end_t = start_t
+                    while seg_idx < len(segs) and words_found < word_count:
+                        seg = segs[seg_idx]
+                        seg_words = seg.get("words", [])
+                        words_found += len(seg_words) if seg_words else len(seg["text"].split())
+                        end_t = seg["end"]
+                        seg_idx += 1
+                    item_boundaries.append((start_t, end_t))
+                # Trim combined audio into per-item clips using ffmpeg
+                for i, (item, (t_start, t_end)) in enumerate(zip(bulletin_items, item_boundaries)):
+                    clip_path = work_dir / f"item_{i:03d}.mp3"
+                    dur = max(0.5, t_end - t_start)
+                    subprocess.run(
+                        ["ffmpeg", "-y", "-i", str(combined_path),
+                         "-ss", str(t_start), "-t", str(dur),
+                         "-acodec", "copy", str(clip_path)],
+                        capture_output=True, check=False
+                    )
+                    if clip_path.exists() and clip_path.stat().st_size > 100:
+                        item.audio_path = clip_path
+                        item.duration_frames = _frames_for_audio(clip_path, fps)
+                    else:
+                        # Fallback: keep combined with proportional duration
+                        item.audio_path = combined_path
+                        item.duration_frames = max(fps * 3, int(dur * fps))
+                    pct = 5 + int((i + 1) / n * 28)
+                    _prog(pct, "tts", f"Ses bölümlendi: {i+1}/{n}")
+            except Exception as _split_err:
+                print(f"  [NewsBulletin] Audio split failed ({_split_err}), falling back to proportional split")
+                total_chars = sum(len(item.narration) for item in bulletin_items)
+                for i, item in enumerate(bulletin_items):
+                    frac = len(item.narration) / max(total_chars, 1)
+                    item_dur = total_dur * frac
+                    item.audio_path = combined_path
+                    item.duration_frames = max(fps * 3, int(item_dur * fps))
             _prog(35, "tts", "Ses sentezi tamamlandı (tek parça)")
         else:
             # ── Per-scene mode: TTS per item (default) ────────────────────────

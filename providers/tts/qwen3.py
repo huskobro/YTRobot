@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 import torch
 import soundfile as sf
@@ -11,14 +12,15 @@ except ImportError:
 from config import settings
 from providers.tts.base import BaseTTSProvider, apply_speed, clean_for_tts, trim_silence
 
-# Global cache to keep models in memory
-_MODEL_CACHE = {}
+# Global cache to keep models in memory — protected by a lock for thread safety.
+_MODEL_CACHE: dict = {}
+_cache_lock = threading.Lock()
 
 class Qwen3TTSProvider(BaseTTSProvider):
     def __init__(self):
         if Qwen3TTSModel is None:
             print("  [Qwen3] ERROR: qwen-tts package not installed. Run 'pip install qwen-tts'")
-            
+
         self.model_id = settings.qwen3_model_id
         self.device = settings.qwen3_device
         if self.device == "auto":
@@ -30,20 +32,23 @@ class Qwen3TTSProvider(BaseTTSProvider):
                 self.device = "cpu"
 
     def _get_model(self):
+        # Double-checked locking pattern to avoid loading the model twice.
         if self.model_id not in _MODEL_CACHE:
-            if Qwen3TTSModel is None:
-                raise ImportError("qwen-tts package is required for Qwen3 TTS.")
+            with _cache_lock:
+                if self.model_id not in _MODEL_CACHE:  # re-check inside lock
+                    if Qwen3TTSModel is None:
+                        raise ImportError("qwen-tts package is required for Qwen3 TTS.")
 
-            print(f"  [Qwen3] Loading model: {self.model_id} on {self.device}...")
-            dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
-            attn_impl = self._attn_impl(self.device)
+                    print(f"  [Qwen3] Loading model: {self.model_id} on {self.device}...")
+                    dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
+                    attn_impl = self._attn_impl(self.device)
 
-            _MODEL_CACHE[self.model_id] = Qwen3TTSModel.from_pretrained(
-                self.model_id,
-                device_map=self.device,
-                dtype=dtype,
-                attn_implementation=attn_impl
-            )
+                    _MODEL_CACHE[self.model_id] = Qwen3TTSModel.from_pretrained(
+                        self.model_id,
+                        device_map=self.device,
+                        dtype=dtype,
+                        attn_implementation=attn_impl
+                    )
         return _MODEL_CACHE[self.model_id]
 
     def _resolve_device(self, requested: str) -> str:

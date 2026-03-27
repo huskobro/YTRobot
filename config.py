@@ -143,7 +143,7 @@ class Settings(BaseSettings):
 
     # Composer
     composer_provider: Literal["moviepy", "remotion"] = "moviepy"
-    remotion_concurrency: int = 4
+    remotion_concurrency: int = Field(default=4, ge=1, le=16)
     remotion_ken_burns_zoom: float = 0.08
     remotion_ken_burns_direction: str = "center"  # center | pan-left | pan-right | random
     remotion_subtitle_font: str = "bebas"         # serif | sans | roboto | montserrat | oswald | bebas | inter
@@ -237,6 +237,7 @@ class Settings(BaseSettings):
     # Subtitles
     subtitle_provider: Literal["ffmpeg", "pycaps", "remotion"] = "ffmpeg"
     pycaps_style: str = "hype"
+    subtitle_chunk_size: int = Field(default=3, ge=1, le=10)  # words per subtitle chunk
 
     # Output
     output_dir: str = "output"

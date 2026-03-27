@@ -3,12 +3,23 @@ import json
 import shutil
 import tempfile
 import logging
+import threading
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException
 
 logger = logging.getLogger("ytrobot.utils")
+
+# Per-session locks to prevent concurrent read-modify-write races on session.json
+_session_locks: Dict[str, threading.Lock] = {}
+_session_locks_meta = threading.Lock()
+
+def _get_session_lock(sid: str) -> threading.Lock:
+    with _session_locks_meta:
+        if sid not in _session_locks:
+            _session_locks[sid] = threading.Lock()
+        return _session_locks[sid]
 
 
 def _safe_write(path: Path, content: str, encoding: str = "utf-8"):
@@ -64,7 +75,8 @@ def _read_session(sid: str) -> dict:
     return json.loads(p.read_text())
 
 def _write_session(sid: str, data: dict):
-    _safe_write(_session_json(sid), json.dumps(data, indent=2))
+    with _get_session_lock(sid):
+        _safe_write(_session_json(sid), json.dumps(data, indent=2))
 
 def _all_sessions() -> list:
     sessions = []

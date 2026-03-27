@@ -184,9 +184,17 @@ def _synthesize_concurrent(
         if out.exists() and out.stat().st_size > 1000:
             logger.info("Scene %d already exists, skipping.", idx)
             return idx, out
-        if _synthesize_with_fallback(narration, out, provider_name, voice_id, syn_kwargs, idx):
+        # Atomic write: synthesize to a temp file then rename to prevent race conditions
+        # when multiple threads process different scenes that could otherwise collide.
+        tmp_out = audio_dir / f"scene_{idx:03d}.mp3.tmp"
+        if _synthesize_with_fallback(narration, tmp_out, provider_name, voice_id, syn_kwargs, idx):
+            try:
+                tmp_out.replace(out)  # atomic on POSIX, best-effort on Windows
+            except OSError:
+                tmp_out.rename(out)
             return idx, out
         else:
+            tmp_out.unlink(missing_ok=True)
             logger.error(f"All TTS providers failed for scene {idx}, generating silent placeholder.")
             _generate_silent_audio(out, duration=3.0)
             return idx, out if out.exists() else None

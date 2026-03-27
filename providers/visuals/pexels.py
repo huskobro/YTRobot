@@ -1,7 +1,14 @@
+import logging
+import time
 import requests
 from pathlib import Path
 from config import settings
 from providers.visuals.base import BaseVisualsProvider
+
+logger = logging.getLogger("PexelsVisuals")
+
+_MAX_RETRIES = 3
+_RETRY_CODES = (429, 500, 502, 503, 504)
 
 
 class PexelsVisualsProvider(BaseVisualsProvider):
@@ -11,13 +18,35 @@ class PexelsVisualsProvider(BaseVisualsProvider):
         self.headers = {"Authorization": settings.pexels_api_key}
 
     def fetch(self, query: str, output_path: Path) -> Path:
-        resp = requests.get(
-            self.BASE_URL,
-            headers=self.headers,
-            params={"query": query, "per_page": 1, "orientation": "landscape"},
-            timeout=15,
-        )
-        resp.raise_for_status()
+        resp = None
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                resp = requests.get(
+                    self.BASE_URL,
+                    headers=self.headers,
+                    params={"query": query, "per_page": 3, "orientation": "landscape"},
+                    timeout=15,
+                )
+                if resp.status_code in _RETRY_CODES:
+                    wait = 2 ** attempt
+                    logger.warning(
+                        f"[Pexels] HTTP {resp.status_code}, retry {attempt}/{_MAX_RETRIES} in {wait}s"
+                    )
+                    time.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if attempt < _MAX_RETRIES:
+                    wait = 2 ** attempt
+                    logger.warning(f"[Pexels] Connection error, retry {attempt}/{_MAX_RETRIES} in {wait}s: {e}")
+                    time.sleep(wait)
+                else:
+                    raise
+
+        if resp is None or not resp.ok:
+            raise RuntimeError(f"Pexels API unavailable after {_MAX_RETRIES} retries for query: {query!r}")
+
         data = resp.json()
         videos = data.get("videos", [])
         if not videos:

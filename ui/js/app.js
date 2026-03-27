@@ -163,6 +163,7 @@ function app() {
     competitorScanning: {},
     agActiveChannel: null,
     agStatusFilter: 'all',
+    agMinScore: 0,
     agNewChannel: { id: '', name: '', language: 'Turkish', dna: 'Documentary', pull_count: 10, competitors: [] },
     agNewCompetitorId: '',
     agNewCompetitorName: '',
@@ -373,13 +374,13 @@ function app() {
       { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', tag: 'ürün inceleme affiliate review video', category: 'create', action: function() { this.view = 'product-review'; } },
       // ── Ana Sayfalar ──
       { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', tag: 'ana sayfa istatistik özet home', category: 'navigate', action: function() { this.view = 'dashboard'; } },
-      { id: 'nav_gallery', title: 'Gallery / Galeri', icon: '🖼️', tag: 'galeri videolar listele izle indir', category: 'navigate', action: function() { this.view = 'gallery'; this.loadSessions(); } },
+      { id: 'nav_gallery', title: 'Gallery / Galeri', icon: '🖼️', tag: 'galeri videolar listele izle indir', category: 'navigate', action: function() { this.view = 'gallery'; this.loadGallery(); } },
       { id: 'nav_channels', title: 'Channels / Kanallar', icon: '📡', tag: 'kanal yönetim profil channel', category: 'navigate', action: function() { this.view = 'channels'; this.loadChannels(); } },
       // ── İçerik Yönetimi ──
-      { id: 'nav_calendar', title: 'Content Calendar / İçerik Takvimi', icon: '📅', tag: 'takvim planlama tarih zamanlama schedule', category: 'content', action: function() { this.view = 'calendar'; this.loadCalendarEntries(); } },
-      { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', tag: 'playlist oynatma listesi sıralama', category: 'content', action: function() { this.view = 'playlists'; this.loadPlaylists(); } },
-      { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', tag: 'şablon preset kayıtlı ayar template', category: 'content', action: function() { this.view = 'templates'; this.loadTemplates(); } },
-      { id: 'nav_ab_testing', title: 'A/B Testing / A/B Test', icon: '🧪', tag: 'test deney varyant başlık thumbnail', category: 'content', action: function() { this.view = 'ab-testing'; this.loadAbTests(); } },
+      { id: 'nav_calendar', title: 'Content Calendar / İçerik Takvimi', icon: '📅', tag: 'takvim planlama tarih zamanlama schedule', category: 'content', action: function() { this.view = 'content-planning'; this.contentPlanningTab = 'calendar'; this.loadCalendarEntries(); } },
+      { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', tag: 'playlist oynatma listesi sıralama', category: 'content', action: function() { this.view = 'content-planning'; this.contentPlanningTab = 'playlists'; this.loadPlaylists(); } },
+      { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', tag: 'şablon preset kayıtlı ayar template', category: 'content', action: function() { this.view = 'content-planning'; this.contentPlanningTab = 'templates'; this.loadTemplates(); } },
+      { id: 'nav_ab_testing', title: 'A/B Testing / A/B Test', icon: '🧪', tag: 'test deney varyant başlık thumbnail', category: 'content', action: function() { this.view = 'content-planning'; this.contentPlanningTab = 'ab-testing'; this.loadAbTests(); } },
       // ── Analiz & İstihbarat ──
       { id: 'nav_analytics', title: 'Pipeline Analytics / Pipeline Analizi', icon: '📈', tag: 'analitik istatistik performans kuyruk hata pipeline', category: 'analytics', action: function() { this.view = 'analytics'; this.analyticsTab = 'pipeline'; this.loadAnalytics(); this.loadQueueStatus(); this.loadErrorDetails(); } },
       { id: 'nav_yt_analytics', title: 'YouTube Analytics / YouTube Analitik', icon: '📊', tag: 'youtube görüntülenme abone izlenme kanal analitik', category: 'analytics', action: function() { this.view = 'analytics'; this.analyticsTab = 'youtube'; } },
@@ -510,9 +511,9 @@ function app() {
           this.wizardNewPlaylistOpen = false;
           this.wizardNewPlaylistName = '';
           this.wizardNewPlaylistDesc = '';
-          this.showToast('Playlist oluşturuldu', 'success');
+          this.showToast(this.t('playlist_created'), 'success');
         }
-      } catch(e) { console.warn('[createWizardPlaylist]', e); this.showToast('Playlist oluşturulamadı', 'error'); }
+      } catch(e) { console.warn('[createWizardPlaylist]', e); this.showToast(this.t('playlist_create_error'), 'error'); }
     },
 
     // ── Command Palette Methods ──
@@ -643,7 +644,7 @@ function app() {
         }
       } catch (e) {
         console.warn('TTS preview error:', e);
-        this.showToast(this.lang === 'tr' ? 'Ses önizlemesi oluşturulamadı' : 'Could not generate voice preview', 'error');
+        this.showToast(this.t('tts_preview_error'), 'error');
       } finally {
         this.ttsPreviewLoading = false;
       }
@@ -859,6 +860,18 @@ function app() {
         if (nextView === 'new-run') { this.mode = 'topic'; this.runError = ''; }
         if (nextView === 'dashboard') { this.loadSessions(); }
       }
+    },
+
+    navigateTo(newView, setupFn) {
+      // Guard: confirm before leaving onboarding mid-flow
+      if (this.view === 'onboarding' && this.onboardingStep > 1) {
+        const msg = this.lang === 'tr'
+          ? 'Kurulum tamamlanmadı. Sayfadan çıkmak istediğinize emin misiniz?'
+          : 'Setup is not complete. Are you sure you want to leave?';
+        if (!confirm(msg)) return;
+      }
+      this.view = newView;
+      if (setupFn) setupFn.call(this);
     },
 
     resetOnboarding() {
@@ -1102,7 +1115,7 @@ function app() {
           body: JSON.stringify({ steps: this.wizardConfigSteps })
         });
         if (resp.ok) {
-          this.showToast(this.lang === 'tr' ? 'Wizard yapılandırması kaydedildi' : 'Wizard configuration saved', 'success');
+          this.showToast(this.t('wizard_config_saved'), 'success');
           this.wizardConfigOpen = false;
           await this.loadWizardStepOrder();
         }
@@ -1114,7 +1127,7 @@ function app() {
         if (resp.ok) {
           const data = await resp.json();
           this.wizardConfigSteps = data.steps;
-          this.showToast(this.lang === 'tr' ? 'Wizard varsayılana sıfırlandı' : 'Wizard reset to defaults', 'success');
+          this.showToast(this.t('wizard_config_reset'), 'success');
           await this.loadWizardStepOrder();
         }
       } catch(e) { console.warn('Failed to reset wizard config:', e); }
@@ -1204,33 +1217,33 @@ function app() {
           body: JSON.stringify({ session_ids: [sid], action: 'delete' })
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        this.showToast('Video silindi', 'success');
+        this.showToast(this.t('video_deleted'), 'success');
         this.loadGallery();
-      } catch(e) { this.showToast('Silme hatasi', 'error'); }
+      } catch(e) { this.showToast(this.t('delete_error'), 'error'); }
     },
     async galleryQuickUploadYT(sid) {
       try {
         const resp = await fetch(`/api/youtube/upload/${sid}`, { method: 'POST' });
-        if (resp.ok) this.showToast('YouTube yukleme baslatildi', 'success');
-        else this.showToast('YouTube yukleme hatasi', 'error');
-      } catch(e) { this.showToast('YouTube yukleme hatasi', 'error'); }
+        if (resp.ok) this.showToast(this.t('yt_upload_started'), 'success');
+        else this.showToast(this.t('yt_upload_error'), 'error');
+      } catch(e) { this.showToast(this.t('yt_upload_error'), 'error'); }
     },
     async galleryQuickSeo(sid) {
       try {
         const resp = await fetch(`/api/social/generate/${sid}`, { method: 'POST' });
         if (resp.ok) {
           const data = await resp.json();
-          this.showToast('SEO skoru: ' + (data.seo_score || 'hesaplandi'), 'success');
+          this.showToast(this.t('seo_score') + ': ' + (data.seo_score || this.t('seo_calculated') || '?'), 'success');
         }
-      } catch(e) { this.showToast('SEO hatasi', 'error'); }
+      } catch(e) { this.showToast(this.t('generic_error'), 'error'); }
     },
     async galleryQuickThumbnail(sid) {
       try {
         const resp = await fetch(`/api/sessions/${sid}/thumbnail`);
-        if (resp.ok) this.showToast('Thumbnail olusturuldu', 'success');
-        else this.showToast('Thumbnail hatasi', 'error');
+        if (resp.ok) this.showToast(this.t('thumbnail_created'), 'success');
+        else this.showToast(this.t('thumbnail_error'), 'error');
         this.loadGallery();
-      } catch(e) { this.showToast('Thumbnail hatasi', 'error'); }
+      } catch(e) { this.showToast(this.t('thumbnail_error'), 'error'); }
     },
 
     // ── Gallery Bulk Actions ──
@@ -1244,12 +1257,12 @@ function app() {
           body: JSON.stringify({ session_ids: this.galleryBulkSelected, action: 'delete' })
         });
         if (resp.ok) {
-          this.showToast(`${this.galleryBulkSelected.length} video silindi`, 'success');
+          this.showToast(`${this.galleryBulkSelected.length} ${this.t('video_deleted')}`, 'success');
           this.galleryBulkSelected = [];
           this.galleryBulkMode = false;
           this.loadGallery();
         }
-      } catch(e) { this.showToast('Silme hatasi', 'error'); }
+      } catch(e) { this.showToast(this.t('delete_error'), 'error'); }
     },
     toggleGalleryBulkSelect(sid) {
       const idx = this.galleryBulkSelected.indexOf(sid);
@@ -1335,6 +1348,9 @@ function app() {
       } catch(e) { console.warn('[loadAbTests]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
     },
     async createAbTest() {
+      if (!this.abTestForm.video_id || !this.abTestForm.video_id.trim()) {
+        this.showToast(this.t('form_field_required'), 'warning'); return;
+      }
       const variants = this.abTestForm.variants.filter(v => v.trim());
       if (variants.length < 2) { this.showToast(this.t('ab_test_min_variants'), 'warning'); return; }
       try {
@@ -1449,6 +1465,9 @@ function app() {
       this.calendarModalOpen = true;
     },
     async saveCalendarEntry() {
+      if (!this.calendarForm.title || !this.calendarForm.title.trim()) {
+        this.showToast(this.t('form_title_required'), 'warning'); return;
+      }
       try {
         if (this.calendarEditId) {
           await fetch(`/api/calendar/${this.calendarEditId}`, {
@@ -1481,11 +1500,11 @@ function app() {
     },
     async saveCalendarSchedule() {
       if (!this.calendarScheduleVideoId) {
-        this.showToast(this.lang === 'tr' ? 'Lütfen bir video seçin' : 'Please select a video', 'error');
+        this.showToast(this.t('schedule_select_video'), 'error');
         return;
       }
       if (!this.calendarForm.planned_date) {
-        this.showToast(this.lang === 'tr' ? 'Lütfen tarih seçin' : 'Please select a date', 'error');
+        this.showToast(this.t('schedule_select_date'), 'error');
         return;
       }
       try {
@@ -1504,7 +1523,7 @@ function app() {
         this.calendarScheduleVideoId = '';
         this.calendarScheduleTime = '09:00';
         this.loadSchedule();
-        this.showToast(this.lang === 'tr' ? 'Video zamanlandı' : 'Video scheduled', 'success');
+        this.showToast(this.t('video_scheduled'), 'success');
       } catch(e) { console.warn('[saveCalendarSchedule]', e); this.showToast(e.message || this.t('generic_error'), 'error'); }
     },
 
@@ -1590,13 +1609,13 @@ function app() {
           const data = await resp.json();
           if (data.name) this.playlistForm.name = data.name;
           if (data.description) this.playlistForm.description = data.description;
-          this.showToast('AI metadata oluşturuldu', 'success');
+          this.showToast(this.t('ai_metadata_created'), 'success');
         } else {
-          this.showToast('AI metadata oluşturulamadı', 'error');
+          this.showToast(this.t('ai_metadata_error'), 'error');
         }
       } catch(e) {
         console.warn('[generatePlaylistMeta]', e);
-        this.showToast('AI metadata hatası', 'error');
+        this.showToast(this.t('ai_metadata_error'), 'error');
       }
       this.playlistAiLoading = false;
     },
@@ -1625,6 +1644,9 @@ function app() {
       } catch(e) { console.warn('[loadTemplates]', e); this.showToast(this.t('load_error') || 'Failed to load', 'error'); }
     },
     async createTemplate() {
+      if (!this.templateForm.name || !this.templateForm.name.trim()) {
+        this.showToast(this.t('form_title_required'), 'warning'); return;
+      }
       let settings;
       try { settings = JSON.parse(this.templateForm.settings); } catch(e) { this.showToast('Invalid JSON', 'error'); return; }
       try {
@@ -1813,6 +1835,8 @@ function app() {
     // ── Toast API ──
     showToast(message, type = 'info', duration = 5000) {
       const id = ++this._toastIdCounter;
+      // Keep max 5 toasts — remove oldest if over limit
+      if (this.toasts.length >= 5) { this.toasts.shift(); }
       this.toasts.push({ id, message, type });
       if (duration > 0) setTimeout(() => this.dismissToast(id), duration);
       return id;
@@ -1874,12 +1898,9 @@ function app() {
     // ── Notification Methods ──
     async loadNotifications() {
       try {
-        const data = await fetch('/api/notifications/?limit=20');
-        if (data.ok) {
-          const json = await data.json();
-          this.notifications = json.notifications || [];
-          this.unreadCount = json.unread_count || 0;
-        }
+        const json = await this.apiFetch('/api/notifications/?limit=20');
+        this.notifications = json.notifications || [];
+        this.unreadCount = json.unread_count || 0;
       } catch(e) { /* silent — notifications are non-critical */ }
     },
 
@@ -2037,15 +2058,13 @@ function app() {
     async loadChannels() {
       this.channelsLoading = true;
       try {
-        const r = await fetch('/api/channels');
-        const data = await r.json();
+        const data = await this.apiFetch('/api/channels');
         this.channelsData = (data.channels || []).filter(c => c.id !== '_default');
-        const ar = await fetch('/api/channels/active');
-        if (ar.ok) {
-          const active = await ar.json();
+        try {
+          const active = await this.apiFetch('/api/channels/active');
           this.activeChannelId = active.id || '_default';
           this.activeChannelName = active.name || 'Varsayılan Kanal';
-        }
+        } catch(e) { console.warn('[loadChannels:active]', e); }
       } catch (e) {
         console.error('Failed to load channels:', e);
       }
@@ -2173,7 +2192,7 @@ function app() {
 
             const file = files[0];
             if (!file.name.endsWith('.txt') && !file.name.endsWith('.json') && !file.name.endsWith('.srt')) {
-                if (this.showToast) this.showToast('Sadece .txt, .json, .srt dosyaları desteklenir', 'warning');
+                if (this.showToast) this.showToast(this.t('file_type_error'), 'warning');
                 return;
             }
 
@@ -2272,6 +2291,20 @@ function app() {
       // Notification polling every 30 seconds
       this.loadNotifications();
       this._notifPoll = setInterval(() => this.loadNotifications(), 30000);
+
+      // Close SSE when navigating away from session view
+      this.$watch('view', (newView, oldView) => {
+        if (oldView === 'session' && newView !== 'session') {
+          if (this._sse) { this._sse.close(); this._sse = null; }
+        }
+      });
+
+      // Cleanup intervals on page unload
+      window.addEventListener('beforeunload', () => {
+        if (this._timer) { clearInterval(this._timer); this._timer = null; }
+        if (this._notifPoll) { clearInterval(this._notifPoll); this._notifPoll = null; }
+        if (this._sse) { this._sse.close(); this._sse = null; }
+      });
     },
 
     async loadAnalytics() {
@@ -2291,16 +2324,12 @@ function app() {
 
     async loadDashboard() {
       try {
-        const statsResp = await fetch('/api/stats');
-        if (statsResp.ok) {
-          const stats = await statsResp.json();
-          this.dashboardStats = { totalRenders: stats.total_renders || 0, successCount: stats.success_count || 0, failCount: stats.fail_count || 0 };
-          this.recentActivity = (stats.recent || []).slice(0, 5);
-        }
+        const stats = await this.apiFetch('/api/stats');
+        this.dashboardStats = { totalRenders: stats.total_renders || 0, successCount: stats.success_count || 0, failCount: stats.fail_count || 0 };
+        this.recentActivity = (stats.recent || []).slice(0, 5);
       } catch(e) { console.warn('Dashboard load failed:', e); }
       try {
-        const qResp = await fetch('/api/stats/queue');
-        if (qResp.ok) this.queueStatus = await qResp.json();
+        this.queueStatus = await this.apiFetch('/api/stats/queue');
       } catch(e) { console.warn('[loadDashboard:queue]', e); }
     },
 
@@ -2381,9 +2410,25 @@ function app() {
       this.updateAgTitle(entry.id, { status: 'in_queue' });
     },
 
+    async agUseTitle(entry) {
+      // Mark as used via API, then send to video wizard
+      try {
+        const slug = this.activeChannelId || '_default';
+        await fetch(`/api/competitor/titles/${entry.id}/use?channel_slug=${slug}`, { method: 'POST' });
+        entry.status = 'used';
+      } catch(e) { console.warn('[agUseTitle]', e); }
+      this.view = 'new-run';
+      this.wizardStep = 2;
+      this.videoModule = 'normal';
+      this.$nextTick(() => { this.newTopic = entry.rewritten_title || entry.original_title; });
+    },
+
     get agFilteredTitles() {
       if (!this.competitorData?.title_pool) return [];
-      const pool = this.competitorData.title_pool;
+      let pool = this.competitorData.title_pool;
+      // Apply min score filter
+      const minScore = parseFloat(this.agMinScore) || 0;
+      if (minScore > 0) pool = pool.filter(t => (t.viral_score || 0) >= minScore);
       const filtered = this.agStatusFilter === 'all'
         ? pool
         : pool.filter(t => t.status === this.agStatusFilter);
@@ -3200,16 +3245,14 @@ function app() {
     // ── Bulletin methods ──────────────────────────────────────────────────
     async loadBulletinSources() {
       try {
-        const r = await fetch('/api/bulletin/sources');
-        const data = await r.json();
+        const data = await this.apiFetch('/api/bulletin/sources');
         this.bulletinSources = Array.isArray(data) ? data : [];
       } catch(e) { this.bulletinSources = []; }
     },
 
     async loadBulletinHistory() {
       try {
-        const r = await fetch('/api/bulletin/history');
-        if (r.ok) this.bulletinHistory = await r.json();
+        this.bulletinHistory = await this.apiFetch('/api/bulletin/history');
       } catch(e) { console.warn('[bulletin] history load error:', e); }
     },
 
@@ -3779,11 +3822,11 @@ Return ONLY the rewritten narration text. No explanation, no JSON, just the text
             case 'calendarTitle': this.calendarForm.title = text; break;
             case 'prName': this.prForm.name = text; break;
           }
-          this.showToast('AI önerisi uygulandı', 'success');
+          this.showToast(this.t('ai_assist_applied'), 'success');
         } else {
-          this.showToast('AI hatası', 'error');
+          this.showToast(this.t('ai_error'), 'error');
         }
-      } catch(e) { console.warn('[aiAssist]', e); this.showToast('AI hatası', 'error'); }
+      } catch(e) { console.warn('[aiAssist]', e); this.showToast(this.t('ai_error'), 'error'); }
     },
   };
 }

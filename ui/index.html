@@ -168,17 +168,17 @@
     <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" @click="sidebarOpen=false">
       <!-- ── Ana İşlemler ── -->
       <p class="px-3 pt-4 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_main')">Ana İşlemler</p>
-      <button @click="view='new-run'; mode='topic'; runError=''"
+      <button @click="navigateTo('new-run', function(){ this.mode='topic'; this.runError=''; })"
               class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2.5 transition-all"
               :class="view==='new-run'?'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>✨</span> <span x-text="t('nav_new_video')"></span>
       </button>
-      <button @click="view='dashboard'; loadDashboard()"
+      <button @click="navigateTo('dashboard', function(){ this.loadDashboard(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='dashboard'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📊</span> <span x-text="t('nav_dashboard')"></span>
       </button>
-      <button @click="view='gallery'; loadGallery()"
+      <button @click="navigateTo('gallery', function(){ this.loadGallery(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='gallery'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>🖼️</span> <span x-text="t('nav_gallery')"></span>
@@ -187,12 +187,12 @@
       <!-- ── İçerik ── -->
       <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
       <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_content')">İçerik</p>
-      <button @click="view='channels'; loadChannels()"
+      <button @click="navigateTo('channels', function(){ this.loadChannels(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='channels'?'bg-blue-600 text-white shadow-md shadow-blue-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📡</span> <span x-text="t('nav_channels')"></span>
       </button>
-      <button @click="view='content-planning'; if(contentPlanningTab==='calendar') loadCalendar(); else if(contentPlanningTab==='playlists') loadPlaylists(); else if(contentPlanningTab==='ab-testing') loadABTests(); else if(contentPlanningTab==='templates') loadTemplates()"
+      <button @click="navigateTo('content-planning', function(){ if(this.contentPlanningTab==='calendar') this.loadCalendarEntries(); else if(this.contentPlanningTab==='playlists') this.loadPlaylists(); else if(this.contentPlanningTab==='ab-testing') this.loadAbTests(); else if(this.contentPlanningTab==='templates') this.loadTemplates(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='content-planning'?'bg-teal-600 text-white shadow-md shadow-teal-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📅</span> <span x-text="t('nav_content_planning')"></span>
@@ -201,7 +201,7 @@
       <!-- ── Analiz ── -->
       <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
       <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_analytics')">Analiz</p>
-      <button @click="view='analytics'; loadAnalytics(); loadQueueStatus(); loadErrorDetails()"
+      <button @click="navigateTo('analytics', function(){ this.loadAnalytics(); this.loadQueueStatus(); this.loadErrorDetails(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='analytics'?'bg-emerald-600 text-white shadow-md shadow-emerald-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>📈</span> <span x-text="t('nav_analytics')"></span>
@@ -210,7 +210,7 @@
       <!-- ── Sistem ── -->
       <div class="border-t border-slate-200 dark:border-slate-800/50 my-2"></div>
       <p class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-500" x-text="t('nav_group_system')">Sistem</p>
-      <button @click="loadSettings();view='settings'"
+      <button @click="navigateTo('settings', function(){ this.loadSettings(); })"
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 transition-all"
               :class="view==='settings'?'bg-indigo-600 text-white shadow-md shadow-indigo-900/40':'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <span>⚙️</span> <span x-text="t('nav_settings')"></span>
@@ -810,13 +810,21 @@
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-xs font-black text-white uppercase tracking-widest">Başlık Havuzu</h2>
               <div class="flex gap-1">
-                <template x-for="f in ['all','new','approved','in_queue']" :key="f">
+                <template x-for="f in ['all','new','approved','in_queue','used']" :key="f">
                   <button @click="agStatusFilter=f"
                     class="px-2 py-1 rounded-lg text-[10px] font-bold transition-all uppercase"
                     :class="agStatusFilter===f ? 'bg-rose-700 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'"
-                    x-text="f==='all'?'Tümü':f==='new'?'Yeni':f==='approved'?'Onaylı':'Kuyrukta'">
+                    x-text="f==='all'?'Tümü':f==='new'?'Yeni':f==='approved'?'Onaylı':f==='used'?'Kullanıldı':'Kuyrukta'">
                   </button>
                 </template>
+                <span class="text-slate-700">|</span>
+                <select x-model="agMinScore" @change="loadCompetitor()"
+                  class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-300 focus:outline-none">
+                  <option value="0">Min Skor: Tümü</option>
+                  <option value="6">Min Skor: 6+</option>
+                  <option value="7">Min Skor: 7+</option>
+                  <option value="8">Min Skor: 8+</option>
+                </select>
               </div>
             </div>
 
@@ -848,6 +856,12 @@
                     <button @click="agSendToQueue(entry)"
                       class="flex-1 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-lg text-[10px] font-bold transition-all">
                       ▶ Kuyruğa Gönder
+                    </button>
+                    <button @click="agUseTitle(entry)"
+                      x-show="entry.status!=='used'"
+                      class="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold transition-all"
+                      title="Başlığı kullanıp video oluştur">
+                      🎬 Kullan
                     </button>
                     <button @click="updateAgTitle(entry.id, {status:'approved'})"
                       x-show="entry.status==='new'"
@@ -7557,7 +7571,7 @@
       <h1 class="text-2xl font-bold text-white mb-4" x-text="t('nav_content_planning') || 'İçerik Planlama'"></h1>
       <!-- Sub-tabs -->
       <div class="flex gap-2 mb-6 border-b border-slate-800 pb-3">
-        <button @click="contentPlanningTab='calendar'; loadCalendar()"
+        <button @click="contentPlanningTab='calendar'; loadCalendarEntries()"
                 class="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
                 :class="contentPlanningTab==='calendar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'">
           📅 <span x-text="t('nav_calendar') || 'Takvim'"></span>

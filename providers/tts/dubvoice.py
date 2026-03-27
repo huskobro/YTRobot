@@ -116,6 +116,7 @@ class DubVoiceTTSProvider(BaseTTSProvider):
 
         if settings.tts_trim_silence:
             trim_silence(output_path)
-        apply_speed(output_path, settings.tts_speed)
+        # NOTE: Speed is already applied natively via the API payload ("speed" field).
+        # Calling apply_speed() again here would double the speed multiplication — removed.
 
         return output_path

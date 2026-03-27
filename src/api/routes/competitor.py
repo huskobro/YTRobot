@@ -25,6 +25,12 @@ def get_competitor_data(channel_slug: Optional[str] = None):
     return competitor_intel.get_data(channel_slug)
 
 
+@router.get("/title-pool")
+def get_title_pool(channel_slug: Optional[str] = None, min_score: float = 0):
+    """Return title pool sorted by viral score, optionally filtered."""
+    return {"titles": competitor_intel.get_title_pool(channel_slug, min_score)}
+
+
 @router.get("/heatmap")
 def competitor_heatmap(channel_slug: str = ""):
     from src.core.competitor_intel import get_heatmap_data
@@ -53,6 +59,15 @@ async def scan_channel(channel_id: str, channel_slug: Optional[str] = None):
 @router.patch("/titles/{title_id}")
 def update_title(title_id: str, body: TitleUpdateReq, channel_slug: Optional[str] = None):
     entry = competitor_intel.update_title(title_id, body.model_dump(exclude_none=True), channel_slug)
+    if not entry:
+        raise HTTPException(404, "Title not found")
+    return entry
+
+
+@router.post("/titles/{title_id}/use")
+def mark_title_used(title_id: str, channel_slug: Optional[str] = None):
+    """Mark a title as used and add to dedup list."""
+    entry = competitor_intel.mark_title_used(title_id, channel_slug)
     if not entry:
         raise HTTPException(404, "Title not found")
     return entry

@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import urllib.request as urllib_req
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -129,23 +130,34 @@ def _score_title_with_ai(title: str, api_key: str) -> Dict[str, Any]:
         return {"curiosity": 5, "emotion": 5, "psychology": 5, "ctr": 5, "trend": 5, "viral_score": 5.0}
 
 
-def _rewrite_title(title: str, language: str, dna: str, api_key: str) -> str:
-    """Rewrite a title in target language/DNA style."""
+def _similarity(a: str, b: str) -> float:
+    """Return similarity ratio (0.0–1.0) between two strings."""
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+def _rewrite_title(title: str, language: str, dna: str, api_key: str, max_retries: int = 2) -> str:
+    """Rewrite a title in target language/DNA style. Re-tries if similarity > 70%."""
     prompt = (
         f"Rewrite this YouTube title in {language} language with a {dna} content style.\n"
         f"Make it more engaging and click-worthy.\n"
+        f"Change the sentence structure completely. The rewritten title must feel like a NEW title.\n"
         f"Original: {title}\n"
         f"Return ONLY the rewritten title, nothing else."
     )
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
-        resp = client.chat.completions.create(
-            model="gemini-2.5-flash",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
-        return resp.choices[0].message.content.strip()
+        for attempt in range(max_retries + 1):
+            resp = client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7 + attempt * 0.1,
+            )
+            result = resp.choices[0].message.content.strip()
+            if _similarity(title, result) < 0.70:
+                return result
+            logger.info(f"Rewrite attempt {attempt+1}: similarity too high ({_similarity(title, result):.0%}), retrying")
+        return result  # return last attempt even if similarity is high
     except Exception as e:
         logger.warning(f"Title rewrite failed: {e}")
         return title
@@ -165,7 +177,8 @@ def scan_channel(channel_id: str, channel_slug: Optional[str] = None) -> Dict[st
     competitors = channel.get("competitors", [])
     pull_count = channel.get("pull_count", 10)
     language = channel.get("language", "Turkish")
-    dna = channel.get("dna", "Documentary")
+    # DNA: check dedicated field, fall back to master_prompt or default_category
+    dna = channel.get("dna") or channel.get("master_prompt") or channel.get("default_category") or "Documentary"
 
     existing_titles = {t["original_title"] for t in data["title_pool"]}
     used_titles = set(data.get("used_titles", []))
@@ -201,17 +214,36 @@ def scan_channel(channel_id: str, channel_slug: Optional[str] = None) -> Dict[st
             new_entries.append(entry)
 
     data["title_pool"].extend(new_entries)
-    if len(data["title_pool"]) > 500:
-        data["title_pool"] = sorted(
-            data["title_pool"], key=lambda x: x.get("scanned_at", 0), reverse=True
-        )[:500]
+    # Sort by viral score (strongest first), trim to 500
+    data["title_pool"] = sorted(
+        data["title_pool"], key=lambda x: x.get("viral_score", 0), reverse=True
+    )[:500]
     _save_data(data, channel_slug)
     return {"added": len(new_entries), "total_pool": len(data["title_pool"])}
 
 
-def get_title_pool(channel_slug: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Return the title pool, optionally scoped to a channel."""
-    return _load_data(channel_slug).get("title_pool", [])
+def mark_title_used(title_id: str, channel_slug: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Mark a title as used — moves it to used_titles and sets status."""
+    data = _load_data(channel_slug)
+    entry = next((t for t in data["title_pool"] if t["id"] == title_id), None)
+    if entry:
+        entry["status"] = "used"
+        entry["used_at"] = time.time()
+        # Add to used_titles set for dedup
+        used = data.get("used_titles", [])
+        if entry["original_title"] not in used:
+            used.append(entry["original_title"])
+        data["used_titles"] = used
+        _save_data(data, channel_slug)
+    return entry
+
+
+def get_title_pool(channel_slug: Optional[str] = None, min_score: float = 0) -> List[Dict[str, Any]]:
+    """Return the title pool sorted by viral score, optionally filtered by min score."""
+    pool = _load_data(channel_slug).get("title_pool", [])
+    if min_score > 0:
+        pool = [t for t in pool if t.get("viral_score", 0) >= min_score]
+    return sorted(pool, key=lambda x: x.get("viral_score", 0), reverse=True)
 
 
 def get_heatmap_data(channel_slug: str = "") -> dict:
@@ -293,8 +325,11 @@ class CompetitorIntelEngine:
     def scan_channel(self, channel_id: str, channel_slug: Optional[str] = None) -> Dict[str, Any]:
         return scan_channel(channel_id, channel_slug)
 
-    def get_title_pool(self, channel_slug: Optional[str] = None) -> List[Dict[str, Any]]:
-        return get_title_pool(channel_slug)
+    def mark_title_used(self, title_id: str, channel_slug: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        return mark_title_used(title_id, channel_slug)
+
+    def get_title_pool(self, channel_slug: Optional[str] = None, min_score: float = 0) -> List[Dict[str, Any]]:
+        return get_title_pool(channel_slug, min_score)
 
 
 # Singleton

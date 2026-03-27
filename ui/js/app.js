@@ -154,6 +154,7 @@ function app() {
     agNewCompetitorId: '',
     agNewCompetitorName: '',
     soundEnabled: localStorage.getItem('ytrobot-sound') !== 'false',
+    darkMode: true,
     // ── Video Preview ──
     videoPreviewOpen: false,
     videoPreviewUrl: '',
@@ -196,6 +197,28 @@ function app() {
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
     setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
+
+    initTheme() {
+        const saved = localStorage.getItem('ytrobot_theme');
+        this.darkMode = saved !== 'light';
+        this.applyTheme();
+    },
+
+    toggleTheme() {
+        this.darkMode = !this.darkMode;
+        localStorage.setItem('ytrobot_theme', this.darkMode ? 'dark' : 'light');
+        this.applyTheme();
+    },
+
+    applyTheme() {
+        if (this.darkMode) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+        }
+    },
 
     // Wizard Navigation
     nextStep() {
@@ -631,6 +654,7 @@ function app() {
 
     async init() {
       // 1. Register Global Listeners First (Immune to API failures)
+      this.initTheme();
       this.initDragDrop();
       this.initKeyboardShortcuts();
       window.addEventListener('keydown', (e) => {

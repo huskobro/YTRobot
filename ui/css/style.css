@@ -224,3 +224,60 @@
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 .tooltip-wrapper:hover .tooltip-content { visibility: visible; opacity: 1; }
+
+/* ── Light Theme Overrides ── */
+html.light body {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+}
+html.light .bg-gray-900, html.light .bg-\[#0a0a0f\] {
+    background: #ffffff !important;
+}
+html.light .bg-gray-800 {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+html.light .bg-gray-950, html.light .bg-slate-950 {
+    background: #f1f5f9 !important;
+}
+html.light .text-white {
+    color: #1e293b !important;
+}
+html.light .text-slate-400, html.light .text-slate-500 {
+    color: #64748b !important;
+}
+html.light .text-slate-300 {
+    color: #475569 !important;
+}
+html.light .text-slate-600 {
+    color: #94a3b8 !important;
+}
+html.light .border-gray-700 {
+    border-color: #e2e8f0 !important;
+}
+html.light .border-gray-800 {
+    border-color: #f1f5f9 !important;
+}
+html.light input, html.light select, html.light textarea {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #1e293b !important;
+}
+html.light .bg-slate-700 {
+    background: #e2e8f0 !important;
+}
+html.light .hover\:bg-slate-600:hover {
+    background: #cbd5e1 !important;
+}
+html.light .bg-slate-900 {
+    background: #ffffff !important;
+}
+html.light .bg-slate-800 {
+    background: #f8fafc !important;
+}
+html.light .border-slate-800 {
+    border-color: #e2e8f0 !important;
+}
+html.light .border-slate-700 {
+    border-color: #e2e8f0 !important;
+}

@@ -3710,6 +3710,125 @@
             </div>
           </div>
 
+          <!-- Telegram Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Telegram Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Telegram bot ile render bildirimleri al</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.TELEGRAM_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.TELEGRAM_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bot Token</label>
+                <input x-model="settings.TELEGRAM_BOT_TOKEN" type="password"
+                  placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" />
+                <p class="text-[9px] text-slate-600 mt-1">@BotFather'dan alabilirsiniz</p>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Chat ID</label>
+                <input x-model="settings.TELEGRAM_CHAT_ID" type="text"
+                  placeholder="-1001234567890 veya kişisel chat ID"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" />
+              </div>
+              <button @click="testNotifChannel('telegram')"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test Telegram
+              </button>
+            </div>
+          </div>
+
+          <!-- Email Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">E-posta Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Render tamamlandığında e-posta al</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.EMAIL_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.EMAIL_ENABLED">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Host</label>
+                  <input x-model="settings.EMAIL_SMTP_HOST" type="text" placeholder="smtp.gmail.com"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Port</label>
+                  <input x-model="settings.EMAIL_SMTP_PORT" type="number" placeholder="587"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Kullanıcı</label>
+                <input x-model="settings.EMAIL_SMTP_USER" type="email" placeholder="you@gmail.com"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">SMTP Şifre</label>
+                <input x-model="settings.EMAIL_SMTP_PASSWORD" type="password" placeholder="App password"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+                <p class="text-[9px] text-slate-600 mt-1">Gmail: Uygulama Şifresi oluşturun (2FA aktifken)</p>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Alıcı(lar)</label>
+                <input x-model="settings.EMAIL_TO" type="text" placeholder="user@example.com, team@company.com"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500" />
+              </div>
+              <button @click="testNotifChannel('email')"
+                class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test E-posta
+              </button>
+            </div>
+          </div>
+
+          <!-- WhatsApp Notifications -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">WhatsApp Bildirimleri</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">WhatsApp Business API / Twilio ile bildirim</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="settings.WHATSAPP_ENABLED" class="sr-only peer" @change="triggerAutoSave()">
+                <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+              </label>
+            </div>
+            <div class="space-y-3" x-show="settings.WHATSAPP_ENABLED">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">API URL</label>
+                <input x-model="settings.WHATSAPP_API_URL" type="text"
+                  placeholder="https://api.twilio.com/2010-04-01/..."
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">API Token</label>
+                <input x-model="settings.WHATSAPP_API_TOKEN" type="password"
+                  placeholder="Bearer token"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Alıcı Numara</label>
+                <input x-model="settings.WHATSAPP_TO" type="text"
+                  placeholder="+905551234567"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+              </div>
+              <button @click="testNotifChannel('whatsapp')"
+                class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold transition-all">
+                Test WhatsApp
+              </button>
+            </div>
+          </div>
+
           <!-- YouTube OAuth Status -->
           <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
             <div class="flex items-center justify-between mb-3">

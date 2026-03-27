@@ -206,6 +206,26 @@ class Settings(BaseSettings):
     webhook_mention: str = ""          # e.g. "@channel" or Discord user ID
     webhook_secret: str = ""           # HMAC secret for webhook signature verification
 
+    # Telegram Notifications
+    telegram_enabled: bool = False
+    telegram_bot_token: str = ""       # Bot token from @BotFather
+    telegram_chat_id: str = ""         # Chat/group/channel ID
+
+    # Email Notifications
+    email_enabled: bool = False
+    email_smtp_host: str = "smtp.gmail.com"
+    email_smtp_port: int = 587
+    email_smtp_user: str = ""
+    email_smtp_password: str = ""
+    email_from: str = ""
+    email_to: str = ""                 # Comma-separated recipient list
+
+    # WhatsApp Notifications (via WhatsApp Business API / Twilio)
+    whatsapp_enabled: bool = False
+    whatsapp_api_url: str = ""         # Twilio or WhatsApp Business API URL
+    whatsapp_api_token: str = ""
+    whatsapp_to: str = ""              # Recipient phone number (e.g. +905551234567)
+
     # Social Media Metadata Tool
     social_meta_enabled_yt_video: bool = False
     social_meta_enabled_bulletin: bool = False

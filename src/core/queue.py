@@ -169,28 +169,26 @@ class QueueManager:
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 
-                    # Webhook notification
+                    # Notifications (webhook + telegram + email + whatsapp)
                     try:
                         from config import settings
-                        from src.api.routes.webhook import dispatch_webhook
-                        if getattr(settings, "webhook_enabled", False) and getattr(settings, "webhook_url", ""):
-                            if getattr(settings, "webhook_on_complete", True) and job.status == "completed":
-                                dispatch_webhook(
-                                    settings.webhook_url,
-                                    {"status": job.status, "module": job.type,
-                                     "session_id": job.id,
-                                     "duration": job.finished_at - (job.started_at or job.created_at)},
-                                    mention=getattr(settings, "webhook_mention", ""),
-                                )
-                            elif getattr(settings, "webhook_on_failure", True) and job.status == "failed":
-                                dispatch_webhook(
-                                    settings.webhook_url,
-                                    {"status": job.status, "module": job.type,
-                                     "session_id": job.id, "error": job.error or ""},
-                                    mention=getattr(settings, "webhook_mention", ""),
-                                )
+                        from src.api.routes.webhook import dispatch_all_notifications
+                        should_notify = (
+                            (getattr(settings, "webhook_on_complete", True) and job.status == "completed")
+                            or (getattr(settings, "webhook_on_failure", True) and job.status == "failed")
+                        )
+                        if should_notify:
+                            payload = {"status": job.status, "module": job.type, "session_id": job.id}
+                            if job.status == "completed":
+                                payload["duration"] = job.finished_at - (job.started_at or job.created_at)
+                            else:
+                                payload["error"] = job.error or ""
+                            results = dispatch_all_notifications(
+                                payload, mention=getattr(settings, "webhook_mention", ""))
+                            if results:
+                                logger.info(f"Notifications sent: {results}")
                     except Exception as wh_err:
-                        logger.warning(f"Webhook dispatch error: {wh_err}")
+                        logger.warning(f"Notification dispatch error: {wh_err}")
 
                 except asyncio.TimeoutError:
                     job.status = JobStatus.FAILED

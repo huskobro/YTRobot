@@ -2092,6 +2092,23 @@ function app() {
       }
     },
 
+    async testNotifChannel(channel) {
+      try {
+        const data = await this.apiFetch('/api/webhook/test-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel }),
+        });
+        const label = {telegram: 'Telegram', email: 'E-posta', whatsapp: 'WhatsApp'}[channel] || channel;
+        this.showToast && this.showToast(
+          data.ok ? `${label} bildirimi gönderildi!` : `${label} hatası — ayarları kontrol edin`,
+          data.ok ? 'success' : 'error'
+        );
+      } catch(e) {
+        this.showToast && this.showToast(`Bildirim testi hatası: ${e.message}`, 'error');
+      }
+    },
+
     async sessionAction(action, sid, e) {
       e.stopPropagation();
       try {

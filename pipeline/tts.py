@@ -12,7 +12,6 @@ def _load_provider(provider_name: str | None = None) -> BaseTTSProvider:
         from providers.tts.elevenlabs import ElevenLabsTTSProvider
         return ElevenLabsTTSProvider()
     elif name == "openai":
-        from providers.tts.openai_tts import OpenAITITTSProvider
         from providers.tts.openai_tts import OpenAITTSProvider
         return OpenAITTSProvider()
     elif name == "speshaudio":

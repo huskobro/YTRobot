@@ -92,7 +92,8 @@ function app() {
     wizardCaptions: 'karaoke',
     wizardTone: 'balanced',
     wizardStyle: 'dynamic',
-    _sse: null, _timer: null,
+    _sse: null, _sseConnecting: false, _timer: null,
+    webhookTesting: false,
     // Bulletin presets
     bulletinPresets: [],
     bulletinPresetName: '',
@@ -196,7 +197,10 @@ function app() {
     ],
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
-    setLang(l) { this.lang = l; localStorage.setItem('ytrobot-lang', l); },
+    safeSave(key, value) {
+      try { localStorage.setItem(key, value); } catch(e) { console.warn('localStorage full:', e); }
+    },
+    setLang(l) { this.lang = l; this.safeSave('ytrobot-lang', l); },
 
     initTheme() {
         const saved = localStorage.getItem('ytrobot_theme');
@@ -206,7 +210,7 @@ function app() {
 
     toggleTheme() {
         this.darkMode = !this.darkMode;
-        localStorage.setItem('ytrobot_theme', this.darkMode ? 'dark' : 'light');
+        this.safeSave('ytrobot_theme', this.darkMode ? 'dark' : 'light');
         this.applyTheme();
     },
 
@@ -351,10 +355,13 @@ function app() {
     // ── Settings Search ──
     async searchSettings() {
       if (!this.settingsSearch) { this.settingsSearchResults = []; return; }
-      try {
-        const resp = await fetch(`/api/settings/search?q=${encodeURIComponent(this.settingsSearch)}`);
-        if (resp.ok) { const d = await resp.json(); this.settingsSearchResults = d.results || []; }
-      } catch(e) { console.warn('[searchSettings]', e); }
+      clearTimeout(this._searchTimeout);
+      this._searchTimeout = setTimeout(async () => {
+        try {
+          const resp = await fetch(`/api/settings/search?q=${encodeURIComponent(this.settingsSearch)}`);
+          if (resp.ok) { const d = await resp.json(); this.settingsSearchResults = d.results || []; }
+        } catch(e) { console.warn('[searchSettings]', e); }
+      }, 300);
     },
 
     // ── Scheduler ──
@@ -428,7 +435,7 @@ function app() {
     // ── Sound UX Engine (Generative Web Audio) ──
     toggleSound() {
       this.soundEnabled = !this.soundEnabled;
-      localStorage.setItem('ytrobot-sound', this.soundEnabled ? 'true' : 'false');
+      this.safeSave('ytrobot-sound', this.soundEnabled ? 'true' : 'false');
     },
     async playSound(type) {
       if (!this.soundEnabled) return;
@@ -1005,15 +1012,18 @@ function app() {
       this.logLines = [];
       this.view = 'session';
       if (this._sse) { this._sse.close(); this._sse = null; }
+      if (this._sseConnecting) return;
+      this._sseConnecting = true;
       const es = new EventSource(`/api/sessions/${session.id}/logs`);
       this._sse = es;
+      this._sseConnecting = false;
       es.onmessage = (e) => {
         const line = JSON.parse(e.data);
         if (line === '__DONE__') { es.close(); this._sse = null; this.loadSessions(); return; }
         this.logLines.push(line);
         this.$nextTick(() => { const el = document.getElementById('log-container'); if (el) el.scrollTop = el.scrollHeight; });
       };
-      es.onerror = () => { es.close(); this._sse = null; };
+      es.onerror = () => { es.close(); this._sse = null; this._sseConnecting = false; };
     },
 
     closeSession() {
@@ -1351,7 +1361,16 @@ function app() {
       if (!this.currentSession?.metadata) return;
       const m = this.currentSession.metadata;
       const text = `Title: ${m.title}\n\nDescription:\n${m.description}\n\nTags: ${(m.tags||[]).join(', ')}`;
-      await navigator.clipboard.writeText(text);
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
       this.metaCopied = true; setTimeout(() => this.metaCopied = false, 2000);
     },
 
@@ -1411,7 +1430,7 @@ function app() {
       }
     },
 
-    copySocialMeta() {
+    async copySocialMeta() {
       if (!this.socialMetaResult) return;
       const r = this.socialMetaResult;
       let text = '';
@@ -1420,10 +1439,18 @@ function app() {
       if (r.tags && r.tags.length) text += `🏷️ ETİKETLER:\n${Array.isArray(r.tags) ? r.tags.join(', ') : r.tags}\n\n`;
       if (r.source) text += `📰 KAYNAK: ${r.source}\n`;
       if (r.link) text += `🔗 LİNK: ${r.link}\n`;
-      navigator.clipboard.writeText(text.trim()).then(() => {
-        this.socialMetaCopied = true;
-        setTimeout(() => this.socialMetaCopied = false, 2000);
-      });
+      try {
+        await navigator.clipboard.writeText(text.trim());
+      } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = text.trim();
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      this.socialMetaCopied = true;
+      setTimeout(() => this.socialMetaCopied = false, 2000);
     },
 
     computeSeoScore(result) {
@@ -1484,6 +1511,7 @@ function app() {
     async testWebhook() {
       const url = this.settings.WEBHOOK_URL;
       if (!url) { this.showToast && this.showToast(this.t('webhook_no_url') || 'Webhook URL not set', 'error'); return; }
+      this.webhookTesting = true;
       try {
         const data = await this.apiFetch('/api/webhook/test', {
           method: 'POST',
@@ -1493,6 +1521,8 @@ function app() {
         this.showToast && this.showToast(data.message || this.t('webhook_sent') || 'Webhook sent', 'success');
       } catch(e) {
         this.showToast && this.showToast((this.t('webhook_error') || 'Webhook error') + ': ' + e.message, 'error');
+      } finally {
+        this.webhookTesting = false;
       }
     },
 

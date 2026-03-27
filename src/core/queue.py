@@ -132,7 +132,14 @@ class QueueManager:
                     )
                     job.status = JobStatus.COMPLETED
                     logger.info(f"  [Queue] Job completed: {job.id}")
-                    
+
+                    # Notify WebSocket clients that job is done
+                    try:
+                        from src.core.progress import progress_manager
+                        await progress_manager.complete(job.id, "completed")
+                    except Exception as pm_err:
+                        logger.warning(f"  [Queue] progress_manager.complete error: {pm_err}")
+
                     # --- Faz 4.3 & 5: Social & Analytics ---
                     job.finished_at = time.time()
                     try:
@@ -192,6 +199,12 @@ class QueueManager:
                         _write_session(job.id, session)
                     except Exception as se:
                         logger.warning(f"  [Queue] Could not write timeout status for {job.id}: {se}")
+                    # Notify WebSocket clients of timeout failure
+                    try:
+                        from src.core.progress import progress_manager
+                        await progress_manager.complete(job.id, "failed", job.error)
+                    except Exception as pm_err:
+                        logger.warning(f"  [Queue] progress_manager.complete (timeout) error: {pm_err}")
 
                 except Exception as e:
                     job.status = JobStatus.FAILED
@@ -207,6 +220,12 @@ class QueueManager:
                         _write_session(job.id, session)
                     except Exception as se:
                         logger.warning(f"  [Queue] Could not write failure status for {job.id}: {se}")
+                    # Notify WebSocket clients of job failure
+                    try:
+                        from src.core.progress import progress_manager
+                        await progress_manager.complete(job.id, "failed", str(e))
+                    except Exception as pm_err:
+                        logger.warning(f"  [Queue] progress_manager.complete (error) error: {pm_err}")
 
                     # Log failure to analytics
                     try:

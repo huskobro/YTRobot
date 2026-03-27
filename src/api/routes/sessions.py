@@ -5,7 +5,8 @@ import threading
 import platform
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from src.api.models.schemas import RunReq
 from src.core.utils import (
     _read_session, _write_session, _all_sessions, _session_dir, PRESETS_DIR
@@ -13,9 +14,28 @@ from src.core.utils import (
 from src.core.process_registry import get_proc, kill_proc
 from src.core.pipeline_runner import _run, STEPS
 from src.core.queue import queue_manager
+from src.core.progress import progress_manager
 import asyncio
 
 router = APIRouter(prefix="/api", tags=["sessions"])
+
+@router.websocket("/ws/progress/{session_id}")
+async def ws_progress(websocket: WebSocket, session_id: str):
+    await progress_manager.connect(websocket, session_id)
+    try:
+        while True:
+            await websocket.receive_text()  # Keep alive
+    except WebSocketDisconnect:
+        progress_manager.disconnect(websocket, session_id)
+
+@router.websocket("/ws/progress")
+async def ws_progress_global(websocket: WebSocket):
+    await progress_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        progress_manager.disconnect(websocket)
 
 @router.get("/sessions")
 def get_sessions():
@@ -24,6 +44,19 @@ def get_sessions():
 @router.get("/sessions/{sid}")
 def get_session(sid: str):
     return _read_session(sid)
+
+@router.get("/sessions/{sid}/video")
+async def get_video(sid: str):
+    """Serve the final video file for preview."""
+    for filename in ["final_video.mp4", "final_output.mp4"]:
+        video_path = Path(f"sessions/{sid}/{filename}")
+        if video_path.exists():
+            return FileResponse(str(video_path), media_type="video/mp4", filename=filename)
+    for filename in ["final_video.mp4", "final_output.mp4"]:
+        video_path = Path(f"output/{sid}/{filename}")
+        if video_path.exists():
+            return FileResponse(str(video_path), media_type="video/mp4", filename=filename)
+    raise HTTPException(status_code=404, detail="Video not found")
 
 @router.post("/run")
 async def start_run(req: RunReq):
@@ -103,6 +136,7 @@ async def run_pipeline_task(sid: str, data: dict, job_type: str):
     if channel_prompt:
         preset_env = {**preset_env, "CHANNEL_MASTER_PROMPT": channel_prompt}
 
+    await progress_manager.update_progress(sid, "script", 0, "Pipeline başlatılıyor...")
     await asyncio.to_thread(_run, sid, topic, script_file, preset_env)
 
 @router.post("/sessions/{sid}/stop")

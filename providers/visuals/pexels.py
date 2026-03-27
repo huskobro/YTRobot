@@ -23,10 +23,13 @@ class PexelsVisualsProvider(BaseVisualsProvider):
         if not videos:
             raise ValueError(f"No Pexels videos found for query: {query!r}")
 
-        # Pick the highest-res HD file available
+        # Pick the highest-res HD file available, fall back to any file
         files = videos[0]["video_files"]
         files_hd = [f for f in files if f.get("quality") in ("hd", "sd")]
-        best = max(files_hd, key=lambda f: f.get("width", 0))
+        candidates = files_hd or files
+        if not candidates:
+            raise ValueError(f"No downloadable video files for query: {query!r}")
+        best = max(candidates, key=lambda f: f.get("width", 0))
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         video_resp = requests.get(best["link"], stream=True, timeout=60)

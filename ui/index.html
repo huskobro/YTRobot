@@ -19,7 +19,7 @@
 <div x-data="app()" x-init="init()" x-cloak class="flex h-screen relative">
 
   <!-- ── Command Palette ──────────────────────────────────────────────── -->
-  <div x-show="showCommandPalette" 
+  <div x-show="showCommandPalette"
        class="fixed inset-0 command-palette-overlay flex items-start justify-center pt-[15vh] px-4"
        x-transition:enter="transition ease-out duration-200"
        x-transition:enter-start="opacity-0"
@@ -27,10 +27,10 @@
        x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0"
+       @click.self="showCommandPalette = false"
        @keydown.window="handleCommandKey($event)">
     
-    <div @click.away="showCommandPalette = false"
-         class="command-palette-modal rounded-2xl overflow-hidden flex flex-col"
+    <div class="command-palette-modal rounded-2xl overflow-hidden flex flex-col"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 scale-95 -translate-y-8"
          x-transition:enter-end="opacity-100 scale-100 translate-y-0">

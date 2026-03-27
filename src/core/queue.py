@@ -165,7 +165,18 @@ class QueueManager:
                         platforms = []
                         if job.data.get("publish_youtube"): platforms.append("youtube")
                         if job.data.get("publish_instagram"): platforms.append("instagram")
-                        stats_manager.log_render(duration, job.status, platforms, None, module=job.type, session_id=job.id, channel_id=job.data.get("channel_id", "_default"))
+                        # Extract providers used for cost estimation
+                        providers_used = []
+                        try:
+                            from config import settings as _cfg
+                            preset_env = job.data.get("preset_env", {})
+                            tts_p = preset_env.get("TTS_PROVIDER", getattr(_cfg, "tts_provider", ""))
+                            vis_p = preset_env.get("VISUALS_PROVIDER", getattr(_cfg, "visuals_provider", ""))
+                            if tts_p: providers_used.append(tts_p)
+                            if vis_p: providers_used.append(vis_p)
+                        except Exception:
+                            pass
+                        stats_manager.log_render(duration, job.status, platforms, None, module=job.type, session_id=job.id, providers=providers_used, channel_id=job.data.get("channel_id", "_default"))
                     except Exception as ex:
                         logger.error(f"  [Queue] Post-process error: {ex}")
 

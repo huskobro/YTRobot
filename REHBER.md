@@ -1,6 +1,6 @@
 # YTRobot v2 — Kapsamlı Kullanım Rehberi
 
-> **Son Güncelleme:** 27 Mart 2026
+> **Son Güncelleme:** 27 Mart 2026 (v2 — Sidebar sadeleştirme, Settings birleştirme, Onboarding wizard)
 > Bu rehber YTRobot'un tüm özelliklerini, ayarlarını ve kullanım adımlarını kapsamlı şekilde anlatır.
 
 ---
@@ -17,24 +17,16 @@
 8. [Gallery (Galeri)](#8-gallery-galeri)
 9. [Kanal Yönetimi (Channels)](#9-kanal-yönetimi-channels)
 10. [YouTube Entegrasyonu](#10-youtube-entegrasyonu)
-11. [Zamanlayıcı (Scheduler)](#11-zamanlayıcı-scheduler)
-12. [İçerik Takvimi (Calendar)](#12-içerik-takvimi-calendar)
-13. [A/B Testi](#13-ab-testi)
-14. [Oynatma Listeleri (Playlists)](#14-oynatma-listeleri-playlists)
-15. [Video Şablonları (Templates)](#15-video-şablonları-templates)
-16. [Sosyal Medya Metadata](#16-sosyal-medya-metadata)
-17. [SEO Analizi](#17-seo-analizi)
-18. [Rakip Analizi (Competitor)](#18-rakip-analizi-competitor)
-19. [Analytics (Analiz Paneli)](#19-analytics-analiz-paneli)
-20. [YouTube Analytics](#20-youtube-analytics)
-21. [Bildirim Sistemi](#21-bildirim-sistemi)
-22. [Ayarlar (Settings)](#22-ayarlar-settings)
-23. [API Anahtarları](#23-api-anahtarları)
-24. [Güvenli Depolama (Secure Storage)](#24-güvenli-depolama-secure-storage)
-25. [Denetim Günlüğü (Audit Log)](#25-denetim-günlüğü-audit-log)
-26. [Tema ve Dil](#26-tema-ve-dil)
-27. [Teknik Mimari](#27-teknik-mimari)
-28. [Sorun Giderme (Troubleshooting)](#28-sorun-giderme-troubleshooting)
+11. [İçerik Planlama](#11-içerik-planlama)
+12. [Analytics (Analiz)](#12-analytics-analiz)
+13. [Bildirim Sistemi](#13-bildirim-sistemi)
+14. [Ayarlar (Settings)](#14-ayarlar-settings)
+15. [API Anahtarları](#15-api-anahtarları)
+16. [Tema ve Dil](#16-tema-ve-dil)
+17. [Teknik Mimari](#17-teknik-mimari)
+18. [Sorun Giderme (Troubleshooting)](#18-sorun-giderme-troubleshooting)
+
+> **Not:** Sidebar, 8 ana menü öğesi içerir. İçerik Planlama (Takvim, Playlist, Şablon, A/B Test, Zamanlama), Analytics (Pipeline, YouTube, Rakip) ve Ayarlar (TTS, Görseller, AI, Sistem, Güvenli Depolama, Sosyal Medya) kendi içinde alt sekmeler barındırır.
 
 ---
 
@@ -135,10 +127,26 @@ Sunucu **http://localhost:5005** adresinde açılır. Tarayıcıdan bu adresi zi
 
 ### İlk Açılışta Göreceğin Ekran
 
-- Sol tarafta **sidebar** navigasyon menüsü
-- Sağ tarafta **Dashboard** ana panel
-- Üstte **bildirim zili** ve **tema değiştirici**
-- Altta **dil seçici** (TR/EN)
+İlk açılışta (API key yapılandırılmamışsa) **Onboarding Sihirbazı** karşılar — 7 adımda dil, kanal, TTS, görseller ve video stilini seçersin.
+
+### Sidebar Yapısı (8 Menü Öğesi)
+
+```
+── Ana İşlemler ──
+  ✨ Yeni Video (CTA butonu)
+  📊 Dashboard
+  🖼️ Gallery
+── İçerik ──
+  📡 Kanallar
+  📅 İçerik Planlama → Takvim | Playlist | A/B Test | Şablon | Zamanlama
+── Analiz ──
+  📈 Analytics → Pipeline | YouTube | Rakip Analizi
+── Sistem ──
+  ⚙️ Ayarlar → TTS | Görseller | AI | Sistem | Güvenli Depolama | Sosyal Medya
+```
+
+### Cmd+K Komut Paleti
+Herhangi bir sayfada **Cmd+K** (veya Ctrl+K) ile hızlı arama/navigasyon yapabilirsin. ~41 komut: sayfa geçişleri, ayar alt sekmeleri, YouTube bağlantısı, tema değiştirme, dil değiştirme vb.
 
 ---
 
@@ -308,7 +316,7 @@ Ana Provider → B-Roll Manager (Pexels/Pixabay anahtar kelime araması) → Gri
 
 ## 6. Haber Bülteni (Bulletin)
 
-Sol menüden **"Bülten"** butonuna tıkla.
+**Yeni Video** → Modül olarak "Haber Bülteni" seç, veya Cmd+K ile "Bülten" ara.
 
 ### 3 Sekmesi Var:
 
@@ -350,7 +358,7 @@ Bülten videosunu oluştur:
 
 ## 7. Ürün İnceleme (Product Review)
 
-Sol menüden **"Ürün İnceleme"** butonuna tıkla.
+**Yeni Video** → Modül olarak "Ürün İnceleme" seç, veya Cmd+K ile "Ürün" ara.
 
 ### Kullanım Adımları
 
@@ -388,7 +396,7 @@ Sol menüden **"Ürün İnceleme"** butonuna tıkla.
 
 ## 8. Gallery (Galeri)
 
-Sol menüden **"Galeri"** (veya gallery ikonu) tıkla.
+Sidebar'dan **"Gallery"** tıkla veya Cmd+K → "galeri".
 
 ### Ne Gösterir?
 Tüm üretilmiş videoların listesi, kart görünümünde:
@@ -426,7 +434,7 @@ Bir videoya tıklayınca açılan detay sayfasında:
 
 ## 9. Kanal Yönetimi (Channels)
 
-Sol menüden **"Kanallar"** butonuna tıkla.
+Sidebar'dan **"Kanallar"** tıkla veya Cmd+K → "kanal".
 
 ### Kanal Nedir?
 Her kanal, farklı bir YouTube kanalını veya içerik profilini temsil eder. Her kanalın kendine özel ayarları olabilir.
@@ -457,9 +465,9 @@ Sağ üst köşede aktif kanalın adı/logosu görünür. Video ürettiğinde bu
 
 ### YouTube'a Bağlanma (OAuth)
 
-1. **Ayarlar → Sistem** sekmesine git
-2. **YouTube OAuth** kartını bul
-3. `YT_OAUTH_CLIENT_ID` ve `YT_OAUTH_CLIENT_SECRET` değerlerini gir
+1. **Ayarlar → Sosyal Medya** sekmesine git (veya Cmd+K → "youtube bağla")
+2. **YouTube Otonom** kartını bul
+3. `YT_OAUTH_CLIENT_ID` ve `YT_OAUTH_CLIENT_SECRET` değerlerini `.env` dosyasına gir
    - Bu değerleri [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials'tan alırsın
    - OAuth 2.0 Client ID oluştur (Web application tipi)
    - Redirect URI olarak `http://localhost:5005/api/youtube/callback` ekle
@@ -487,11 +495,17 @@ Video üretimi tamamlandıktan sonra:
 
 ---
 
-## 11. Zamanlayıcı (Scheduler)
+## 11. İçerik Planlama
 
-Videoları gelecek bir tarih ve saatte otomatik YouTube'a yükler.
+Sidebar'dan **"İçerik Planlama"** tıkla. 5 alt sekmesi var: **Takvim**, **Playlist**, **A/B Test**, **Şablon**, **Zamanlama**.
 
-### Nasıl Kullanılır?
+---
+
+### 11.1 Zamanlayıcı (Zamanlama Sekmesi)
+
+Videoları gelecek bir tarih ve saatte otomatik YouTube'a yükler. **Toplu zamanlama** ile birden fazla videoyu belirli aralıklarla (6h, 8h, 12h, 24h, 48h, 72h, haftalık) planlayabilirsin.
+
+#### Nasıl Kullanılır?
 
 1. Bir video üret (herhangi bir modülle)
 2. Video tamamlandıktan sonra **"Zamanla"** butonuna tıkla
@@ -519,9 +533,9 @@ Videoları gelecek bir tarih ve saatte otomatik YouTube'a yükler.
 
 ---
 
-## 12. İçerik Takvimi (Calendar)
+### 11.2 İçerik Takvimi (Takvim Sekmesi)
 
-Sol menüden **"Takvim"** butonuna tıkla.
+İçerik Planlama → **Takvim** sekmesi.
 
 ### Ne İşe Yarar?
 Video fikirlerini ve planlarını organize etmek için takvim görünümü sunar. Bu bir **planlama aracıdır** — direkt video üretmez, ama üretilmiş videoları takvim girişlerine bağlayabilirsin.
@@ -559,9 +573,9 @@ Video üretildikten sonra takvim girişine bağlayabilirsin:
 
 ---
 
-## 13. A/B Testi
+### 11.3 A/B Testi (A/B Test Sekmesi)
 
-Sol menüden **"A/B Testi"** butonuna tıkla.
+İçerik Planlama → **A/B Test** sekmesi.
 
 ### Ne İşe Yarar?
 Farklı video başlıklarını (veya thumbnail'leri) karşılaştırarak hangisinin daha iyi performans gösterdiğini ölçer.
@@ -614,9 +628,9 @@ Sonuç:
 
 ---
 
-## 14. Oynatma Listeleri (Playlists)
+### 11.4 Oynatma Listeleri (Playlist Sekmesi)
 
-Sol menüden **"Oynatma Listeleri"** butonuna tıkla.
+İçerik Planlama → **Playlist** sekmesi.
 
 ### Ne İşe Yarar?
 Ürettiğin videoları mantıksal gruplar halinde organize eder. YouTube playlist'leriyle senkronize edebilirsin.
@@ -661,9 +675,9 @@ Sol menüden **"Oynatma Listeleri"** butonuna tıkla.
 
 ---
 
-## 15. Video Şablonları (Templates)
+### 11.5 Video Şablonları (Şablon Sekmesi)
 
-Sol menüden **"Şablonlar"** butonuna tıkla.
+İçerik Planlama → **Şablon** sekmesi.
 
 ### Ne İşe Yarar?
 Sık kullandığın video ayar kombinasyonlarını şablon olarak kaydedip tekrar tekrar kullanabilirsin. Böylece her seferinde aynı ayarları tek tek yapmazsın.
@@ -716,14 +730,11 @@ Sık kullandığın video ayar kombinasyonlarını şablon olarak kaydedip tekra
 
 ---
 
-## 16. Sosyal Medya Metadata
+## ~~16. Sosyal Medya Metadata~~ → Ayarlar → Sosyal Medya Sekmesine Taşındı
 
-Sol menüden **"Sosyal Medya"** butonuna tıkla.
+Ayarlar → **Sosyal Medya** sekmesinde yer alır. Video tamamlandığında otomatik olarak YouTube başlığı, açıklaması, etiketleri ve hashtag'leri üretir.
 
-### Ne İşe Yarar?
-Video tamamlandığında otomatik olarak YouTube başlığı, açıklaması, etiketleri ve hashtag'leri üretir.
-
-### Ayarlar (Settings → AI & Script)
+### Ayarlar (Settings → Sosyal Medya)
 - **Etkin Modüller**: Normal Video, Bülten, Ürün İnceleme için ayrı ayrı aç/kapat
 - **Alanlar**: title, description, tags, source, link — hangilerinin üretileceğini seç
 - **Master Prompt**: AI'ya ek talimat ver (ör: "Başlıkları merak uyandırıcı yap")
@@ -740,7 +751,7 @@ Video tamamlandığında otomatik olarak YouTube başlığı, açıklaması, eti
 
 ---
 
-## 17. SEO Analizi
+## ~~17.~~ SEO Analizi (Session Detay Sayfasında)
 
 Video metadata'nızı otomatik olarak analiz eder ve puanlar.
 
@@ -781,9 +792,9 @@ Video metadata'nızı otomatik olarak analiz eder ve puanlar.
 
 ---
 
-## 18. Rakip Analizi (Competitor)
+## ~~18. Rakip Analizi~~ → Analytics → Rakip Sekmesine Taşındı
 
-Sol menüden **"Rakip Analizi"** butonuna tıkla.
+Sidebar'dan **Analytics** → **Rakip** sekmesi.
 
 ### Ne İşe Yarar?
 Rakip YouTube kanallarının başlıklarını analiz ederek viral potansiyeli yüksek başlık fikirleri üretir.
@@ -831,9 +842,9 @@ Rakiplerin ne zaman video yüklediğini görselleştirir:
 
 ---
 
-## 19. Analytics (Analiz Paneli)
+## 12. Analytics (Analiz)
 
-Sol menüden **"Analiz"** butonuna tıkla.
+Sidebar'dan **"Analytics"** tıkla. 3 alt sekmesi var: **Pipeline**, **YouTube**, **Rakip**.
 
 ### Dashboard İstatistikleri
 
@@ -864,9 +875,9 @@ Başarısız render'ların hata analizi:
 
 ---
 
-## 20. YouTube Analytics
+### 12.2 YouTube Analytics (YouTube Sekmesi)
 
-Sol menüden **"YouTube Analiz"** butonuna tıkla.
+Analytics → **YouTube** sekmesi.
 
 ### Gereksinim
 YouTube OAuth bağlantısı yapılmış olmalı (Bkz: [YouTube Entegrasyonu](#10-youtube-entegrasyonu)).
@@ -897,7 +908,7 @@ Belirli bir videonun:
 
 ---
 
-## 21. Bildirim Sistemi
+## 13. Bildirim Sistemi
 
 YTRobot 5 farklı bildirim kanalını destekler:
 
@@ -972,13 +983,13 @@ Bildirimler şu durumlarda gönderilir:
 - Zamanlanmış yükleme gerçekleştiğinde
 
 ### Test Etme
-Ayarlar → Sistem sekmesinde her kanal için **"Test"** butonu var. Tıklayarak test bildirimi gönderebilirsin.
+Ayarlar → Sosyal Medya sekmesinde veya Sistem sekmesinde her bildirim kanalı için **"Test"** butonu var. Tıklayarak test bildirimi gönderebilirsin.
 
 ---
 
-## 22. Ayarlar (Settings)
+## 14. Ayarlar (Settings)
 
-Sol menüden **"Ayarlar"** butonuna tıkla. 6 ana sekmesi var:
+Sidebar'dan **"Ayarlar"** tıkla. 6 ana sekmesi var: **TTS**, **Görseller**, **AI**, **Sistem**, **Güvenli Depolama**, **Sosyal Medya**.
 
 ### Sekme 1: Ses (TTS / Voice)
 
@@ -1059,13 +1070,16 @@ Bu sekmede ayrıca:
 - **Webhook/Bildirim** ayarları (Telegram, E-posta, WhatsApp)
 - **Bildirim test butonları**
 
-### Sekme 5: Denetim Günlüğü (Audit Log)
+### Sekme 5: Güvenli Depolama (Secure Storage)
 
-Bkz: [Denetim Günlüğü](#25-denetim-günlüğü-audit-log)
+Hassas bilgileri (API anahtarları, token'lar) Fernet şifreleme ile saklar.
+- **Yeni Key Ekle**: Key adı + değer gir → şifrelenerek kaydedilir
+- **Key Listesi**: Maskeli değerlerle listelenir (`sk-...xxxx`)
+- **Key Sil**: Onay ile güvenli silme
 
-### Sekme 6: Güvenli Depolama (Secure Storage)
+### Sekme 6: Sosyal Medya
 
-Bkz: [Güvenli Depolama](#24-güvenli-depolama-secure-storage)
+YouTube Otonom yayın, Reels/Shorts dağıtım, Meta Engine, modül bazlı auto-trigger ayarları ve paylaşım geçmişi. YouTube OAuth bağlantısı da buradan yapılır.
 
 ### Ayar Arama
 Tüm sekmeler üzerinde arama yapabilirsin:
@@ -1078,9 +1092,9 @@ Tüm sekmeler üzerinde arama yapabilirsin:
 
 ---
 
-## 23. API Anahtarları
+## 15. API Anahtarları
 
-Sol menüden **"API Anahtarları"** butonuna tıkla.
+Cmd+K → "API Keys" veya Ayarlar altından erişilebilir.
 
 ### Desteklenen Provider'lar
 
@@ -1114,54 +1128,7 @@ Her provider için **"Test"** butonu var:
 
 ---
 
-## 24. Güvenli Depolama (Secure Storage)
-
-Ayarlar → **"Güvenli Depolama"** sekmesine git.
-
-### Ne İşe Yarar?
-Hassas bilgileri (API anahtarları, token'lar) şifreli olarak saklar. `.env` dosyasına yazmak istemediğin verileri burada güvenle saklayabilirsin.
-
-### Kullanım
-
-| İşlem | Açıklama |
-|-------|----------|
-| **Yeni Key Ekle** | Key adı + değer gir → şifrelenerek kaydedilir |
-| **Key Listesi** | Saklanan tüm key'ler listelenir (değerler maskeli: `sk-...xxxx`) |
-| **Key Sil** | Onay dialogu ile güvenli silme |
-
-### Güvenlik
-- Veriler **Fernet şifreleme** ile korunur (AES-128-CBC)
-- Şifreleme anahtarı makineye özgü (PBKDF2 key derivation)
-- Dosya izinleri 0600 (sadece sahibi okuyabilir)
-- `data/secure_store.json` dosyasında saklanır
-
----
-
-## 25. Denetim Günlüğü (Audit Log)
-
-Ayarlar → **"Denetim Günlüğü"** sekmesine git.
-
-### Ne İşe Yarar?
-Sistemde yapılan tüm önemli işlemlerin kaydını tutar. Kim, ne zaman, ne yaptı?
-
-### Log Kategorileri
-
-| Kategori | Neler Kaydedilir |
-|----------|-----------------|
-| **settings** | Ayar değişiklikleri |
-| **render** | Video üretim başlatma/bitirme/hata |
-| **channel** | Kanal oluşturma/silme/güncelleme |
-| **auth** | YouTube OAuth bağlantı/koparma |
-| **security** | Güvenli depolama işlemleri, şifreleme |
-
-### Kullanım
-- **Filtre**: Kategori seçerek sadece o kategorideki logları göster
-- **Sayfalama**: Her sayfada 100 kayıt (ileri/geri butonları)
-- **Detay**: Her log'da tarih, kategori, aksiyon ve detay bilgisi
-
----
-
-## 26. Tema ve Dil
+## 16. Tema ve Dil
 
 ### Tema Değiştirme
 Sol sidebar'ın altında **ay/güneş ikonu**:
@@ -1178,7 +1145,7 @@ Sol sidebar'ın altında **EN/TR** butonları:
 
 ---
 
-## 27. Teknik Mimari
+## 17. Teknik Mimari
 
 ### Teknoloji Yığını
 
@@ -1229,7 +1196,7 @@ YTRobot/
 │
 ├── src/
 │   ├── api/
-│   │   ├── routes/           # API endpoint'leri (20 modül)
+│   │   ├── routes/           # API endpoint'leri (21 modül)
 │   │   └── models/
 │   │       └── schemas.py    # Pydantic request/response modelleri
 │   └── core/                 # Çekirdek modüller
@@ -1300,7 +1267,7 @@ YTRobot/
 
 ---
 
-## 28. Sorun Giderme (Troubleshooting)
+## 18. Sorun Giderme (Troubleshooting)
 
 ### Sık Karşılaşılan Sorunlar
 

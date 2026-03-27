@@ -34,7 +34,12 @@ function app() {
     presets: [], presetName: '', presetSaved: false, selectedPreset: '',
     filter: 'all',
     dashboardModuleFilter: 'all',
+    contentPlanningTab: 'calendar',
+    dashboardChannelFilter: 'all',
+    analyticsTab: 'pipeline',
+    wizardStepOrder: [],
     settingsModule: 'tts',
+    categoryPromptOpen: '',
     // Social meta state
     socialMetaLoading: false, socialMetaError: '', socialMetaResult: null, socialMetaCopied: false,
     bulletinVoicesList: [], bulletinVoicesLoading: false, bulletinVoicesFetchError: '',
@@ -59,6 +64,7 @@ function app() {
     bulletinCategoryOutputs: {},
     _bulletinPoll: null,
     // Product Review state
+    prWizardStep: 1,
     prMode: 'auto',
     prAutoOpen: true,
     prManualOpen: false,
@@ -87,6 +93,12 @@ function app() {
     wizardPlatform: 'youtube_16_9',
     wizardSubtitleStyle: 'hype',
     wizardAdvancedOpen: false,
+    wizardPlaylistId: '',
+    wizardScheduleAt: '',
+    wizardNewPlaylistOpen: false,
+    wizardNewPlaylistName: '',
+    wizardNewPlaylistDesc: '',
+    ytPlaylists: [],
     // Legacy wizard options (used by Bulletin & Product Review modules)
     wizardMood: 'informative',
     wizardCaptions: 'karaoke',
@@ -159,17 +171,34 @@ function app() {
     // ── Video Preview ──
     videoPreviewOpen: false,
     videoPreviewUrl: '',
+    wizardConfigOpen: false,
+    wizardConfigSteps: [],
+    wizardConfigDragIdx: -1,
+    wizardConfigDragOverIdx: -1,
     // ── Video Gallery ──
     galleryVideos: [],
     gallerySearch: '',
     galleryFilter: '',
+    galleryModuleFilter: '',
+    galleryChannelFilter: '',
+    galleryPlatformFilter: '',
+    galleryAvailableFilters: { modules: [], channels: [], platforms: [] },
+    galleryTotal: 0,
     galleryOffset: 0,
     galleryHasMore: false,
+    galleryBulkMode: false,
+    galleryBulkSelected: [],
     // ── Settings Search ──
     settingsSearch: '',
     settingsSearchResults: [],
     // ── Scheduler ──
     scheduledVideos: [],
+    schedulableVideos: [],
+    bulkScheduleChannel: '',
+    bulkScheduleInterval: '24',
+    bulkScheduleStart: '',
+    bulkScheduleSelected: [],
+    bulkScheduleSelectedAll: false,
     // ── A/B Testing ──
     abTests: [],
     abTestModalOpen: false,
@@ -180,12 +209,18 @@ function app() {
     calendarModalOpen: false,
     calendarEditId: null,
     calendarForm: { title: '', topic: '', planned_date: '', status: 'idea', notes: '', channel_id: '_default' },
+    calendarScheduleMode: false,
+    calendarScheduleVideoId: '',
+    calendarScheduleTime: '09:00',
     // ── Playlists ──
     playlists: [],
     selectedPlaylist: null,
     playlistModalOpen: false,
     playlistForm: { name: '', description: '', channel_id: '_default' },
     playlistAddVideoId: '',
+    playlistBulkOpen: false,
+    playlistBulkSelected: [],
+    playlistAiLoading: false,
     // ── Templates ──
     templates: [],
     templateModalOpen: false,
@@ -231,16 +266,79 @@ function app() {
     wizardMaxSteps: 3,
     // ── Onboarding ──
     onboardingStep: 1,
+    onboardingMode: 'user',       // 'user' = channel onboarding, 'admin' = global defaults wizard
+    onboardingChannelId: '',      // channel ID for pre-fill/save (empty = new channel)
     onboardingAudioPlaying: '',
     _onboardingAudio: null,
+    ttsPreviewLoading: false,
+    ttsPreviewPlaying: false,
     onboardingData: {
+      // Step 2: Channel
       channelName: '', channelLang: 'tr',
       colorPrimary: '#6366f1', colorSecondary: '#ffffff',
+      // Step 3-4: TTS Provider & Voice
       ttsProvider: 'edge', ttsApiKey: '', ttsKeyStatus: '',
       selectedVoice: 'tr-TR-AhmetNeural', ttsSpeed: 1.0,
+      // Step 5: Visual Provider
       visualProvider: 'pexels', visualApiKey: '',
+      // Step 6: Video Style basics
       resolution: '1920x1080', subtitleAnim: 'hype',
       videoEffect: 'none', subtitleFont: 'bebas', composer: 'remotion',
+      // Step 7: TTS Advanced
+      ttsRemoveApostrophes: true, ttsTrimSilence: false,
+      ttsEnhanceWithLlm: false, ttsConcurrentWorkers: 1,
+      // SpeshAudio params
+      speshLanguage: '', speshStability: 0.3, speshSimilarity: 0.5, speshStyle: 0.75,
+      speshVoiceId: '',
+      // ElevenLabs params
+      elevenlabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
+      // OpenAI TTS params
+      openaiTtsVoice: 'onyx',
+      // DubVoice params
+      dubvoiceVoiceId: '',
+      // Qwen3 advanced
+      qwen3ModelId: 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice',
+      qwen3ModelType: 'custom', qwen3VoiceInstruct: '', qwen3RefAudio: '', qwen3Device: 'auto',
+      // Step 8: Subtitle Details & Camera
+      subtitleSize: 68, subtitleColor: '#ffffff', subtitleBg: 'none',
+      subtitleStroke: 2, karaokeEnabled: true, karaokeColor: '#FFD700',
+      transitionDuration: 10, kenBurnsZoom: 0.08, kenBurnsDirection: 'center',
+      // Step 9: Script/AI & System
+      targetAudience: '', scriptHumanize: false,
+      videoFps: 30, gpuEncoding: 'auto', subtitleProvider: 'ffmpeg', pycapsStyle: 'hype',
+      remotionConcurrency: 4,
+      // Step 10: API Keys
+      openaiApiKey: '', anthropicApiKey: '', kieaiApiKey: '', geminiApiKey: '',
+      youtubeApiKey: '', pixabayApiKey: '',
+      // Step 11: YouTube & Publishing
+      ytOauthClientId: '', ytOauthClientSecret: '',
+      autopublishYoutube: false, ytPrivacyStatus: 'private', ytCategoryId: '22',
+      autopublishReels: false, shareOnInstagram: false, shareOnTiktok: false,
+      // Step 12: Notifications
+      webhookEnabled: false, webhookUrl: '', webhookOnComplete: true, webhookOnFailure: true,
+      webhookMention: '', webhookSecret: '',
+      telegramEnabled: false, telegramBotToken: '', telegramChatId: '',
+      emailEnabled: false, emailSmtpHost: 'smtp.gmail.com', emailSmtpPort: 587,
+      emailSmtpUser: '', emailSmtpPassword: '', emailFrom: '', emailTo: '',
+      whatsappEnabled: false, whatsappApiUrl: '', whatsappApiToken: '', whatsappTo: '',
+      // Step 13: Social Meta
+      socialMetaEnabledYt: false, socialMetaEnabledBulletin: false, socialMetaEnabledPr: false,
+      socialMetaFields: 'title,description,tags', socialMetaMasterPrompt: '', socialMetaLanguage: '',
+      // Step 14: Module TTS Overrides
+      ytTtsProvider: '', ytTtsSpeed: 0.0, ytTtsVoiceId: '',
+      bulletinTtsProvider: '', bulletinTtsSpeed: 0.0, bulletinTtsVoiceId: '',
+      prTtsProvider: '', prTtsSpeed: 0.0, prTtsVoiceId: '',
+      // Step 15: Bulletin & PR Module Settings
+      bulletinNetworkName: 'YTRobot Haber', bulletinStyle: 'breaking',
+      bulletinFormat: '16:9', bulletinFps: 60, bulletinMaxItems: 3,
+      bulletinDefaultLanguage: '',
+      prStyle: 'modern', prFormat: '16:9', prFps: 60,
+      prChannelName: 'YTRobot İnceleme', prCurrency: 'TL', prCtaText: 'Linke tıkla!',
+      prAutoGenerateTts: true, prMasterPrompt: '', prAiLanguage: '',
+      // Aspect ratio for visuals
+      zimageAspectRatio: '16:9',
+      // CORS & Debug
+      corsOrigins: '*', debugMode: false,
     },
     onboardingEdgeVoices: [
       { id: 'tr-TR-AhmetNeural', name: 'Ahmet (TR)', gender: 'male', sample: '/samples/audio/edge_tr_ahmet.mp3' },
@@ -269,26 +367,46 @@ function app() {
     commandQuery: '',
     selectedCommandIndex: 0,
     commands: [
-      { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', action: function() { this.view = 'dashboard'; } },
-      { id: 'nav_new_run', title: 'New Video / Yeni Video Başlat', icon: '✨', action: function() { this.view = 'new-run'; this.mode='topic'; this.runError=''; } },
-      { id: 'nav_settings', title: 'Settings / Ayarlar', icon: '⚙️', action: function() { this.loadSettings(); this.view = 'settings'; } },
-      { id: 'nav_api_keys', title: 'API Keys / Anahtarlar', icon: '🔑', action: function() { this.loadSettings(); this.view = 'api-keys'; } },
-      { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', action: function() { this.view = 'bulletin'; this.bulletinTab = 'sources'; this.loadBulletinSources(); } },
-      { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', action: function() { this.view = 'product-review'; } },
-      { id: 'nav_social_meta', title: 'Social Media / Sosyal Medya', icon: '📱', action: function() { this.loadSettings(); this.view = 'social-meta'; this.loadSocialLog(); } },
-      { id: 'nav_analytics', title: 'Analytics / Analiz Paneli', icon: '📈', action: function() {
-  this.view = 'analytics';
-  this.loadAnalytics();
-  this.loadQueueStatus();
-  this.loadErrorDetails();
-} },
-      { id: 'nav_ab_testing', title: 'A/B Testing / A/B Test', icon: '🧪', action: function() { this.view = 'ab-testing'; this.loadAbTests(); } },
-      { id: 'nav_calendar', title: 'Calendar / Takvim', icon: '📅', action: function() { this.view = 'calendar'; this.loadCalendarEntries(); } },
-      { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', action: function() { this.view = 'playlists'; this.loadPlaylists(); } },
-      { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', action: function() { this.view = 'templates'; this.loadTemplates(); } },
-      { id: 'nav_yt_analytics', title: 'YouTube Analytics / YouTube Analitik', icon: '📊', action: function() { this.view = 'yt-analytics'; this.loadYtAnalytics(); } },
-      { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', action: function() { this.loadSessions(); } },
-      { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', action: function() { this.globalError = null; } }
+      // ── Video Üretimi ──
+      { id: 'nav_new_run', title: 'New Video / Yeni Video Başlat', icon: '✨', tag: 'video üretim oluştur create', category: 'create', action: function() { this.view = 'new-run'; this.mode='topic'; this.runError=''; } },
+      { id: 'nav_bulletin', title: 'News Bulletin / Haber Bülteni', icon: '📺', tag: 'haber news bülten video oluştur', category: 'create', action: function() { this.view = 'bulletin'; this.bulletinTab = 'sources'; this.loadBulletinSources(); } },
+      { id: 'nav_product_review', title: 'Product Review / Ürün İnceleme', icon: '🛒', tag: 'ürün inceleme affiliate review video', category: 'create', action: function() { this.view = 'product-review'; } },
+      // ── Ana Sayfalar ──
+      { id: 'nav_dashboard', title: 'Dashboard / Gözlem Paneli', icon: '📊', tag: 'ana sayfa istatistik özet home', category: 'navigate', action: function() { this.view = 'dashboard'; } },
+      { id: 'nav_gallery', title: 'Gallery / Galeri', icon: '🖼️', tag: 'galeri videolar listele izle indir', category: 'navigate', action: function() { this.view = 'gallery'; this.loadSessions(); } },
+      { id: 'nav_channels', title: 'Channels / Kanallar', icon: '📡', tag: 'kanal yönetim profil channel', category: 'navigate', action: function() { this.view = 'channels'; this.loadChannels(); } },
+      // ── İçerik Yönetimi ──
+      { id: 'nav_calendar', title: 'Content Calendar / İçerik Takvimi', icon: '📅', tag: 'takvim planlama tarih zamanlama schedule', category: 'content', action: function() { this.view = 'calendar'; this.loadCalendarEntries(); } },
+      { id: 'nav_playlists', title: 'Playlists / Playlistler', icon: '📋', tag: 'playlist oynatma listesi sıralama', category: 'content', action: function() { this.view = 'playlists'; this.loadPlaylists(); } },
+      { id: 'nav_templates', title: 'Templates / Şablonlar', icon: '📄', tag: 'şablon preset kayıtlı ayar template', category: 'content', action: function() { this.view = 'templates'; this.loadTemplates(); } },
+      { id: 'nav_ab_testing', title: 'A/B Testing / A/B Test', icon: '🧪', tag: 'test deney varyant başlık thumbnail', category: 'content', action: function() { this.view = 'ab-testing'; this.loadAbTests(); } },
+      // ── Analiz & İstihbarat ──
+      { id: 'nav_analytics', title: 'Pipeline Analytics / Pipeline Analizi', icon: '📈', tag: 'analitik istatistik performans kuyruk hata pipeline', category: 'analytics', action: function() { this.view = 'analytics'; this.analyticsTab = 'pipeline'; this.loadAnalytics(); this.loadQueueStatus(); this.loadErrorDetails(); } },
+      { id: 'nav_yt_analytics', title: 'YouTube Analytics / YouTube Analitik', icon: '📊', tag: 'youtube görüntülenme abone izlenme kanal analitik', category: 'analytics', action: function() { this.view = 'analytics'; this.analyticsTab = 'youtube'; } },
+      { id: 'nav_competitor', title: 'Competitor Analysis / Rakip Analizi', icon: '🎯', tag: 'rakip competitor tarama analiz trend', category: 'analytics', action: function() { this.view = 'analytics'; this.analyticsTab = 'competitor'; } },
+      // ── Ayarlar & Sistem ──
+      { id: 'nav_settings', title: 'Settings / Ayarlar', icon: '⚙️', tag: 'ayar yapılandırma config tts ses görsel yönetici admin', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; } },
+      { id: 'nav_settings_ai', title: 'AI Settings / AI & Yönetici Ayarları', icon: '🤖', tag: 'ai yapay zeka model prompt yönetici ayarları admin kategori master belgesel din', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'ai'; } },
+      { id: 'nav_settings_tts', title: 'TTS Settings / Ses Ayarları', icon: '🎙', tag: 'tts ses seslendirme voice provider edge elevenlabs', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'tts'; } },
+      { id: 'nav_settings_visuals', title: 'Visual Settings / Görsel Ayarları', icon: '🎨', tag: 'görsel visual pexels dalle zimage resim video', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'visuals'; } },
+      { id: 'nav_settings_social', title: 'Social Media / Sosyal Medya Yönetimi', icon: '📱', tag: 'sosyal medya meta youtube otonom paylaşım zamanlanmış reels shorts', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'social_meta'; } },
+      { id: 'nav_api_keys', title: 'API Keys / API Anahtarları', icon: '🔑', tag: 'api key anahtar openai elevenlabs pexels gemini oauth', category: 'settings', action: function() { this.loadSettings(); this.view = 'api-keys'; } },
+      { id: 'nav_secure', title: 'Secure Storage / Güvenli Depolama', icon: '🔐', tag: 'güvenli depolama şifre şifreleme fernet', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'secure'; } },
+      // ── İçerik Planlama ──
+      { id: 'nav_scheduler', title: 'Video Scheduler / Video Zamanlama', icon: '⏰', tag: 'zamanlama schedule yükleme toplu kuyruk', category: 'content', action: function() { this.view = 'content-planning'; this.contentPlanningTab = 'scheduler'; this.loadScheduledVideos(); } },
+      // ── Alt Ayarlar (Deep Links) ──
+      { id: 'nav_youtube_connect', title: 'YouTube Bağla / YouTube OAuth', icon: '🔴', tag: 'youtube bağla connect oauth google hesap kanal yetkilendirme auth token', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'social_meta'; } },
+      { id: 'nav_settings_system', title: 'System Settings / Sistem Ayarları', icon: '⚙️', tag: 'sistem system çözünürlük fps resolution output dizin', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'system'; } },
+      { id: 'nav_category_prompts', title: 'Category Prompts / Kategori Promptları', icon: '📝', tag: 'kategori prompt belgesel din ruhani tarih bilim motivasyon true crime karanlık psikoloji', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'ai'; } },
+      { id: 'nav_ai_prompts', title: 'AI Master Prompts / AI İşlev Promptları', icon: '🤖', tag: 'master prompt senaryo seo metadata bülten ürün inceleme thumbnail ai talimat', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'ai'; } },
+      { id: 'nav_notifications', title: 'Notifications / Bildirimler', icon: '🔔', tag: 'bildirim notification telegram email whatsapp', category: 'settings', action: function() { this.loadSettings(); this.view = 'settings'; this.settingsModule = 'system'; } },
+      // ── Hızlı Aksiyonlar ──
+      { id: 'action_refresh', title: 'Refresh Sessions / Oturumları Yenile', icon: '🔄', tag: 'yenile güncelle refresh', category: 'action', action: function() { this.loadSessions(); } },
+      { id: 'action_clear_logs', title: 'Clear Errors / Hataları Temizle', icon: '🧹', tag: 'temizle hata sıfırla clear', category: 'action', action: function() { this.globalError = null; } },
+      { id: 'action_toggle_theme', title: 'Toggle Theme / Tema Değiştir', icon: '🌓', tag: 'tema karanlık açık dark light mode', category: 'action', action: function() { this.toggleTheme(); } },
+      { id: 'action_toggle_lang', title: 'Switch Language / Dil Değiştir', icon: '🌐', tag: 'dil türkçe ingilizce language tr en', category: 'action', action: function() { this.setLang(this.lang === 'tr' ? 'en' : 'tr'); } },
+      { id: 'action_onboarding', title: 'Setup Wizard / Kurulum Sihirbazı', icon: '🧙', tag: 'kurulum sihirbaz onboarding wizard başlangıç', category: 'action', action: function() { this.loadWizardStepOrder(); this.view = 'onboarding'; this.onboardingStep = 1; } },
+      { id: 'action_yt_connect', title: 'YouTube Hesap Bağla', icon: '🔴', tag: 'youtube bağla oauth connect google api', category: 'action', action: function() { this.connectYouTube(); } },
     ],
 
     t(key) { return LANG[this.lang]?.[key] ?? LANG.en[key] ?? key; },
@@ -363,8 +481,47 @@ function app() {
       return labels[this.wizardSubtitleStyle] || 'Hype';
     },
 
+    async loadYtPlaylists() {
+      try {
+        const resp = await fetch('/api/youtube/playlists');
+        if (resp.ok) {
+          const data = await resp.json();
+          this.ytPlaylists = data.playlists || [];
+        }
+      } catch(e) { console.warn('[loadYtPlaylists]', e); }
+    },
+
+    async createWizardPlaylist() {
+      if (!this.wizardNewPlaylistName.trim()) return;
+      try {
+        const resp = await fetch('/api/playlists/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: this.wizardNewPlaylistName.trim(),
+            description: this.wizardNewPlaylistDesc.trim(),
+            channel_id: this.activeChannelId || '_default'
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          await this.loadPlaylists();
+          if (data.playlist?.id) this.wizardPlaylistId = data.playlist.id;
+          this.wizardNewPlaylistOpen = false;
+          this.wizardNewPlaylistName = '';
+          this.wizardNewPlaylistDesc = '';
+          this.showToast('Playlist oluşturuldu', 'success');
+        }
+      } catch(e) { console.warn('[createWizardPlaylist]', e); this.showToast('Playlist oluşturulamadı', 'error'); }
+    },
+
     // ── Command Palette Methods ──
     toggleCommandPalette() {
+      // Debounce guard — prevent rapid re-entry from duplicate keydown events
+      const now = Date.now();
+      if (this._cmdPaletteLastToggle && now - this._cmdPaletteLastToggle < 200) return;
+      this._cmdPaletteLastToggle = now;
+
       if (!this.showCommandPalette) {
         // Blur any active element to prevent focus conflicts
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -372,12 +529,12 @@ function app() {
         this.playSound('pop');
         this.commandQuery = '';
         this.selectedCommandIndex = 0;
-        // Aggrresive focus with multiple retries for browser stability
+        // Aggressive focus with multiple retries for browser stability
         setTimeout(() => {
           const inp = document.getElementById('command-input');
           if (inp) {
             inp.focus();
-            inp.select(); // Text select to allow quick overwrite
+            inp.select();
           }
         }, 50);
         setTimeout(() => document.getElementById('command-input')?.focus(), 150);
@@ -389,15 +546,15 @@ function app() {
     filteredCommands() {
       if (!this.commandQuery) return this.commands;
       const q = this.commandQuery.toLowerCase();
-      return this.commands.filter(c => 
-        c.title.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
+      return this.commands.filter(c =>
+        c.title.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || (c.tag && c.tag.toLowerCase().includes(q))
       );
     },
 
     executeCommand(cmd) {
       if (cmd && cmd.action) {
         this.playSound('click');
-        cmd.action();
+        cmd.action.call(this);
         this.showCommandPalette = false;
       }
     },
@@ -438,89 +595,670 @@ function app() {
       } catch { this.onboardingData.ttsKeyStatus = 'fail'; }
     },
 
+    getSubtitlePreviewStyle() {
+      const d = this.onboardingData;
+      const fontMap = {
+        bebas: '"Bebas Neue", sans-serif',
+        montserrat: 'Montserrat, sans-serif',
+        oswald: 'Oswald, sans-serif',
+        roboto: 'Roboto, sans-serif',
+        inter: 'Inter, sans-serif',
+        serif: 'Georgia, serif',
+        sans: 'sans-serif'
+      };
+      return {
+        fontFamily: fontMap[d.subtitleFont] || 'sans-serif',
+        fontSize: Math.min(d.subtitleSize || 68, 36) + 'px',
+        color: d.subtitleColor || '#ffffff',
+        textShadow: d.subtitleStroke > 0 ? '0 0 ' + (d.subtitleStroke * 2) + 'px rgba(0,0,0,0.8)' : 'none',
+        padding: d.subtitleBg === 'box' ? '4px 12px' : d.subtitleBg === 'pill' ? '4px 16px' : '2px 4px',
+        backgroundColor: d.subtitleBg === 'box' ? 'rgba(0,0,0,0.6)' : d.subtitleBg === 'pill' ? 'rgba(0,0,0,0.5)' : 'transparent',
+        borderRadius: d.subtitleBg === 'pill' ? '999px' : d.subtitleBg === 'box' ? '6px' : '0',
+        letterSpacing: d.subtitleFont === 'bebas' ? '1px' : '0',
+        textTransform: d.subtitleFont === 'bebas' ? 'uppercase' : 'none'
+      };
+    },
+
+    async playTtsPreview() {
+      const d = this.onboardingData;
+      const text = this.lang === 'tr' ? 'Merhaba, bu bir ses önizlemesidir.' : 'Hello, this is a voice preview sample.';
+      this.ttsPreviewLoading = true;
+      this.ttsPreviewPlaying = false;
+      try {
+        const resp = await fetch('/api/tts/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: d.ttsProvider, voice: d.selectedVoice, text, speed: d.ttsSpeed })
+        });
+        if (!resp.ok) throw new Error('TTS preview failed');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = this.$refs.ttsPreviewAudio;
+        if (audio) {
+          audio.src = url;
+          audio.onplay = () => { this.ttsPreviewPlaying = true; };
+          audio.onended = () => { this.ttsPreviewPlaying = false; URL.revokeObjectURL(url); };
+          audio.onerror = () => { this.ttsPreviewPlaying = false; };
+          await audio.play();
+        }
+      } catch (e) {
+        console.warn('TTS preview error:', e);
+        this.showToast(this.lang === 'tr' ? 'Ses önizlemesi oluşturulamadı' : 'Could not generate voice preview', 'error');
+      } finally {
+        this.ttsPreviewLoading = false;
+      }
+    },
+
     async completeOnboarding(nextView) {
-      // Save all settings to backend
+      // Save ALL settings to backend
       const d = this.onboardingData;
       const settingsPayload = {
+        // TTS core
         TTS_PROVIDER: d.ttsProvider,
         TTS_SPEED: String(d.ttsSpeed),
+        TTS_REMOVE_APOSTROPHES: String(d.ttsRemoveApostrophes),
+        TTS_TRIM_SILENCE: String(d.ttsTrimSilence),
+        TTS_ENHANCE_WITH_LLM: String(d.ttsEnhanceWithLlm),
+        TTS_CONCURRENT_WORKERS: String(d.ttsConcurrentWorkers),
+        // Visuals
         VISUALS_PROVIDER: d.visualProvider,
+        ZIMAGE_ASPECT_RATIO: d.zimageAspectRatio,
+        // Video output
         VIDEO_RESOLUTION: d.resolution,
+        VIDEO_FPS: String(d.videoFps),
+        GPU_ENCODING: d.gpuEncoding,
+        // Composer
         COMPOSER_PROVIDER: d.composer,
+        REMOTION_CONCURRENCY: String(d.remotionConcurrency),
+        // Subtitle/animation
         REMOTION_SUBTITLE_ANIMATION: d.subtitleAnim,
         REMOTION_VIDEO_EFFECT: d.videoEffect,
         REMOTION_SUBTITLE_FONT: d.subtitleFont,
+        REMOTION_SUBTITLE_SIZE: String(d.subtitleSize),
+        REMOTION_SUBTITLE_COLOR: d.subtitleColor,
+        REMOTION_SUBTITLE_BG: d.subtitleBg,
+        REMOTION_SUBTITLE_STROKE: String(d.subtitleStroke),
+        REMOTION_KARAOKE_ENABLED: String(d.karaokeEnabled),
+        REMOTION_KARAOKE_COLOR: d.karaokeColor,
+        REMOTION_TRANSITION_DURATION: String(d.transitionDuration),
+        REMOTION_KEN_BURNS_ZOOM: String(d.kenBurnsZoom),
+        REMOTION_KEN_BURNS_DIRECTION: d.kenBurnsDirection,
+        // Subtitle provider
+        SUBTITLE_PROVIDER: d.subtitleProvider,
+        PYCAPS_STYLE: d.pycapsStyle,
+        // Script/AI
+        TARGET_AUDIENCE: d.targetAudience,
+        SCRIPT_HUMANIZE_WITH_LLM: String(d.scriptHumanize),
+        // SpeshAudio params
+        SPESHAUDIO_LANGUAGE: d.speshLanguage,
+        SPESHAUDIO_VOICE_ID: d.speshVoiceId,
+        SPESHAUDIO_STABILITY: String(d.speshStability),
+        SPESHAUDIO_SIMILARITY_BOOST: String(d.speshSimilarity),
+        SPESHAUDIO_STYLE: String(d.speshStyle),
+        // ElevenLabs
+        ELEVENLABS_VOICE_ID: d.elevenlabsVoiceId,
+        // OpenAI TTS
+        OPENAI_TTS_VOICE: d.openaiTtsVoice,
+        // DubVoice
+        DUBVOICE_VOICE_ID: d.dubvoiceVoiceId,
+        // Qwen3 advanced
+        QWEN3_MODEL_ID: d.qwen3ModelId,
+        QWEN3_MODEL_TYPE: d.qwen3ModelType,
+        QWEN3_VOICE_INSTRUCT: d.qwen3VoiceInstruct,
+        QWEN3_REF_AUDIO: d.qwen3RefAudio,
+        QWEN3_DEVICE: d.qwen3Device,
+        // YouTube & Publishing
+        YT_OAUTH_CLIENT_ID: d.ytOauthClientId,
+        YT_OAUTH_CLIENT_SECRET: d.ytOauthClientSecret,
+        AUTOPUBLISH_YOUTUBE: String(d.autopublishYoutube),
+        YT_PRIVACY_STATUS: d.ytPrivacyStatus,
+        YT_CATEGORY_ID: d.ytCategoryId,
+        AUTOPUBLISH_REELS: String(d.autopublishReels),
+        SHARE_ON_INSTAGRAM: String(d.shareOnInstagram),
+        SHARE_ON_TIKTOK: String(d.shareOnTiktok),
+        // Notifications — Webhook
+        WEBHOOK_ENABLED: String(d.webhookEnabled),
+        WEBHOOK_URL: d.webhookUrl,
+        WEBHOOK_ON_COMPLETE: String(d.webhookOnComplete),
+        WEBHOOK_ON_FAILURE: String(d.webhookOnFailure),
+        WEBHOOK_MENTION: d.webhookMention,
+        WEBHOOK_SECRET: d.webhookSecret,
+        // Notifications — Telegram
+        TELEGRAM_ENABLED: String(d.telegramEnabled),
+        TELEGRAM_BOT_TOKEN: d.telegramBotToken,
+        TELEGRAM_CHAT_ID: d.telegramChatId,
+        // Notifications — Email
+        EMAIL_ENABLED: String(d.emailEnabled),
+        EMAIL_SMTP_HOST: d.emailSmtpHost,
+        EMAIL_SMTP_PORT: String(d.emailSmtpPort),
+        EMAIL_SMTP_USER: d.emailSmtpUser,
+        EMAIL_SMTP_PASSWORD: d.emailSmtpPassword,
+        EMAIL_FROM: d.emailFrom,
+        EMAIL_TO: d.emailTo,
+        // Notifications — WhatsApp
+        WHATSAPP_ENABLED: String(d.whatsappEnabled),
+        WHATSAPP_API_URL: d.whatsappApiUrl,
+        WHATSAPP_API_TOKEN: d.whatsappApiToken,
+        WHATSAPP_TO: d.whatsappTo,
+        // Social Meta
+        SOCIAL_META_ENABLED_YT_VIDEO: String(d.socialMetaEnabledYt),
+        SOCIAL_META_ENABLED_BULLETIN: String(d.socialMetaEnabledBulletin),
+        SOCIAL_META_ENABLED_PR: String(d.socialMetaEnabledPr),
+        SOCIAL_META_FIELDS: d.socialMetaFields,
+        SOCIAL_META_MASTER_PROMPT: d.socialMetaMasterPrompt,
+        SOCIAL_META_LANGUAGE: d.socialMetaLanguage,
+        // Module TTS overrides — YT
+        YT_TTS_PROVIDER: d.ytTtsProvider,
+        YT_TTS_SPEED: String(d.ytTtsSpeed),
+        YT_TTS_VOICE_ID: d.ytTtsVoiceId,
+        // Module TTS overrides — Bulletin
+        BULLETIN_TTS_PROVIDER: d.bulletinTtsProvider,
+        BULLETIN_TTS_SPEED: String(d.bulletinTtsSpeed),
+        BULLETIN_TTS_VOICE_ID: d.bulletinTtsVoiceId,
+        // Module TTS overrides — PR
+        PR_TTS_PROVIDER: d.prTtsProvider,
+        PR_TTS_SPEED: String(d.prTtsSpeed),
+        PR_TTS_VOICE_ID: d.prTtsVoiceId,
+        // Bulletin module
+        BULLETIN_NETWORK_NAME: d.bulletinNetworkName,
+        BULLETIN_STYLE: d.bulletinStyle,
+        BULLETIN_FORMAT: d.bulletinFormat,
+        BULLETIN_FPS: String(d.bulletinFps),
+        BULLETIN_DEFAULT_MAX_ITEMS: String(d.bulletinMaxItems),
+        BULLETIN_DEFAULT_LANGUAGE: d.bulletinDefaultLanguage,
+        // Product Review module
+        PR_STYLE: d.prStyle,
+        PR_FORMAT: d.prFormat,
+        PR_FPS: String(d.prFps),
+        PR_CHANNEL_NAME: d.prChannelName,
+        PR_CURRENCY: d.prCurrency,
+        PR_CTA_TEXT: d.prCtaText,
+        PR_AUTO_GENERATE_TTS: String(d.prAutoGenerateTts),
+        PR_MASTER_PROMPT: d.prMasterPrompt,
+        PR_AI_LANGUAGE: d.prAiLanguage,
+        // System
+        CORS_ORIGINS: d.corsOrigins,
+        DEBUG_MODE: String(d.debugMode),
       };
       // Set voice based on provider
       if (d.ttsProvider === 'edge') settingsPayload.EDGE_TTS_VOICE = d.selectedVoice;
       else if (d.ttsProvider === 'qwen3') settingsPayload.QWEN3_SPEAKER = d.selectedVoice;
-      // Set API keys if provided
+      // Set TTS API keys if provided
       if (d.ttsApiKey) {
         if (d.ttsProvider === 'elevenlabs') settingsPayload.ELEVENLABS_API_KEY = d.ttsApiKey;
         else if (d.ttsProvider === 'openai') settingsPayload.OPENAI_API_KEY = d.ttsApiKey;
         else if (d.ttsProvider === 'speshaudio') settingsPayload.SPESHAUDIO_API_KEY = d.ttsApiKey;
         else if (d.ttsProvider === 'dubvoice') settingsPayload.DUBVOICE_API_KEY = d.ttsApiKey;
       }
+      // Set visual provider API keys
       if (d.visualApiKey) {
         if (d.visualProvider === 'pexels') settingsPayload.PEXELS_API_KEY = d.visualApiKey;
         else if (d.visualProvider === 'zimage') settingsPayload.KIEAI_API_KEY = d.visualApiKey;
         else if (d.visualProvider === 'dalle') settingsPayload.OPENAI_API_KEY = d.visualApiKey;
       }
-      try {
-        await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(settingsPayload) });
-      } catch(e) { console.warn('Settings save error:', e); }
+      // General API keys (Step 10)
+      if (d.openaiApiKey) settingsPayload.OPENAI_API_KEY = d.openaiApiKey;
+      if (d.anthropicApiKey) settingsPayload.ANTHROPIC_API_KEY = d.anthropicApiKey;
+      if (d.kieaiApiKey) settingsPayload.KIEAI_API_KEY = d.kieaiApiKey;
+      if (d.geminiApiKey) settingsPayload.GEMINI_API_KEY = d.geminiApiKey;
+      if (d.youtubeApiKey) settingsPayload.YOUTUBE_API_KEY = d.youtubeApiKey;
+      if (d.pixabayApiKey) settingsPayload.PIXABAY_API_KEY = d.pixabayApiKey;
 
-      // Create channel if name provided
-      if (d.channelName) {
+      if (this.onboardingMode === 'admin') {
+        // Admin mode: save to global .env settings
         try {
-          await fetch('/api/channels', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
-            name: d.channelName, language: d.channelLang,
-            branding: { color_primary: d.colorPrimary, color_secondary: d.colorSecondary, thumbnail_template: 'classic' }
-          })});
-          await this.loadChannels();
-        } catch(e) { console.warn('Channel create error:', e); }
-      }
+          await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(settingsPayload) });
+        } catch(e) { console.warn('Settings save error:', e); }
+        this.playSound('click');
+        this.view = nextView || 'settings';
+        this.loadSettings();
+      } else {
+        // User/channel mode: always save to global .env first
+        try {
+          await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(settingsPayload) });
+        } catch(e) { console.warn('Settings save error:', e); }
 
-      localStorage.setItem('ytrobot-onboarding-done', '1');
-      this.playSound('click');
-      this.view = nextView;
-      if (nextView === 'new-run') { this.mode = 'topic'; this.runError = ''; }
-      if (nextView === 'dashboard') { this.loadSessions(); }
+        if (this.onboardingChannelId) {
+          // Existing channel: update channel config + save channel-specific settings
+          try {
+            await fetch(`/api/channels/${this.onboardingChannelId}`, {
+              method: 'PATCH', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                name: d.channelName || undefined,
+                language: d.channelLang,
+                branding: { color_primary: d.colorPrimary, color_secondary: d.colorSecondary, thumbnail_template: 'classic' }
+              })
+            });
+            await fetch(`/api/channels/${this.onboardingChannelId}/settings`, {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify(settingsPayload)
+            });
+            await this.loadChannels();
+          } catch(e) { console.warn('Channel update error:', e); }
+        } else if (d.channelName) {
+          // New channel: create + save channel settings
+          try {
+            const resp = await fetch('/api/channels', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+              name: d.channelName, language: d.channelLang,
+              branding: { color_primary: d.colorPrimary, color_secondary: d.colorSecondary, thumbnail_template: 'classic' }
+            })});
+            const newCh = await resp.json();
+            if (newCh && newCh.id) {
+              await fetch(`/api/channels/${newCh.id}/settings`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(settingsPayload)
+              });
+            }
+            await this.loadChannels();
+          } catch(e) { console.warn('Channel create error:', e); }
+        }
+
+        localStorage.setItem('ytrobot-onboarding-done', '1');
+        this.playSound('click');
+        this.view = nextView;
+        if (nextView === 'new-run') { this.mode = 'topic'; this.runError = ''; }
+        if (nextView === 'dashboard') { this.loadSessions(); }
+      }
     },
 
     resetOnboarding() {
       localStorage.removeItem('ytrobot-onboarding-done');
       this.onboardingStep = 1;
+      this.onboardingMode = 'user';
+      this.onboardingChannelId = '';
+      this.loadWizardStepOrder();
       this.view = 'onboarding';
     },
 
+    async launchAdminWizard() {
+      // Launch onboarding wizard in admin mode — pre-fills from current global settings (.env)
+      this.onboardingMode = 'admin';
+      this.onboardingChannelId = '';
+      this.onboardingStep = 1;
+      await this.loadWizardStepOrder();
+      await this._prefillOnboardingFromGlobalSettings();
+      this.view = 'onboarding';
+    },
+
+    async launchChannelWizard(channelId) {
+      // Launch onboarding wizard for a specific channel — pre-fills from channel settings, falls back to global
+      this.onboardingMode = 'user';
+      this.onboardingChannelId = channelId || '';
+      this.onboardingStep = 1;
+      await this.loadWizardStepOrder();
+      if (channelId) {
+        await this._prefillOnboardingFromChannel(channelId);
+      }
+      this.view = 'onboarding';
+    },
+
+    async _prefillOnboardingFromGlobalSettings() {
+      // Load current settings from backend and map to onboarding fields
+      try {
+        const resp = await fetch('/api/settings');
+        const s = await resp.json();
+        this._mapSettingsToOnboarding(s);
+      } catch(e) { console.warn('Failed to load settings for admin wizard:', e); }
+    },
+
+    async _prefillOnboardingFromChannel(channelId) {
+      // First load global settings as baseline, then overlay channel-specific settings
+      try {
+        const [globalResp, channelResp, channelCfgResp] = await Promise.all([
+          fetch('/api/settings'),
+          fetch(`/api/channels/${channelId}/settings`),
+          fetch(`/api/channels/${channelId}`)
+        ]);
+        const globalSettings = await globalResp.json();
+        const channelSettings = await channelResp.json();
+        const channelConfig = await channelCfgResp.json();
+        // Start with global defaults
+        this._mapSettingsToOnboarding(globalSettings);
+        // Overlay channel-specific settings (only non-empty values)
+        if (Object.keys(channelSettings).length > 0) {
+          this._mapSettingsToOnboarding(channelSettings);
+        }
+        // Pre-fill channel info from config
+        if (channelConfig) {
+          const d = this.onboardingData;
+          d.channelName = channelConfig.name || d.channelName;
+          d.channelLang = channelConfig.language || d.channelLang;
+          if (channelConfig.branding) {
+            d.colorPrimary = channelConfig.branding.color_primary || d.colorPrimary;
+            d.colorSecondary = channelConfig.branding.color_secondary || d.colorSecondary;
+          }
+        }
+      } catch(e) { console.warn('Failed to load channel settings:', e); }
+    },
+
+    _mapSettingsToOnboarding(s) {
+      // Map backend settings dict (ENV_KEY: value) to onboardingData fields
+      const d = this.onboardingData;
+      const v = (key, fallback) => { const val = s[key]; return (val !== undefined && val !== null && val !== '') ? val : fallback; };
+      const b = (key, fallback) => { const val = s[key]; if (val === undefined || val === null || val === '') return fallback; return String(val).toLowerCase() === 'true'; };
+      const n = (key, fallback) => { const val = s[key]; return (val !== undefined && val !== null && val !== '') ? Number(val) : fallback; };
+
+      // TTS
+      d.ttsProvider = v('TTS_PROVIDER', d.ttsProvider);
+      d.ttsSpeed = n('TTS_SPEED', d.ttsSpeed);
+      d.ttsRemoveApostrophes = b('TTS_REMOVE_APOSTROPHES', d.ttsRemoveApostrophes);
+      d.ttsTrimSilence = b('TTS_TRIM_SILENCE', d.ttsTrimSilence);
+      d.ttsEnhanceWithLlm = b('TTS_ENHANCE_WITH_LLM', d.ttsEnhanceWithLlm);
+      d.ttsConcurrentWorkers = n('TTS_CONCURRENT_WORKERS', d.ttsConcurrentWorkers);
+      // Voice
+      if (d.ttsProvider === 'edge') d.selectedVoice = v('EDGE_TTS_VOICE', d.selectedVoice);
+      else if (d.ttsProvider === 'qwen3') d.selectedVoice = v('QWEN3_SPEAKER', d.selectedVoice);
+      // SpeshAudio
+      d.speshLanguage = v('SPESHAUDIO_LANGUAGE', d.speshLanguage);
+      d.speshVoiceId = v('SPESHAUDIO_VOICE_ID', d.speshVoiceId);
+      d.speshStability = n('SPESHAUDIO_STABILITY', d.speshStability);
+      d.speshSimilarity = n('SPESHAUDIO_SIMILARITY_BOOST', d.speshSimilarity);
+      d.speshStyle = n('SPESHAUDIO_STYLE', d.speshStyle);
+      d.elevenlabsVoiceId = v('ELEVENLABS_VOICE_ID', d.elevenlabsVoiceId);
+      d.openaiTtsVoice = v('OPENAI_TTS_VOICE', d.openaiTtsVoice);
+      d.dubvoiceVoiceId = v('DUBVOICE_VOICE_ID', d.dubvoiceVoiceId);
+      // Qwen3
+      d.qwen3ModelId = v('QWEN3_MODEL_ID', d.qwen3ModelId);
+      d.qwen3ModelType = v('QWEN3_MODEL_TYPE', d.qwen3ModelType);
+      d.qwen3VoiceInstruct = v('QWEN3_VOICE_INSTRUCT', d.qwen3VoiceInstruct);
+      d.qwen3RefAudio = v('QWEN3_REF_AUDIO', d.qwen3RefAudio);
+      d.qwen3Device = v('QWEN3_DEVICE', d.qwen3Device);
+      // Visuals
+      d.visualProvider = v('VISUALS_PROVIDER', d.visualProvider);
+      d.zimageAspectRatio = v('ZIMAGE_ASPECT_RATIO', d.zimageAspectRatio);
+      // Video
+      d.resolution = v('VIDEO_RESOLUTION', d.resolution);
+      d.videoFps = n('VIDEO_FPS', d.videoFps);
+      d.gpuEncoding = v('GPU_ENCODING', d.gpuEncoding);
+      d.composer = v('COMPOSER_PROVIDER', d.composer);
+      d.remotionConcurrency = n('REMOTION_CONCURRENCY', d.remotionConcurrency);
+      // Subtitle
+      d.subtitleAnim = v('REMOTION_SUBTITLE_ANIMATION', d.subtitleAnim);
+      d.videoEffect = v('REMOTION_VIDEO_EFFECT', d.videoEffect);
+      d.subtitleFont = v('REMOTION_SUBTITLE_FONT', d.subtitleFont);
+      d.subtitleSize = n('REMOTION_SUBTITLE_SIZE', d.subtitleSize);
+      d.subtitleColor = v('REMOTION_SUBTITLE_COLOR', d.subtitleColor);
+      d.subtitleBg = v('REMOTION_SUBTITLE_BG', d.subtitleBg);
+      d.subtitleStroke = n('REMOTION_SUBTITLE_STROKE', d.subtitleStroke);
+      d.karaokeEnabled = b('REMOTION_KARAOKE_ENABLED', d.karaokeEnabled);
+      d.karaokeColor = v('REMOTION_KARAOKE_COLOR', d.karaokeColor);
+      d.transitionDuration = n('REMOTION_TRANSITION_DURATION', d.transitionDuration);
+      d.kenBurnsZoom = n('REMOTION_KEN_BURNS_ZOOM', d.kenBurnsZoom);
+      d.kenBurnsDirection = v('REMOTION_KEN_BURNS_DIRECTION', d.kenBurnsDirection);
+      // Subtitle provider
+      d.subtitleProvider = v('SUBTITLE_PROVIDER', d.subtitleProvider);
+      d.pycapsStyle = v('PYCAPS_STYLE', d.pycapsStyle);
+      // Script/AI
+      d.targetAudience = v('TARGET_AUDIENCE', d.targetAudience);
+      d.scriptHumanize = b('SCRIPT_HUMANIZE_WITH_LLM', d.scriptHumanize);
+      // YouTube
+      d.ytOauthClientId = v('YT_OAUTH_CLIENT_ID', d.ytOauthClientId);
+      d.ytOauthClientSecret = v('YT_OAUTH_CLIENT_SECRET', d.ytOauthClientSecret);
+      d.autopublishYoutube = b('AUTOPUBLISH_YOUTUBE', d.autopublishYoutube);
+      d.ytPrivacyStatus = v('YT_PRIVACY_STATUS', d.ytPrivacyStatus);
+      d.ytCategoryId = v('YT_CATEGORY_ID', d.ytCategoryId);
+      d.autopublishReels = b('AUTOPUBLISH_REELS', d.autopublishReels);
+      d.shareOnInstagram = b('SHARE_ON_INSTAGRAM', d.shareOnInstagram);
+      d.shareOnTiktok = b('SHARE_ON_TIKTOK', d.shareOnTiktok);
+      // Notifications
+      d.webhookEnabled = b('WEBHOOK_ENABLED', d.webhookEnabled);
+      d.webhookUrl = v('WEBHOOK_URL', d.webhookUrl);
+      d.webhookOnComplete = b('WEBHOOK_ON_COMPLETE', d.webhookOnComplete);
+      d.webhookOnFailure = b('WEBHOOK_ON_FAILURE', d.webhookOnFailure);
+      d.webhookMention = v('WEBHOOK_MENTION', d.webhookMention);
+      d.webhookSecret = v('WEBHOOK_SECRET', d.webhookSecret);
+      d.telegramEnabled = b('TELEGRAM_ENABLED', d.telegramEnabled);
+      d.telegramBotToken = v('TELEGRAM_BOT_TOKEN', d.telegramBotToken);
+      d.telegramChatId = v('TELEGRAM_CHAT_ID', d.telegramChatId);
+      d.emailEnabled = b('EMAIL_ENABLED', d.emailEnabled);
+      d.emailSmtpHost = v('EMAIL_SMTP_HOST', d.emailSmtpHost);
+      d.emailSmtpPort = n('EMAIL_SMTP_PORT', d.emailSmtpPort);
+      d.emailSmtpUser = v('EMAIL_SMTP_USER', d.emailSmtpUser);
+      d.emailSmtpPassword = v('EMAIL_SMTP_PASSWORD', d.emailSmtpPassword);
+      d.emailFrom = v('EMAIL_FROM', d.emailFrom);
+      d.emailTo = v('EMAIL_TO', d.emailTo);
+      d.whatsappEnabled = b('WHATSAPP_ENABLED', d.whatsappEnabled);
+      d.whatsappApiUrl = v('WHATSAPP_API_URL', d.whatsappApiUrl);
+      d.whatsappApiToken = v('WHATSAPP_API_TOKEN', d.whatsappApiToken);
+      d.whatsappTo = v('WHATSAPP_TO', d.whatsappTo);
+      // Social Meta
+      d.socialMetaEnabledYt = b('SOCIAL_META_ENABLED_YT_VIDEO', d.socialMetaEnabledYt);
+      d.socialMetaEnabledBulletin = b('SOCIAL_META_ENABLED_BULLETIN', d.socialMetaEnabledBulletin);
+      d.socialMetaEnabledPr = b('SOCIAL_META_ENABLED_PR', d.socialMetaEnabledPr);
+      d.socialMetaFields = v('SOCIAL_META_FIELDS', d.socialMetaFields);
+      d.socialMetaMasterPrompt = v('SOCIAL_META_MASTER_PROMPT', d.socialMetaMasterPrompt);
+      d.socialMetaLanguage = v('SOCIAL_META_LANGUAGE', d.socialMetaLanguage);
+      // Module overrides
+      d.ytTtsProvider = v('YT_TTS_PROVIDER', d.ytTtsProvider);
+      d.ytTtsSpeed = n('YT_TTS_SPEED', d.ytTtsSpeed);
+      d.ytTtsVoiceId = v('YT_TTS_VOICE_ID', d.ytTtsVoiceId);
+      d.bulletinTtsProvider = v('BULLETIN_TTS_PROVIDER', d.bulletinTtsProvider);
+      d.bulletinTtsSpeed = n('BULLETIN_TTS_SPEED', d.bulletinTtsSpeed);
+      d.bulletinTtsVoiceId = v('BULLETIN_TTS_VOICE_ID', d.bulletinTtsVoiceId);
+      d.prTtsProvider = v('PR_TTS_PROVIDER', d.prTtsProvider);
+      d.prTtsSpeed = n('PR_TTS_SPEED', d.prTtsSpeed);
+      d.prTtsVoiceId = v('PR_TTS_VOICE_ID', d.prTtsVoiceId);
+      // Bulletin module
+      d.bulletinNetworkName = v('BULLETIN_NETWORK_NAME', d.bulletinNetworkName);
+      d.bulletinStyle = v('BULLETIN_STYLE', d.bulletinStyle);
+      d.bulletinFormat = v('BULLETIN_FORMAT', d.bulletinFormat);
+      d.bulletinFps = n('BULLETIN_FPS', d.bulletinFps);
+      d.bulletinMaxItems = n('BULLETIN_DEFAULT_MAX_ITEMS', d.bulletinMaxItems);
+      d.bulletinDefaultLanguage = v('BULLETIN_DEFAULT_LANGUAGE', d.bulletinDefaultLanguage);
+      // PR module
+      d.prStyle = v('PR_STYLE', d.prStyle);
+      d.prFormat = v('PR_FORMAT', d.prFormat);
+      d.prFps = n('PR_FPS', d.prFps);
+      d.prChannelName = v('PR_CHANNEL_NAME', d.prChannelName);
+      d.prCurrency = v('PR_CURRENCY', d.prCurrency);
+      d.prCtaText = v('PR_CTA_TEXT', d.prCtaText);
+      d.prAutoGenerateTts = b('PR_AUTO_GENERATE_TTS', d.prAutoGenerateTts);
+      d.prMasterPrompt = v('PR_MASTER_PROMPT', d.prMasterPrompt);
+      d.prAiLanguage = v('PR_AI_LANGUAGE', d.prAiLanguage);
+      // System
+      d.corsOrigins = v('CORS_ORIGINS', d.corsOrigins);
+      d.debugMode = b('DEBUG_MODE', d.debugMode);
+      // API keys (masked — only set if not masked)
+      const unmask = (val) => (val && !val.includes('***')) ? val : '';
+      d.openaiApiKey = unmask(v('OPENAI_API_KEY', ''));
+      d.anthropicApiKey = unmask(v('ANTHROPIC_API_KEY', ''));
+      d.kieaiApiKey = unmask(v('KIEAI_API_KEY', ''));
+      d.geminiApiKey = unmask(v('GEMINI_API_KEY', ''));
+      d.youtubeApiKey = unmask(v('YOUTUBE_API_KEY', ''));
+      d.pixabayApiKey = unmask(v('PIXABAY_API_KEY', ''));
+    },
+
     // ── Video Preview ──
+    // ── Wizard Configuration ──
+    async openWizardConfig() {
+      try {
+        const resp = await fetch('/api/wizard-config');
+        if (resp.ok) {
+          const data = await resp.json();
+          this.wizardConfigSteps = JSON.parse(JSON.stringify(data.steps));
+        }
+      } catch(e) { console.warn('Failed to load wizard config:', e); }
+      this.wizardConfigOpen = true;
+    },
+    moveWizardStep(idx, dir) {
+      const target = idx + dir;
+      if (target < 0 || target >= this.wizardConfigSteps.length) return;
+      const steps = [...this.wizardConfigSteps];
+      [steps[idx], steps[target]] = [steps[target], steps[idx]];
+      this.wizardConfigSteps = steps;
+    },
+    reorderWizardStep(fromIdx, toIdx) {
+      if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+      const steps = [...this.wizardConfigSteps];
+      const [moved] = steps.splice(fromIdx, 1);
+      steps.splice(toIdx, 0, moved);
+      this.wizardConfigSteps = steps;
+    },
+    async saveWizardConfig() {
+      try {
+        const resp = await fetch('/api/wizard-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ steps: this.wizardConfigSteps })
+        });
+        if (resp.ok) {
+          this.showToast(this.lang === 'tr' ? 'Wizard yapılandırması kaydedildi' : 'Wizard configuration saved', 'success');
+          this.wizardConfigOpen = false;
+          await this.loadWizardStepOrder();
+        }
+      } catch(e) { console.warn('Failed to save wizard config:', e); }
+    },
+    async resetWizardConfig() {
+      try {
+        const resp = await fetch('/api/wizard-config/reset', { method: 'POST' });
+        if (resp.ok) {
+          const data = await resp.json();
+          this.wizardConfigSteps = data.steps;
+          this.showToast(this.lang === 'tr' ? 'Wizard varsayılana sıfırlandı' : 'Wizard reset to defaults', 'success');
+          await this.loadWizardStepOrder();
+        }
+      } catch(e) { console.warn('Failed to reset wizard config:', e); }
+    },
+
+    async loadWizardStepOrder() {
+      try {
+        const resp = await fetch('/api/wizard-config');
+        if (resp.ok) {
+          const data = await resp.json();
+          const steps = (data.steps || []).filter(s => s.enabled !== false);
+          this.wizardStepOrder = steps.map(s => s.key);
+        }
+      } catch(e) {
+        // fallback to default order
+        this.wizardStepOrder = ['welcome','channel','tts_provider','voice_select','visual_provider','video_style','tts_advanced','subtitle_detail','ai_system','api_keys','notifications','social_meta','youtube_oauth','module_tts','module_settings','summary'];
+      }
+      if (this.wizardStepOrder.length === 0) {
+        this.wizardStepOrder = ['welcome','channel','tts_provider','voice_select','visual_provider','video_style','tts_advanced','subtitle_detail','ai_system','api_keys','notifications','social_meta','youtube_oauth','module_tts','module_settings','summary'];
+      }
+    },
+    isWizardStep(key) {
+      if (this.wizardStepOrder.length === 0) return false;
+      const currentKey = this.wizardStepOrder[this.onboardingStep - 1];
+      return currentKey === key;
+    },
+    get wizardTotalSteps() {
+      return this.wizardStepOrder.length || 16;
+    },
+    nextWizardStep() {
+      if (this.onboardingStep < this.wizardTotalSteps) {
+        this.onboardingStep++;
+      }
+    },
+    prevWizardStep() {
+      if (this.onboardingStep > 1) {
+        this.onboardingStep--;
+      }
+    },
+
     previewVideo(sessionId) {
       this.videoPreviewUrl = `/api/sessions/${sessionId}/video`;
       this.videoPreviewOpen = true;
     },
 
     // ── Video Gallery ──
-    async loadGallery() {
-      this.galleryOffset = 0;
+    _galleryParams() {
       const params = new URLSearchParams();
       if (this.galleryFilter) params.set('status', this.galleryFilter);
       if (this.gallerySearch) params.set('search', this.gallerySearch);
+      if (this.galleryModuleFilter) params.set('module', this.galleryModuleFilter);
+      if (this.galleryChannelFilter) params.set('channel', this.galleryChannelFilter);
+      return params;
+    },
+    async loadGallery() {
+      this.galleryOffset = 0;
+      const params = this._galleryParams();
       params.set('limit', '20');
       try {
         const resp = await fetch(`/api/sessions/gallery?${params}`);
-        if (resp.ok) { const d = await resp.json(); this.galleryVideos = d.videos||[]; this.galleryHasMore = d.total > 20; this.galleryOffset = 20; }
+        if (resp.ok) {
+          const d = await resp.json();
+          this.galleryVideos = d.videos || [];
+          this.galleryTotal = d.total || 0;
+          this.galleryHasMore = d.total > 20;
+          this.galleryOffset = 20;
+          if (d.filters) this.galleryAvailableFilters = d.filters;
+        }
       } catch(e) { console.warn('[loadGallery]', e); this.showToast(this.t('load_error') || 'Failed to load gallery', 'error'); }
     },
     async loadMoreGallery() {
-      const params = new URLSearchParams();
-      if (this.galleryFilter) params.set('status', this.galleryFilter);
-      if (this.gallerySearch) params.set('search', this.gallerySearch);
+      const params = this._galleryParams();
       params.set('limit', '20'); params.set('offset', String(this.galleryOffset));
       try {
         const resp = await fetch(`/api/sessions/gallery?${params}`);
         if (resp.ok) { const d = await resp.json(); this.galleryVideos = [...this.galleryVideos, ...(d.videos||[])]; this.galleryHasMore = d.total > this.galleryOffset + 20; this.galleryOffset += 20; }
       } catch(e) { console.warn('[loadMoreGallery]', e); }
+    },
+
+    // ── Gallery Quick Actions ──
+    async galleryQuickDelete(sid) {
+      if (!confirm('Bu videoyu silmek istediginize emin misiniz?')) return;
+      try {
+        const resp = await fetch('/api/sessions/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_ids: [sid], action: 'delete' })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        this.showToast('Video silindi', 'success');
+        this.loadGallery();
+      } catch(e) { this.showToast('Silme hatasi', 'error'); }
+    },
+    async galleryQuickUploadYT(sid) {
+      try {
+        const resp = await fetch(`/api/youtube/upload/${sid}`, { method: 'POST' });
+        if (resp.ok) this.showToast('YouTube yukleme baslatildi', 'success');
+        else this.showToast('YouTube yukleme hatasi', 'error');
+      } catch(e) { this.showToast('YouTube yukleme hatasi', 'error'); }
+    },
+    async galleryQuickSeo(sid) {
+      try {
+        const resp = await fetch(`/api/social/generate/${sid}`, { method: 'POST' });
+        if (resp.ok) {
+          const data = await resp.json();
+          this.showToast('SEO skoru: ' + (data.seo_score || 'hesaplandi'), 'success');
+        }
+      } catch(e) { this.showToast('SEO hatasi', 'error'); }
+    },
+    async galleryQuickThumbnail(sid) {
+      try {
+        const resp = await fetch(`/api/sessions/${sid}/thumbnail`);
+        if (resp.ok) this.showToast('Thumbnail olusturuldu', 'success');
+        else this.showToast('Thumbnail hatasi', 'error');
+        this.loadGallery();
+      } catch(e) { this.showToast('Thumbnail hatasi', 'error'); }
+    },
+
+    // ── Gallery Bulk Actions ──
+    async bulkDeleteGallery() {
+      if (this.galleryBulkSelected.length === 0) return;
+      if (!confirm(`${this.galleryBulkSelected.length} video silinecek. Emin misiniz?`)) return;
+      try {
+        const resp = await fetch('/api/sessions/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_ids: this.galleryBulkSelected, action: 'delete' })
+        });
+        if (resp.ok) {
+          this.showToast(`${this.galleryBulkSelected.length} video silindi`, 'success');
+          this.galleryBulkSelected = [];
+          this.galleryBulkMode = false;
+          this.loadGallery();
+        }
+      } catch(e) { this.showToast('Silme hatasi', 'error'); }
+    },
+    toggleGalleryBulkSelect(sid) {
+      const idx = this.galleryBulkSelected.indexOf(sid);
+      if (idx > -1) this.galleryBulkSelected.splice(idx, 1);
+      else this.galleryBulkSelected.push(sid);
+    },
+    selectAllGalleryByStatus(status) {
+      this.galleryBulkSelected = this.galleryVideos.filter(v => v.status === status).map(v => v.session_id);
+      this.galleryBulkMode = true;
     },
 
     // ── Settings Search ──
@@ -542,12 +1280,49 @@ function app() {
         if (resp.ok) { const d = await resp.json(); this.scheduledVideos = d.entries || []; }
       } catch(e) { console.warn('[loadSchedule]', e); this.showToast(this.t('load_error') || 'Failed to load data', 'error'); }
     },
+    async loadScheduledVideos() {
+      this.loadSchedule();
+      this.loadChannelVideosForSchedule();
+    },
+    async loadChannelVideosForSchedule() {
+      try {
+        const params = new URLSearchParams({ status: 'completed', limit: '200' });
+        if (this.bulkScheduleChannel) params.set('channel', this.bulkScheduleChannel);
+        const resp = await fetch(`/api/sessions/gallery?${params}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          this.schedulableVideos = (data.videos || []).filter(v => v.has_video && v.status === 'completed');
+        }
+      } catch(e) { console.warn('[loadChannelVideosForSchedule]', e); }
+    },
     async cancelSchedule(sessionId) {
       try {
         await fetch(`/api/scheduler/${sessionId}`, { method: 'DELETE' });
         this.loadSchedule();
         if (this.showToast) this.showToast(this.t('schedule_cancelled') || 'Schedule cancelled', 'success');
       } catch(e) { console.warn('[cancelSchedule]', e); this.showToast(this.t('cancel_error') || 'Cancel failed', 'error'); }
+    },
+    async executeBulkSchedule() {
+      if (this.bulkScheduleSelected.length === 0) return;
+      const intervalHours = parseInt(this.bulkScheduleInterval) || 24;
+      const startDate = this.bulkScheduleStart ? new Date(this.bulkScheduleStart) : new Date();
+      let scheduled = 0;
+      for (let i = 0; i < this.bulkScheduleSelected.length; i++) {
+        const sid = this.bulkScheduleSelected[i];
+        const scheduleAt = new Date(startDate.getTime() + i * intervalHours * 3600000);
+        try {
+          const resp = await fetch('/api/scheduler/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sid, scheduled_at: scheduleAt.toISOString() })
+          });
+          if (resp.ok) scheduled++;
+        } catch(e) { console.warn('[bulkSchedule]', e); }
+      }
+      this.showToast(`${scheduled} video zamanlandı`, 'success');
+      this.bulkScheduleSelected = [];
+      this.bulkScheduleSelectedAll = false;
+      this.loadSchedule();
     },
 
     // ── A/B Testing Methods ──
@@ -632,6 +1407,28 @@ function app() {
       const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       return this.calendarEntries.filter(e => e.planned_date === dateStr);
     },
+    calendarVideosForDay(day) {
+      if (!day) return [];
+      const y = this.calendarMonth.getFullYear();
+      const m = this.calendarMonth.getMonth();
+      const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      return this.sessions.filter(s => {
+        if (s.status !== 'completed') return false;
+        const created = s.created_at || s.start_time;
+        if (!created) return false;
+        return created.startsWith(dateStr);
+      });
+    },
+    calendarScheduledForDay(day) {
+      if (!day) return [];
+      const y = this.calendarMonth.getFullYear();
+      const m = this.calendarMonth.getMonth();
+      const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      return this.scheduledVideos.filter(sv => {
+        if (!sv.scheduled_at) return false;
+        return sv.scheduled_at.startsWith(dateStr);
+      });
+    },
     calendarStatusColor(status) {
       const colors = { idea: 'bg-slate-600', planned: 'bg-blue-600', recorded: 'bg-yellow-600', published: 'bg-green-600' };
       return colors[status] || 'bg-slate-600';
@@ -646,6 +1443,9 @@ function app() {
         const dateStr = day ? `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` : '';
         this.calendarForm = { title: '', topic: '', planned_date: dateStr, status: 'idea', notes: '', channel_id: this.activeChannelId || '_default' };
       }
+      this.calendarScheduleMode = false;
+      this.calendarScheduleVideoId = '';
+      this.calendarScheduleTime = '09:00';
       this.calendarModalOpen = true;
     },
     async saveCalendarEntry() {
@@ -669,11 +1469,43 @@ function app() {
     async deleteCalendarEntry(id) {
       if (!confirm(this.t('confirm_delete'))) return;
       try {
-        await fetch(`/api/calendar/${id}`, { method: 'DELETE' });
+        const resp = await fetch(`/api/calendar/${id}`, { method: 'DELETE' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || `Delete failed (${resp.status})`);
+        }
         this.calendarModalOpen = false;
         this.loadCalendarEntries();
         this.showToast('Deleted', 'success');
-      } catch(e) { console.warn('[deleteCalendarEntry]', e); this.showToast(this.t('generic_error'), 'error'); }
+      } catch(e) { console.warn('[deleteCalendarEntry]', e); this.showToast(e.message || this.t('generic_error'), 'error'); }
+    },
+    async saveCalendarSchedule() {
+      if (!this.calendarScheduleVideoId) {
+        this.showToast(this.lang === 'tr' ? 'Lütfen bir video seçin' : 'Please select a video', 'error');
+        return;
+      }
+      if (!this.calendarForm.planned_date) {
+        this.showToast(this.lang === 'tr' ? 'Lütfen tarih seçin' : 'Please select a date', 'error');
+        return;
+      }
+      try {
+        const scheduledAt = new Date(`${this.calendarForm.planned_date}T${this.calendarScheduleTime || '09:00'}:00`);
+        const resp = await fetch('/api/scheduler/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: this.calendarScheduleVideoId, scheduled_at: scheduledAt.toISOString() })
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || `Schedule failed (${resp.status})`);
+        }
+        this.calendarModalOpen = false;
+        this.calendarScheduleMode = false;
+        this.calendarScheduleVideoId = '';
+        this.calendarScheduleTime = '09:00';
+        this.loadSchedule();
+        this.showToast(this.lang === 'tr' ? 'Video zamanlandı' : 'Video scheduled', 'success');
+      } catch(e) { console.warn('[saveCalendarSchedule]', e); this.showToast(e.message || this.t('generic_error'), 'error'); }
     },
 
     // ── Playlist Methods ──
@@ -723,6 +1555,50 @@ function app() {
         });
         if (resp.ok) { this.playlistAddVideoId = ''; this.openPlaylistDetail(playlistId); this.showToast(this.t('playlists_add_video') + ' OK', 'success'); }
       } catch(e) { console.warn('[addVideoToPlaylist]', e); this.showToast(this.t('generic_error'), 'error'); }
+    },
+    async bulkAddToPlaylist() {
+      if (!this.selectedPlaylist || this.playlistBulkSelected.length === 0) return;
+      let added = 0;
+      for (const sid of this.playlistBulkSelected) {
+        try {
+          const resp = await fetch(`/api/playlists/${this.selectedPlaylist.id}/videos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sid })
+          });
+          if (resp.ok) added++;
+        } catch(e) { console.warn('[bulkAddToPlaylist]', e); }
+      }
+      this.showToast(`${added} video eklendi`, 'success');
+      this.playlistBulkSelected = [];
+      this.playlistBulkOpen = false;
+      this.openPlaylistDetail(this.selectedPlaylist.id);
+    },
+    async generatePlaylistMeta() {
+      this.playlistAiLoading = true;
+      try {
+        const resp = await fetch('/api/playlists/generate-meta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videos: this.sessions.filter(s => s.status === 'completed').slice(0, 10).map(s => s.topic || s.id),
+            channel_id: this.activeChannelId || '_default',
+            language: this.lang === 'tr' ? 'Turkish' : 'English'
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.name) this.playlistForm.name = data.name;
+          if (data.description) this.playlistForm.description = data.description;
+          this.showToast('AI metadata oluşturuldu', 'success');
+        } else {
+          this.showToast('AI metadata oluşturulamadı', 'error');
+        }
+      } catch(e) {
+        console.warn('[generatePlaylistMeta]', e);
+        this.showToast('AI metadata hatası', 'error');
+      }
+      this.playlistAiLoading = false;
     },
     async removeVideoFromPlaylist(playlistId, sessionId) {
       try {
@@ -777,10 +1653,11 @@ function app() {
     async deleteTemplate(id) {
       if (!confirm(this.t('confirm_delete'))) return;
       try {
-        await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+        const resp = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(`Delete failed (${resp.status})`);
         this.loadTemplates();
         this.showToast('Deleted', 'success');
-      } catch(e) { console.warn('[deleteTemplate]', e); this.showToast(this.t('generic_error'), 'error'); }
+      } catch(e) { console.warn('[deleteTemplate]', e); this.showToast(e.message || this.t('generic_error'), 'error'); }
     },
     async createTemplateFromSession() {
       if (!this.templateFromSessionId) return;
@@ -1162,7 +2039,7 @@ function app() {
       try {
         const r = await fetch('/api/channels');
         const data = await r.json();
-        this.channelsData = data.channels || [];
+        this.channelsData = (data.channels || []).filter(c => c.id !== '_default');
         const ar = await fetch('/api/channels/active');
         if (ar.ok) {
           const active = await ar.json();
@@ -1243,12 +2120,20 @@ function app() {
     async deleteChannel(channelId) {
       if (!confirm('Bu kanalı silmek istediğinize emin misiniz?')) return;
       try {
-        await fetch(`/api/channels/${channelId}`, { method: 'DELETE' });
+        const r = await fetch(`/api/channels/${channelId}`, { method: 'DELETE' });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.detail || err.error || `Hata (${r.status})`);
+        }
+        if (this.activeChannelId === channelId) {
+          this.activeChannelId = '_default';
+          this.activeChannelName = 'Varsayılan Kanal';
+        }
         await this.loadChannels();
         this.showSuccess('Kanal silindi.');
       } catch (e) {
         console.error('Failed to delete channel:', e);
-        this.showError('Kanal silinemedi.');
+        this.showError(e.message || 'Kanal silinemedi.');
       }
     },
 
@@ -1341,11 +2226,13 @@ function app() {
       window.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
           e.preventDefault();
+          e.stopImmediatePropagation();
           this.toggleCommandPalette();
         }
       });
 
       // 1b. Check if first run → show onboarding
+      await this.loadWizardStepOrder();
       if (!localStorage.getItem('ytrobot-onboarding-done')) {
         this.view = 'onboarding';
       }
@@ -1379,7 +2266,7 @@ function app() {
           this.loadAnalytics();
           this.loadQueueStatus();
         }
-        if (this.view === 'social-meta') this.loadSocialLog();
+        if (this.view === 'settings' && this.settingsModule === 'social_meta') this.loadSocialLog();
       }, 3000);
 
       // Notification polling every 30 seconds
@@ -1576,7 +2463,11 @@ function app() {
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 10 } } },
+            tooltip: { enabled: true, mode: 'index', intersect: false },
+          },
           scales: {
             x: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } },
                  grid: { color: 'rgba(255,255,255,0.05)' } },
@@ -1747,6 +2638,9 @@ function app() {
         };
         body.content_category = this.wizardCategory;
       }
+      // Yayın ayarları
+      if (this.wizardPlaylistId) body.playlist_id = this.wizardPlaylistId;
+      if (this.wizardScheduleAt) body.schedule_at = this.wizardScheduleAt;
       this.submitting = true;
       try {
         const data = await this.apiFetch('/api/run', {
@@ -1755,7 +2649,28 @@ function app() {
           body: JSON.stringify(body)
         });
         const session_id = data.session_id;
+        // Zamanlama varsa schedule et
+        if (this.wizardScheduleAt && session_id) {
+          try {
+            await fetch('/api/scheduler/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id, scheduled_at: new Date(this.wizardScheduleAt).toISOString() })
+            });
+          } catch(e) { console.warn('[wizardSchedule]', e); }
+        }
+        // Playlist'e ekle
+        if (this.wizardPlaylistId && session_id) {
+          try {
+            await fetch(`/api/playlists/${this.wizardPlaylistId}/videos`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id })
+            });
+          } catch(e) { console.warn('[wizardPlaylist]', e); }
+        }
         this.newTopic = ''; this.newScriptFile = '';
+        this.wizardPlaylistId = ''; this.wizardScheduleAt = '';
         await this.loadSessions();
         const session = this.sessions.find(s => s.id === session_id);
         if (session) this.openSession(session);
@@ -2068,6 +2983,7 @@ function app() {
       let list = this.sessions;
       if (this.filter !== 'all') list = list.filter(s => s.status === this.filter);
       if (this.dashboardModuleFilter !== 'all') list = list.filter(s => (s.module || 'yt_video') === this.dashboardModuleFilter);
+      if (this.dashboardChannelFilter !== 'all') list = list.filter(s => (s.channel_id || '_default') === this.dashboardChannelFilter);
       return list;
     },
 
@@ -2229,17 +3145,35 @@ function app() {
     async sessionAction(action, sid, e) {
       e.stopPropagation();
       try {
-        await fetch(`/api/sessions/${sid}/${action}`, { method: 'POST' });
+        const resp = await fetch(`/api/sessions/${sid}/${action}`, { method: 'POST' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || `Action '${action}' failed (${resp.status})`);
+        }
         await this.loadSessions();
-      } catch(err) { console.error(err); }
+      } catch(err) {
+        console.error(err);
+        this.showToast(err.message || this.t('generic_error'), 'error');
+      }
     },
 
     async deleteSession(sid, e) {
       e.stopPropagation();
       if (!window.confirm(this.t('confirm_delete_msg'))) return;
-      await fetch(`/api/sessions/${sid}`, { method: 'DELETE' });
-      if (this.currentSession?.id === sid) this.closeSession();
-      await this.loadSessions();
+      try {
+        const resp = await fetch('/api/sessions/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_ids: [sid], action: 'delete' })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        if (this.currentSession?.id === sid) this.closeSession();
+        await this.loadSessions();
+        this.showToast(this.t('session_deleted') || 'Session deleted', 'success');
+      } catch (err) {
+        console.error('Failed to delete session:', err);
+        this.showToast(this.t('generic_error') || 'Delete failed', 'error');
+      }
     },
 
     statusBadge(status) {
@@ -2816,6 +3750,40 @@ Return ONLY the rewritten narration text. No explanation, no JSON, just the text
       Alpine.store('promptModal').title = p.title;
       Alpine.store('promptModal').content = p.content;
       Alpine.store('promptModal').show = true;
+    },
+
+    // ── AI Assist (inline field helper) ────────────────────────────────
+    async aiAssist(field) {
+      const prompts = {
+        topic: 'Popüler ve dikkat çekici bir YouTube video konusu öner. Tek bir konu yaz, açıklama yapma.',
+        verdict: `Bu ürün incelemesi için son değerlendirme yaz (2-3 cümle). Artılar: ${(this.prForm?.pros||[]).join(', ')}. Eksiler: ${(this.prForm?.cons||[]).join(', ')}. Puan: ${this.prForm?.score||5}/10`,
+        calendarTitle: 'Bir YouTube videosu için kısa, dikkat çekici bir başlık öner. Tek bir başlık yaz.',
+        prName: this.prAutoUrl ? `Bu URL'deki ürünün adını çıkar: ${this.prAutoUrl}` : 'Popüler bir teknoloji ürünü adı öner.',
+      };
+      const prompt = prompts[field];
+      if (!prompt) return;
+
+      try {
+        const resp = await fetch('/api/ai/assist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, max_tokens: 100 })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = (data.text || '').trim();
+          if (!text) return;
+          switch(field) {
+            case 'topic': this.newTopic = text; break;
+            case 'verdict': this.prForm.verdict = text; break;
+            case 'calendarTitle': this.calendarForm.title = text; break;
+            case 'prName': this.prForm.name = text; break;
+          }
+          this.showToast('AI önerisi uygulandı', 'success');
+        } else {
+          this.showToast('AI hatası', 'error');
+        }
+      } catch(e) { console.warn('[aiAssist]', e); this.showToast('AI hatası', 'error'); }
     },
   };
 }

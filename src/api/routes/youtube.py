@@ -105,6 +105,33 @@ async def upload_video(data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/playlists")
+async def list_playlists(channel_id: str = Query(default="_default")):
+    """Fetch the authenticated user's YouTube playlists."""
+    service = youtube_auth.get_service(channel_id)
+    if not service:
+        raise HTTPException(status_code=401, detail="YouTube not authenticated for this channel")
+
+    try:
+        playlists = []
+        request = service.playlists().list(part="snippet,contentDetails", mine=True, maxResults=50)
+        while request:
+            response = request.execute()
+            for item in response.get("items", []):
+                playlists.append({
+                    "id": item["id"],
+                    "title": item["snippet"]["title"],
+                    "description": item["snippet"].get("description", ""),
+                    "itemCount": item.get("contentDetails", {}).get("itemCount", 0),
+                    "thumbnail": item["snippet"].get("thumbnails", {}).get("default", {}).get("url", ""),
+                })
+            request = service.playlists().list_next(request, response)
+        return {"playlists": playlists}
+    except Exception as e:
+        logger.error(f"Failed to fetch YouTube playlists: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/channels")
 async def list_authenticated_channels():
     from src.core.channel_hub import channel_hub

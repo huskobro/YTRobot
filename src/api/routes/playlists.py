@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from src.core.playlist_manager import playlist_manager
+import os, json
 
 router = APIRouter(prefix="/api/playlists", tags=["playlists"])
 
@@ -64,3 +65,49 @@ async def sync_youtube(playlist_id: str):
     if not result: raise HTTPException(404, "Playlist not found")
     if "error" in result: raise HTTPException(400, result["error"])
     return result
+
+class PlaylistMetaReq(BaseModel):
+    videos: List[str] = []
+    channel_id: str = "_default"
+    language: str = "Turkish"
+
+@router.post("/generate-meta")
+async def generate_playlist_meta(req: PlaylistMetaReq):
+    """AI ile playlist adı ve açıklaması üret"""
+    try:
+        from config import settings
+        api_key = getattr(settings, 'KIEAI_API_KEY', '') or getattr(settings, 'OPENAI_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
+        if not api_key:
+            return {"name": f"Playlist - {req.channel_id}", "description": "AI API key bulunamadı, varsayılan isim kullanıldı."}
+
+        video_list = "\n".join(f"- {v}" for v in req.videos[:15])
+        prompt = f"""Bu YouTube kanalının aşağıdaki videoları var:
+{video_list}
+
+Bu videolar için SEO uyumlu, dikkat çekici bir YouTube playlist adı ve açıklaması oluştur.
+Dil: {req.language}
+
+JSON formatında yanıt ver:
+{{"name": "Playlist adı (max 60 karakter)", "description": "Playlist açıklaması (max 200 karakter, anahtar kelimeler içersin)"}}"""
+
+        import httpx
+        base_url = getattr(settings, 'KIEAI_BASE_URL', 'https://api.openai.com/v1')
+        model = getattr(settings, 'KIEAI_MODEL', 'gpt-4o-mini')
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.7, "max_tokens": 300}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                # Parse JSON from response
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                if start >= 0 and end > start:
+                    result = json.loads(content[start:end])
+                    return {"name": result.get("name", ""), "description": result.get("description", "")}
+            return {"name": f"Playlist - {req.channel_id}", "description": "AI yanıt ayrıştırılamadı"}
+    except Exception as e:
+        return {"name": f"Playlist - {req.channel_id}", "description": f"Hata: {str(e)}"}

@@ -352,9 +352,75 @@ grid grid-cols-1 lg:grid-cols-5 gap-4
 - ✅ Icon badge boyutları standart mı? (w-8 h-8)
 - ✅ Checkbox boyutu w-4 h-4 mı?
 
+## 🏗️ Sidebar Yapısı
+
+Sidebar 8 ana menü öğesi içerir, 4 gruba ayrılmıştır:
+
+```
+── Ana İşlemler (her oturumda) ──
+  ✨ Yeni Video     → bg-indigo-600 CTA butonu
+  📊 Dashboard
+  🖼️ Gallery
+
+── İçerik (haftalık) ──
+  📡 Kanallar
+  📅 İçerik Planlama → 5 alt sekme
+
+── Analiz (ihtiyaç duyulduğunda) ──
+  📈 Analytics → 3 alt sekme
+
+── Sistem (nadir) ──
+  ⚙️ Ayarlar → 6 alt sekme
+```
+
+**Grup başlıkları:** `text-[10px] uppercase tracking-widest text-slate-500`
+**Ayırıcı:** `border-t border-slate-800/50 my-2`
+**CTA butonu:** `bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl`
+
+## 🎯 Yeni Bileşenler (v2)
+
+### AI Assist Button
+Input alanları yanında kompakt AI destek butonu:
+```html
+<button @click="aiAssist('fieldName')"
+        class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-bold rounded-lg border border-indigo-800/30 transition-all">
+  AI
+</button>
+```
+
+### Product Review Style Preview
+Ürün inceleme stil seçiminde canlı önizleme mockup:
+```html
+<div class="aspect-video rounded-lg overflow-hidden relative">
+  <!-- Dinamik arkaplan: style'a göre gradient değişir -->
+  <!-- Ürün bilgileri (isim, fiyat, puan) overlay olarak gösterilir -->
+</div>
+```
+
+### Onboarding Card
+Onboarding wizard provider seçim kartı:
+```html
+<div @click="select(id)"
+     :class="selected === id ? 'border-indigo-500 bg-indigo-950/30' : 'border-slate-700 bg-slate-800/50'"
+     class="p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-indigo-400">
+  <div class="text-lg mb-1">{icon}</div>
+  <div class="text-sm font-bold text-white">{name}</div>
+  <div class="text-[10px] text-slate-400">{description}</div>
+</div>
+```
+
 ## 🔄 Güncelleme Notları
 
-**Son Güncelleme:** 2025-01-XX
-**Versiyon:** 1.0
+**Son Güncelleme:** 2026-03-27
+**Versiyon:** 2.0
 
 Bu design system, tüm modüller arasında görsel tutarlılığı sağlamak için oluşturulmuştur. Yeni bileşen eklerken bu pattern'lara sadık kalınmalıdır.
+
+### v2 Değişiklikleri
+- Sidebar 17 öğeden 8 öğeye sadeleştirildi
+- Settings 7 sekmeden 6 sekmeye (Audit Log kaldırıldı)
+- Analytics: YouTube + Rakip inline sekmeler olarak entegre edildi
+- İçerik Planlama: Takvim + Playlist + A/B Test + Şablon + Zamanlama birleştirildi
+- Sosyal Medya standalone sayfası Settings altına taşındı
+- AI Assist butonları, onboarding wizard, ürün stil preview eklendi
+- Cmd+K komut paleti ~41 komut ile genişletildi

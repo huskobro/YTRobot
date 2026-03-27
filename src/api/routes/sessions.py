@@ -50,7 +50,8 @@ def get_sessions():
     return _all_sessions()
 
 @router.get("/sessions/gallery")
-async def video_gallery(status: str = "", search: str = "", limit: int = 20, offset: int = 0):
+async def video_gallery(status: str = "", search: str = "", module: str = "",
+                        channel: str = "", limit: int = 20, offset: int = 0):
     """List all sessions that have generated videos."""
     results = []
     for base_dir in [Path("sessions"), Path("output")]:
@@ -66,7 +67,8 @@ async def video_gallery(status: str = "", search: str = "", limit: int = 20, off
                     video_file = fn
                     break
             session_data = {}
-            for sj in ["session.json", "metadata.json"]:
+            metadata = {}
+            for sj in ["session.json"]:
                 sjp = session_path / sj
                 if sjp.exists():
                     try:
@@ -74,24 +76,115 @@ async def video_gallery(status: str = "", search: str = "", limit: int = 20, off
                         break
                     except Exception:
                         pass
+            # Also read metadata.json for title/tags
+            meta_path = session_path / "metadata.json"
+            if meta_path.exists():
+                try:
+                    metadata = json.loads(meta_path.read_text())
+                except Exception:
+                    pass
+            wc = session_data.get("wizard_config", {})
+            entry_module = session_data.get("module", "")
+            # Detect module from session ID patterns
+            if not entry_module:
+                if session_id.startswith("bul_"):
+                    entry_module = "bulletin"
+                elif session_id.startswith("pr_"):
+                    entry_module = "product_review"
             entry = {
                 "session_id": session_id,
                 "has_video": video_file is not None,
                 "video_file": video_file,
                 "status": session_data.get("status", "unknown"),
-                "topic": session_data.get("topic", session_data.get("title", "")),
-                "created_at": session_data.get("created_at", ""),
+                "topic": session_data.get("topic", metadata.get("title", session_data.get("title", ""))),
+                "created_at": session_data.get("created_at", session_data.get("started_at", "")),
                 "channel_id": session_data.get("channel_id", "_default"),
+                "module": entry_module,
+                "platform": wc.get("platform", ""),
+                "quality_preset": wc.get("quality_preset", ""),
+                "has_thumbnail": (session_path / "thumbnail.jpg").exists(),
+                "duration": session_data.get("duration", ""),
+                "tags": metadata.get("tags", [])[:5],
             }
             if status and entry["status"] != status:
                 continue
             if search and search.lower() not in (entry.get("topic", "") or "").lower():
                 continue
+            if module and entry["module"] != module:
+                continue
+            if channel and entry["channel_id"] != channel:
+                continue
             results.append(entry)
     seen = set()
     unique = [r for r in results if r["session_id"] not in seen and not seen.add(r["session_id"])]
     total = len(unique)
-    return {"videos": unique[offset:offset + limit], "total": total, "limit": limit, "offset": offset}
+    # Collect unique filter values for frontend pill filters
+    modules_set = set()
+    channels_set = set()
+    platforms_set = set()
+    for r in unique:
+        if r.get("module"):
+            modules_set.add(r["module"])
+        if r.get("channel_id"):
+            channels_set.add(r["channel_id"])
+        if r.get("platform"):
+            platforms_set.add(r["platform"])
+    return {
+        "videos": unique[offset:offset + limit],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "filters": {
+            "modules": sorted(modules_set),
+            "channels": sorted(channels_set),
+            "platforms": sorted(platforms_set),
+        }
+    }
+
+
+@router.get("/sessions/{session_id}/thumbnail")
+async def session_thumbnail(session_id: str):
+    """Return a thumbnail for a session video. Generates one from the video if missing."""
+    import subprocess
+    for base in ["sessions", "output"]:
+        sp = Path(base) / session_id
+        if not sp.is_dir():
+            continue
+        thumb = sp / "thumbnail.jpg"
+        if thumb.exists():
+            return FileResponse(thumb, media_type="image/jpeg")
+        # Try to generate from video
+        for vf in ["final_video.mp4", "final_output.mp4"]:
+            video = sp / vf
+            if video.exists():
+                try:
+                    subprocess.run([
+                        "ffmpeg", "-y", "-i", str(video),
+                        "-ss", "2", "-frames:v", "1",
+                        "-vf", "scale=480:-1",
+                        "-q:v", "4", str(thumb)
+                    ], capture_output=True, timeout=10)
+                    if thumb.exists():
+                        return FileResponse(thumb, media_type="image/jpeg")
+                except Exception:
+                    pass
+        # Try first clip as fallback
+        clips_dir = sp / "clips"
+        if clips_dir.exists():
+            clips = sorted(clips_dir.glob("scene_*.mp4"))
+            if clips:
+                try:
+                    subprocess.run([
+                        "ffmpeg", "-y", "-i", str(clips[0]),
+                        "-ss", "0.5", "-frames:v", "1",
+                        "-vf", "scale=480:-1",
+                        "-q:v", "4", str(thumb)
+                    ], capture_output=True, timeout=10)
+                    if thumb.exists():
+                        return FileResponse(thumb, media_type="image/jpeg")
+                except Exception:
+                    pass
+    raise HTTPException(404, "Thumbnail not found")
 
 
 @router.post("/sessions/bulk")

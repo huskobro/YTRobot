@@ -247,6 +247,29 @@ class ChannelHub:
         logger.info(f"[ChannelHub] Channel updated: {channel_id}")
         return config
 
+    def get_channel_settings(self, channel_id: str) -> dict:
+        """Get per-channel settings overrides. Returns empty dict if none saved."""
+        path = self._channel_dir(channel_id) / "settings.json"
+        if not path.exists():
+            return {}
+        try:
+            return json.loads(path.read_text())
+        except Exception:
+            return {}
+
+    def save_channel_settings(self, channel_id: str, settings: dict) -> dict:
+        """Save per-channel settings overrides."""
+        channel_dir = self._channel_dir(channel_id)
+        if not channel_dir.exists():
+            raise ValueError(f"Channel not found: {channel_id}")
+        path = channel_dir / "settings.json"
+        # Merge with existing settings (don't overwrite unmentioned keys)
+        existing = self.get_channel_settings(channel_id)
+        existing.update(settings)
+        path.write_text(json.dumps(existing, indent=2, ensure_ascii=False))
+        logger.info(f"[ChannelHub] Channel settings saved: {channel_id} ({len(settings)} keys)")
+        return existing
+
     def delete_channel(self, channel_id: str) -> bool:
         if channel_id == DEFAULT_CHANNEL_ID:
             raise ValueError("Cannot delete default channel")

@@ -272,6 +272,79 @@ def _fetch_voices(provider: str = "", api_key: str = ""):
     raise HTTPException(400, f"Bilinmeyen TTS provider: {provider}. Desteklenenler: openai, elevenlabs, speshaudio")
 
 
+# ── AI Assist (generic short text generation) ────────────────────────────────
+
+class AiAssistReq(BaseModel):
+    prompt: str
+    max_tokens: int = 100
+
+
+@router.post("/ai/assist")
+async def ai_assist(req: AiAssistReq):
+    """Generic AI text assist — returns a short generated text for form fields."""
+    from config import Settings
+    cfg = Settings()
+
+    prompt = req.prompt.strip()
+    if not prompt:
+        raise HTTPException(400, "Prompt boş olamaz")
+
+    messages = [
+        {"role": "system", "content": "Sen kısa ve öz yanıtlar veren bir asistansın. Sadece istenen metni yaz, başka açıklama ekleme."},
+        {"role": "user", "content": prompt},
+    ]
+
+    # Try KieAI first
+    kieai_key = os.environ.get("KIEAI_API_KEY") or getattr(cfg, "kieai_api_key", "")
+    if kieai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=kieai_key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
+            resp = client.chat.completions.create(
+                model="gemini-2.5-flash", messages=messages,
+                max_tokens=req.max_tokens, temperature=0.7,
+            )
+            text = resp.choices[0].message.content.strip()
+            return {"text": text}
+        except Exception as e:
+            logger.warning(f"KieAI ai/assist failed: {e}")
+
+    # Try Gemini direct
+    gemini_key = os.environ.get("GEMINI_API_KEY") or getattr(cfg, "gemini_api_key", "")
+    if gemini_key:
+        try:
+            g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.7, "maxOutputTokens": req.max_tokens},
+            }
+            import urllib.request as _ur
+            _req = _ur.Request(g_url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+            with _ur.urlopen(_req, timeout=15) as r:
+                data = json.loads(r.read())
+                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                return {"text": text}
+        except Exception as e:
+            logger.warning(f"Gemini ai/assist failed: {e}")
+
+    # Try OpenAI
+    openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            resp = client.chat.completions.create(
+                model="gpt-4o-mini", messages=messages,
+                max_tokens=req.max_tokens, temperature=0.7,
+            )
+            text = resp.choices[0].message.content.strip()
+            return {"text": text}
+        except Exception as e:
+            logger.warning(f"OpenAI ai/assist failed: {e}")
+
+    raise HTTPException(503, "Hiçbir AI provider yapılandırılmamış veya erişilemiyor")
+
+
 @router.post("/system/cleanup")
 def cleanup_system():
     import shutil
@@ -307,6 +380,7 @@ class TTSPreviewReq(BaseModel):
     provider: str = "edge"
     voice: str = "tr-TR-AhmetNeural"
     text: str = ""
+    speed: float = 1.0
 
 
 @router.post("/tts/preview")
@@ -332,7 +406,11 @@ async def tts_preview(body: TTSPreviewReq):
         tmp.close()
 
         try:
-            communicate = edge_tts.Communicate(text, body.voice)
+            rate_str = ""
+            if body.speed and body.speed != 1.0:
+                pct = int((body.speed - 1.0) * 100)
+                rate_str = f"{pct:+d}%"
+            communicate = edge_tts.Communicate(text, body.voice, rate=rate_str if rate_str else None)
             await communicate.save(tmp_path)
         except Exception as e:
             logger.error(f"edge-tts preview failed: {e}")
@@ -385,3 +463,60 @@ async def tts_preview(body: TTSPreviewReq):
 
     else:
         raise HTTPException(400, f"Bilinmeyen TTS provider: {provider}")
+
+
+# ── Wizard Configuration ─────────────────────────────────────────────────────
+
+WIZARD_CONFIG_FILE = Path("data/wizard_config.json")
+
+# Default wizard steps definition
+DEFAULT_WIZARD_STEPS = [
+    {"id": 1, "key": "welcome", "icon": "🎬", "enabled": True},
+    {"id": 2, "key": "channel", "icon": "📡", "enabled": True},
+    {"id": 3, "key": "tts_provider", "icon": "🎤", "enabled": True},
+    {"id": 4, "key": "voice_select", "icon": "🗣️", "enabled": True},
+    {"id": 5, "key": "visual_provider", "icon": "🖼️", "enabled": True},
+    {"id": 6, "key": "video_style", "icon": "🎬", "enabled": True},
+    {"id": 7, "key": "tts_advanced", "icon": "🔧", "enabled": True},
+    {"id": 8, "key": "subtitle_detail", "icon": "📝", "enabled": True},
+    {"id": 9, "key": "ai_system", "icon": "🧠", "enabled": True},
+    {"id": 10, "key": "api_keys", "icon": "🔑", "enabled": True},
+    {"id": 11, "key": "notifications", "icon": "🔔", "enabled": True},
+    {"id": 12, "key": "social_meta", "icon": "📱", "enabled": True},
+    {"id": 13, "key": "youtube_oauth", "icon": "📺", "enabled": True},
+    {"id": 14, "key": "module_tts", "icon": "🎙️", "enabled": True},
+    {"id": 15, "key": "module_settings", "icon": "⚙️", "enabled": True},
+    {"id": 16, "key": "summary", "icon": "✅", "enabled": True},
+]
+
+
+@router.get("/wizard-config")
+def get_wizard_config():
+    """Get the wizard step configuration."""
+    if WIZARD_CONFIG_FILE.exists():
+        try:
+            return json.loads(WIZARD_CONFIG_FILE.read_text())
+        except Exception:
+            pass
+    return {"steps": DEFAULT_WIZARD_STEPS}
+
+
+class WizardConfigReq(BaseModel):
+    steps: list
+
+
+@router.post("/wizard-config")
+def save_wizard_config(body: WizardConfigReq):
+    """Save wizard step configuration (order, enabled/disabled)."""
+    WIZARD_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    config = {"steps": body.steps, "updated_at": datetime.now(timezone.utc).isoformat()}
+    WIZARD_CONFIG_FILE.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+    return {"ok": True}
+
+
+@router.post("/wizard-config/reset")
+def reset_wizard_config():
+    """Reset wizard configuration to defaults."""
+    if WIZARD_CONFIG_FILE.exists():
+        WIZARD_CONFIG_FILE.unlink()
+    return {"steps": DEFAULT_WIZARD_STEPS}

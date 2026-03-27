@@ -1,5 +1,5 @@
 import re
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from src.core.channel_hub import channel_hub
@@ -126,6 +126,26 @@ def delete_channel(channel_id: str):
         return {"ok": True}
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@router.get("/{channel_id}/settings")
+async def get_channel_settings(channel_id: str):
+    """Get per-channel settings overrides."""
+    from fastapi.responses import JSONResponse
+    settings = channel_hub.get_channel_settings(channel_id)
+    return JSONResponse(settings)
+
+
+@router.post("/{channel_id}/settings")
+async def save_channel_settings(channel_id: str, request: Request):
+    """Save per-channel settings overrides."""
+    from fastapi.responses import JSONResponse
+    body = await request.json()
+    try:
+        result = channel_hub.save_channel_settings(channel_id, body)
+        return JSONResponse({"ok": True, "settings": result})
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=404)
 
 
 @router.get("/{channel_id}/analytics")

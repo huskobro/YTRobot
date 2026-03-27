@@ -20,3 +20,4 @@ qwen-tts
 torch
 soundfile
 edge-tts>=7.0.0
+langdetect

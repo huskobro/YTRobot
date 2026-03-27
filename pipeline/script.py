@@ -15,6 +15,24 @@ from pathlib import Path
 from config import settings  # type: ignore  # pyre-ignore[missing-module-attribute]
 
 
+def detect_language(text: str) -> str:
+    """Detect language of text. Returns ISO 639-1 code (e.g., 'tr', 'en', 'de').
+    Falls back to 'tr' if detection fails or confidence is low."""
+    if not text or len(text.strip()) < 10:
+        return "tr"
+    try:
+        from langdetect import detect, DetectorFactory
+        DetectorFactory.seed = 0  # Deterministic results
+        lang = detect(text[:500])  # Use first 500 chars for speed
+        # Map common language codes
+        supported = {"tr", "en", "de", "fr", "es", "pt", "ar", "ru", "ja", "ko", "zh-cn", "it", "nl"}
+        if lang in supported:
+            return lang
+        return "tr"  # Default fallback
+    except Exception:
+        return "tr"
+
+
 CATEGORY_INSTRUCTIONS = {
     "true_crime": (
         "Structure: Hook with shocking revelation → build tension → reveal backstory → "

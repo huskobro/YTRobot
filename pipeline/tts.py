@@ -100,6 +100,10 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
 _FALLBACK_PROVIDERS = ["edge", "openai", "elevenlabs"]
 
 
+# kwargs keys that are specific to Qwen3 — must NOT be passed to other providers
+_QWEN3_KWARGS = frozenset({"model_id", "model_type", "voice_instruct", "device", "ref_audio", "speaker"})
+
+
 def _synthesize_with_fallback(
     narration: str,
     out: Path,
@@ -115,7 +119,12 @@ def _synthesize_with_fallback(
             prov = _load_provider(pname)
             if pname == provider_name and voice_id and hasattr(prov, "voice_id"):
                 prov.voice_id = voice_id
-            prov.synthesize(narration, out, **syn_kwargs)
+            # Strip Qwen3-specific kwargs when calling non-Qwen3 providers
+            if pname != "qwen3":
+                kwargs = {k: v for k, v in syn_kwargs.items() if k not in _QWEN3_KWARGS}
+            else:
+                kwargs = syn_kwargs
+            prov.synthesize(narration, out, **kwargs)
             if out.exists() and out.stat().st_size > 1000:
                 if pname != provider_name:
                     logger.warning(f"Scene {scene_idx}: primary TTS '{provider_name}' failed, used fallback '{pname}'")

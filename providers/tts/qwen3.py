@@ -33,15 +33,10 @@ class Qwen3TTSProvider(BaseTTSProvider):
         if self.model_id not in _MODEL_CACHE:
             if Qwen3TTSModel is None:
                 raise ImportError("qwen-tts package is required for Qwen3 TTS.")
-                
+
             print(f"  [Qwen3] Loading model: {self.model_id} on {self.device}...")
-            # Use bfloat16 for better efficiency if not on CPU
             dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
-            
-            # On Mac MPS, some kernels might not support flash_attention_2
-            attn_impl = "sdpa" if self.device == "mps" else "flash_attention_2"
-            if self.device == "cpu":
-                attn_impl = "eager"
+            attn_impl = self._attn_impl(self.device)
 
             _MODEL_CACHE[self.model_id] = Qwen3TTSModel.from_pretrained(
                 self.model_id,
@@ -50,6 +45,29 @@ class Qwen3TTSProvider(BaseTTSProvider):
                 attn_implementation=attn_impl
             )
         return _MODEL_CACHE[self.model_id]
+
+    def _resolve_device(self, requested: str) -> str:
+        """Resolve 'auto' to actual device string."""
+        if requested and requested != "auto":
+            return requested
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+
+    def _attn_impl(self, device: str) -> str:
+        """Pick the safest attention implementation for the device."""
+        if device == "cpu":
+            return "eager"
+        if device == "mps":
+            return "sdpa"
+        # CUDA: only use flash_attention_2 if the package is actually installed
+        try:
+            import flash_attn  # noqa: F401
+            return "flash_attention_2"
+        except ImportError:
+            return "sdpa"
 
     def synthesize(self, text: str, output_path: Path, **kwargs) -> Path:
         if Qwen3TTSModel is None:
@@ -61,7 +79,8 @@ class Qwen3TTSProvider(BaseTTSProvider):
         speaker = kwargs.get("speaker") or settings.qwen3_speaker
         voice_instruct = kwargs.get("voice_instruct") or settings.qwen3_voice_instruct
         ref_audio = kwargs.get("ref_audio") or settings.qwen3_ref_audio
-        device = kwargs.get("device") or self.device
+        # Always resolve "auto" to a real device name
+        device = self._resolve_device(kwargs.get("device") or self.device)
 
         text = clean_for_tts(text, remove_apostrophes=settings.tts_remove_apostrophes)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,9 +88,7 @@ class Qwen3TTSProvider(BaseTTSProvider):
         if model_id not in _MODEL_CACHE:
              print(f"  [Qwen3] Loading model: {model_id} on {device}...")
              dtype = torch.bfloat16 if device != "cpu" else torch.float32
-             attn_impl = "sdpa" if device == "mps" else "flash_attention_2"
-             if device == "cpu":
-                 attn_impl = "eager"
+             attn_impl = self._attn_impl(device)
              _MODEL_CACHE[model_id] = Qwen3TTSModel.from_pretrained(
                  model_id, device_map=device, dtype=dtype, attn_implementation=attn_impl
              )

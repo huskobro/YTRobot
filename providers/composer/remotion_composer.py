@@ -250,6 +250,7 @@ def compose_remotion(
                 str(output_file.absolute()),
                 f"--props={props_file.absolute()}",
                 f"--concurrency={settings.remotion_concurrency}",
+                "--timeout=120000",
                 "--log=verbose",
             ],
             cwd=_REMOTION_DIR,

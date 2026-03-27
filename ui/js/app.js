@@ -134,6 +134,8 @@ function app() {
         color_secondary: '#FFFFFF'
       }
     },
+    youtubeConnected: false,
+    youtubeChannelInfo: null,
     analyticsData: null,
     analyticsLoading: false,
     queueStatus: null,
@@ -477,6 +479,24 @@ function app() {
       }
     },
 
+    async checkYouTubeStatus() {
+      try {
+        const activeChannel = this.activeChannelId || '_default';
+        const resp = await fetch(`/api/youtube/status?channel_id=${activeChannel}`);
+        const data = await resp.json();
+        this.youtubeConnected = data.authenticated;
+        this.youtubeChannelInfo = data.channel_info;
+      } catch(e) { console.warn('YouTube status check failed:', e); }
+    },
+
+    connectYouTube() {
+      const activeChannel = this.activeChannelId || '_default';
+      fetch(`/api/youtube/auth-url?channel_id=${activeChannel}`)
+        .then(r => r.json())
+        .then(data => { if(data.auth_url) window.open(data.auth_url, '_blank'); })
+        .catch(e => console.error('YouTube auth error:', e));
+    },
+
     async init() {
       // 1. Register Global Listeners First (Immune to API failures)
       window.addEventListener('keydown', (e) => {
@@ -499,6 +519,7 @@ function app() {
         ]);
         this.loadBulletinPresets();
         this.loadBulletinHistory();
+        this.checkYouTubeStatus();
       } catch (e) {
         console.error("Initialization error:", e);
       }

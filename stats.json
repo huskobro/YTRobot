@@ -1,10 +1,10 @@
 {
-    "total_renders": 9,
-    "success_rate": 66.66666666666666,
+    "total_renders": 13,
+    "success_rate": 76.92307692307693,
     "failed_renders": 3,
-    "completed_renders": 6,
-    "average_render_time": 74.54264704386394,
-    "total_render_time": 447.2558822631836,
+    "completed_renders": 10,
+    "average_render_time": 126.14645476341248,
+    "total_render_time": 1261.4645476341248,
     "platform_stats": {
         "youtube": 0,
         "instagram": 0
@@ -13,5 +13,23 @@
         "argument should be a str or an os.PathLike object ": 2,
         "FlashAttention2 has been toggled on, but it cannot": 1
     },
-    "last_update": 1774559924.519913
+    "last_update": 1774603423.4079711,
+    "modules": {
+        "yt_video": 4,
+        "bulletin": 0,
+        "product_review": 0
+    },
+    "daily_history": [
+        {
+            "date": "2026-03-27",
+            "renders": 4,
+            "success": 4,
+            "failed": 0
+        }
+    ],
+    "cost_tracking": {
+        "total_estimated_usd": 0.0,
+        "by_provider": {}
+    },
+    "error_details": []
 }

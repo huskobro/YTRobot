@@ -25,6 +25,12 @@ def get_competitor_data(channel_slug: Optional[str] = None):
     return competitor_intel.get_data(channel_slug)
 
 
+@router.get("/heatmap")
+def competitor_heatmap(channel_slug: str = ""):
+    from src.core.competitor_intel import get_heatmap_data
+    return get_heatmap_data(channel_slug)
+
+
 @router.post("/channels")
 def save_channel(body: ChannelReq, channel_slug: Optional[str] = None):
     return competitor_intel.save_channel(body.model_dump(), channel_slug)

@@ -214,6 +214,63 @@ def get_title_pool(channel_slug: Optional[str] = None) -> List[Dict[str, Any]]:
     return _load_data(channel_slug).get("title_pool", [])
 
 
+def get_heatmap_data(channel_slug: str = "") -> dict:
+    """Generate heatmap data showing competitor activity patterns."""
+    data = get_data(channel_slug)
+    channels = data.get("channels", [])
+
+    # Analyze upload patterns by day of week and hour
+    day_hour_grid = [[0] * 24 for _ in range(7)]  # 7 days x 24 hours
+    title_lengths = []
+    tag_frequency = {}
+
+    for channel in channels:
+        for video in channel.get("recent_videos", channel.get("videos", [])):
+            # Parse published date if available
+            pub = video.get("published_at", "")
+            if pub:
+                try:
+                    from datetime import datetime as dt
+                    if "T" in pub:
+                        d = dt.fromisoformat(pub.replace("Z", "+00:00"))
+                        day_hour_grid[d.weekday()][d.hour] += 1
+                except Exception:
+                    pass
+
+            # Title analysis
+            title = video.get("title", "")
+            if title:
+                title_lengths.append(len(title))
+
+            # Tag frequency
+            for tag in video.get("tags", []):
+                tag_frequency[tag.lower()] = tag_frequency.get(tag.lower(), 0) + 1
+
+    # Find peak times
+    peak_times = []
+    for day in range(7):
+        for hour in range(24):
+            if day_hour_grid[day][hour] > 0:
+                peak_times.append({
+                    "day": ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"][day],
+                    "hour": hour,
+                    "count": day_hour_grid[day][hour],
+                })
+
+    peak_times.sort(key=lambda x: x["count"], reverse=True)
+
+    # Top tags
+    top_tags = sorted(tag_frequency.items(), key=lambda x: x[1], reverse=True)[:20]
+
+    return {
+        "heatmap": day_hour_grid,
+        "peak_times": peak_times[:10],
+        "avg_title_length": round(sum(title_lengths) / max(1, len(title_lengths)), 1),
+        "top_tags": [{"tag": t, "count": c} for t, c in top_tags],
+        "channels_analyzed": len(channels),
+    }
+
+
 # Module-level convenience: CompetitorIntelEngine class for structured usage
 class CompetitorIntelEngine:
     """Competitor intelligence engine — wraps module-level functions."""

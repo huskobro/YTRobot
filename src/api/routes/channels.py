@@ -3,10 +3,8 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from src.core.channel_hub import channel_hub
+from src.core.upload_validator import validate_image_upload, validate_file_size, sanitize_filename, MAX_IMAGE_SIZE
 from pathlib import Path
-
-_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-_MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 def _sanitize_channel_id(channel_id: str) -> str:
@@ -153,15 +151,9 @@ async def upload_logo(channel_id: str, file: UploadFile = File(...)):
     if not ch:
         raise HTTPException(404, f"Channel not found: {channel_id}")
 
-    # Validate MIME type — must be an image
-    if not file.content_type or file.content_type not in _ALLOWED_IMAGE_TYPES:
-        raise HTTPException(400, f"Only image files allowed (jpeg, png, gif, webp). Got: {file.content_type}")
-
+    validate_image_upload(file)
     content = await file.read()
-
-    # Validate file size
-    if len(content) > _MAX_LOGO_SIZE:
-        raise HTTPException(400, "File too large (max 5 MB)")
+    validate_file_size(content, MAX_IMAGE_SIZE, file.filename or "")
 
     # Save logo — filename is hardcoded to logo.png to prevent filename injection
     branding_dir = Path("channels") / safe_channel_id / "branding"

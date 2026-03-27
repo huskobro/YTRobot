@@ -27,9 +27,12 @@ from src.api.routes.thumbnail import router as thumbnail_router
 from src.api.routes.webhook import router as webhook_router
 from src.api.routes.channels import router as channels_router
 from src.api.routes.youtube import router as youtube_router
+from src.api.routes.scheduler import router as scheduler_router
 from src.core.queue import queue_manager
+from src.core.scheduler import video_scheduler
 from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
+from config import settings
 
 def _setup_logging():
     """Yapilandirilmis logging kurulumu."""
@@ -72,9 +75,11 @@ async def lifespan(app: FastAPI):
     # Startup
     asset_cache.cleanup() # Disk optimization
     queue_manager.start()
+    video_scheduler.start()
     yield
     # Shutdown
     await queue_manager.stop()
+    await video_scheduler.stop()
 
 app = FastAPI(title="YTRobot API", version="2.0.0", lifespan=lifespan)
 
@@ -92,9 +97,10 @@ async def general_exception_handler(request, exc):
         content={"error": "Sunucu hatası: " + str(exc), "status_code": 500}
     )
 
+origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,6 +118,7 @@ app.include_router(thumbnail_router)
 app.include_router(webhook_router)
 app.include_router(channels_router)
 app.include_router(youtube_router, prefix="/api/youtube")
+app.include_router(scheduler_router)
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")

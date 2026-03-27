@@ -222,6 +222,9 @@ class Settings(BaseSettings):
     video_fps: int = 30
     gpu_encoding: str = "auto"  # auto | force | disabled
 
+    # Security
+    cors_origins: str = "*"  # comma-separated origins, "*" for all (dev mode)
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

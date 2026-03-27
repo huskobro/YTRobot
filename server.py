@@ -30,6 +30,8 @@ from src.api.routes.youtube import router as youtube_router
 from src.api.routes.scheduler import router as scheduler_router
 from src.api.routes.audit import router as audit_router
 from src.api.routes.notifications import router as notifications_router
+from src.api.routes.calendar import router as calendar_router
+from src.api.routes.ab_testing import router as ab_testing_router
 from src.core.queue import queue_manager
 from src.core.scheduler import video_scheduler
 from src.core.cache import asset_cache
@@ -128,6 +130,8 @@ app.include_router(youtube_router, prefix="/api/youtube")
 app.include_router(scheduler_router)
 app.include_router(audit_router)
 app.include_router(notifications_router)
+app.include_router(calendar_router)
+app.include_router(ab_testing_router)
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")

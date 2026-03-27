@@ -1,13 +1,49 @@
 import hmac
 import hashlib
+import ipaddress
 import json
 import logging
+import socket
 import urllib.request as urllib_req
-from fastapi import APIRouter
+from urllib.parse import urlparse
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 logger = logging.getLogger("ytrobot.webhook")
+
+
+def _is_safe_url(url: str) -> bool:
+    """Reject URLs pointing to localhost, private/link-local IPs, or file:// scheme."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+
+    # Block non-HTTP schemes
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+
+    # Block obvious localhost names
+    if hostname in ("localhost", "127.0.0.1", "[::1]", "::1", "0.0.0.0"):
+        return False
+
+    # Resolve hostname and check IP ranges
+    try:
+        for info in socket.getaddrinfo(hostname, None):
+            addr = info[4][0]
+            ip = ipaddress.ip_address(addr)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+    except socket.gaierror:
+        # Cannot resolve — reject to be safe
+        return False
+
+    return True
 
 
 def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
@@ -25,6 +61,9 @@ class WebhookTestReq(BaseModel):
 def dispatch_webhook(url: str, payload: dict, mention: str = "") -> bool:
     """Send a webhook notification. Supports Slack and Discord format."""
     if not url:
+        return False
+    if not _is_safe_url(url):
+        logger.warning(f"[Webhook] Blocked unsafe URL: {url}")
         return False
     try:
         emoji = "✅" if payload.get("status") == "completed" else "❌"
@@ -64,6 +103,8 @@ def dispatch_webhook(url: str, payload: dict, mention: str = "") -> bool:
 
 @router.post("/test")
 def test_webhook(body: WebhookTestReq):
+    if not _is_safe_url(body.url):
+        raise HTTPException(400, "Unsafe webhook URL: localhost, private IPs, and non-HTTP schemes are not allowed")
     result = dispatch_webhook(
         body.url,
         {"status": "completed", "module": "yt_video",

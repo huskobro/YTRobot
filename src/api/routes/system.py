@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from src.api.models.schemas import SettingsReq, PromptsReq, PresetReq
 from src.core.utils import _read_env, _write_env, _list_presets, PRESETS_DIR, PROMPTS_DIR
 from src.core.cache import api_cache
@@ -185,11 +186,34 @@ def test_api_key(provider: str):
                 else: return fail(f"HTTP {response.status}")
         return fail(f"Bilinmeyen provider: '{provider}'. Desteklenenler: kieai, openai, elevenlabs, speshaudio")
     except Exception as e:
-        return fail(f"Hata: {str(e)}")
+        logger.error(f"API key test failed for provider '{provider}': {e}")
+        return fail("API key test failed. Check server logs for details.")
 
 @router.get("/voices")
 def get_voices(provider: str = "", api_key: str = ""):
-    """Secili TTS provider'dan ses listesi getirir."""
+    """Secili TTS provider'dan ses listesi getirir.
+
+    DEPRECATED: api_key query parameter is deprecated. Use stored config instead.
+    """
+    if api_key:
+        logger.warning("DEPRECATED: api_key passed as query parameter to /voices. "
+                       "Use stored config or POST /voices with body instead.")
+    return _fetch_voices(provider=provider, api_key=api_key)
+
+
+class VoicesReq(BaseModel):
+    provider: str = ""
+    api_key: str = ""
+
+
+@router.post("/voices")
+def post_voices(body: VoicesReq):
+    """Fetch voice list — preferred endpoint (api_key in body, not URL)."""
+    return _fetch_voices(provider=body.provider, api_key=body.api_key)
+
+
+def _fetch_voices(provider: str = "", api_key: str = ""):
+    """Internal helper to fetch voices for a given provider."""
     from config import Settings
     cfg = Settings()
 
@@ -224,7 +248,7 @@ def get_voices(provider: str = "", api_key: str = ""):
             return {"voices": voices}
         except Exception as e:
             logger.error(f"ElevenLabs voices fetch error: {e}")
-            raise HTTPException(502, f"ElevenLabs API hatasi: {str(e)}")
+            raise HTTPException(502, "Failed to fetch voices from ElevenLabs")
 
     if provider == "speshaudio":
         key = api_key or os.environ.get("SPESHAUDIO_API_KEY") or getattr(cfg, "speshaudio_api_key", "")
@@ -241,7 +265,7 @@ def get_voices(provider: str = "", api_key: str = ""):
             return {"voices": voices}
         except Exception as e:
             logger.error(f"SpeshAudio voices fetch error: {e}")
-            raise HTTPException(502, f"SpeshAudio API hatasi: {str(e)}")
+            raise HTTPException(502, "Failed to fetch voices from SpeshAudio")
 
     # Bilinmeyen provider
     raise HTTPException(400, f"Bilinmeyen TTS provider: {provider}. Desteklenenler: openai, elevenlabs, speshaudio")

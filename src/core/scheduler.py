@@ -1,4 +1,5 @@
 import asyncio
+import fcntl
 import json
 import logging
 from pathlib import Path
@@ -54,13 +55,23 @@ class VideoScheduler:
         SCHEDULE_FILE.parent.mkdir(parents=True, exist_ok=True)
         if SCHEDULE_FILE.exists():
             try:
-                self._entries = json.loads(SCHEDULE_FILE.read_text())
+                with open(SCHEDULE_FILE, 'r') as f:
+                    fcntl.flock(f, fcntl.LOCK_SH)
+                    try:
+                        self._entries = json.load(f)
+                    finally:
+                        fcntl.flock(f, fcntl.LOCK_UN)
             except Exception:
                 self._entries = []
 
     def _save(self):
         SCHEDULE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        SCHEDULE_FILE.write_text(json.dumps(self._entries, indent=2, ensure_ascii=False))
+        with open(SCHEDULE_FILE, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                json.dump(self._entries, f, indent=2, ensure_ascii=False)
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
 
     def add(self, entry: ScheduleEntry) -> dict:
         d = entry.to_dict()

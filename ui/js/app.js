@@ -335,7 +335,7 @@ function app() {
       try {
         const resp = await fetch(`/api/sessions/gallery?${params}`);
         if (resp.ok) { const d = await resp.json(); this.galleryVideos = d.videos||[]; this.galleryHasMore = d.total > 20; this.galleryOffset = 20; }
-      } catch(e) {}
+      } catch(e) { console.warn('[loadGallery]', e); this.showToast(this.t('load_error') || 'Failed to load gallery', 'error'); }
     },
     async loadMoreGallery() {
       const params = new URLSearchParams();
@@ -345,7 +345,7 @@ function app() {
       try {
         const resp = await fetch(`/api/sessions/gallery?${params}`);
         if (resp.ok) { const d = await resp.json(); this.galleryVideos = [...this.galleryVideos, ...(d.videos||[])]; this.galleryHasMore = d.total > this.galleryOffset + 20; this.galleryOffset += 20; }
-      } catch(e) {}
+      } catch(e) { console.warn('[loadMoreGallery]', e); }
     },
 
     // ── Settings Search ──
@@ -354,7 +354,7 @@ function app() {
       try {
         const resp = await fetch(`/api/settings/search?q=${encodeURIComponent(this.settingsSearch)}`);
         if (resp.ok) { const d = await resp.json(); this.settingsSearchResults = d.results || []; }
-      } catch(e) {}
+      } catch(e) { console.warn('[searchSettings]', e); }
     },
 
     // ── Scheduler ──
@@ -362,14 +362,14 @@ function app() {
       try {
         const resp = await fetch('/api/scheduler/');
         if (resp.ok) { const d = await resp.json(); this.scheduledVideos = d.entries || []; }
-      } catch(e) {}
+      } catch(e) { console.warn('[loadSchedule]', e); this.showToast(this.t('load_error') || 'Failed to load data', 'error'); }
     },
     async cancelSchedule(sessionId) {
       try {
         await fetch(`/api/scheduler/${sessionId}`, { method: 'DELETE' });
         this.loadSchedule();
-        if (this.showToast) this.showToast('Zamanlama iptal edildi', 'success');
-      } catch(e) {}
+        if (this.showToast) this.showToast(this.t('schedule_cancelled') || 'Schedule cancelled', 'success');
+      } catch(e) { console.warn('[cancelSchedule]', e); this.showToast(this.t('cancel_error') || 'Cancel failed', 'error'); }
     },
 
     // ── Toast API ──
@@ -627,7 +627,7 @@ function app() {
             // Ctrl+Enter or Cmd+Enter: Start video generation
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
-                if (typeof this.startGeneration === 'function') this.startGeneration();
+                if (this.view === 'new-run' && typeof this.submitRun === 'function') this.submitRun();
                 return;
             }
 
@@ -724,7 +724,7 @@ function app() {
       try {
         const qResp = await fetch('/api/queue/status');
         if (qResp.ok) this.queueStatus = await qResp.json();
-      } catch(e) {}
+      } catch(e) { console.warn('[loadDashboard:queue]', e); }
     },
 
     async loadErrorDetails() {
@@ -973,6 +973,7 @@ function app() {
     },
 
     deleteBulletinPreset(name) {
+      if (!confirm(this.t('confirm_delete') || 'Are you sure?')) return;
       this.bulletinPresets = this.bulletinPresets.filter(p => p.name !== name);
       localStorage.setItem('ytrobot-bulletin-presets', JSON.stringify(this.bulletinPresets));
     },
@@ -1022,11 +1023,16 @@ function app() {
 
     async saveNotes() {
       if (!this.currentSession) return;
-      await fetch(`/api/sessions/${this.currentSession.id}`, {
-        method: 'PATCH', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ notes: this.notes }),
-      });
-      this.notesSaved = true; setTimeout(() => this.notesSaved = false, 2000);
+      try {
+        await fetch(`/api/sessions/${this.currentSession.id}`, {
+          method: 'PATCH', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ notes: this.notes }),
+        });
+        this.notesSaved = true; setTimeout(() => this.notesSaved = false, 2000);
+      } catch(e) {
+        console.warn('[saveNotes]', e);
+        this.showToast(this.t('save_error') || 'Save failed', 'error');
+      }
     },
 
     async submitRun() {
@@ -1335,6 +1341,7 @@ function app() {
     },
 
     async deletePreset(name) {
+      if (!confirm(this.t('confirm_delete') || 'Are you sure?')) return;
       await fetch(`/api/presets/${encodeURIComponent(name)}`, { method: 'DELETE' });
       if (this.selectedPreset === name) this.selectedPreset = '';
       await this.loadPresets();
@@ -1425,30 +1432,30 @@ function app() {
       const checks = [];
       const title = result.title || '';
       if (title.length >= 20 && title.length <= 60) {
-        score += 25; checks.push({ label: 'Title uzunluğu', ok: true, msg: title.length+' karakter (ideal: 20-60)' });
+        score += 25; checks.push({ label: this.t('seo_title_length') || 'Title length', ok: true, msg: title.length+' '+(this.t('seo_chars') || 'chars')+' (ideal: 20-60)' });
       } else {
-        checks.push({ label: 'Title uzunluğu', ok: false, msg: title.length+' karakter (ideal: 20-60)' });
+        checks.push({ label: this.t('seo_title_length') || 'Title length', ok: false, msg: title.length+' '+(this.t('seo_chars') || 'chars')+' (ideal: 20-60)' });
       }
       const desc = result.description || '';
       if (desc.length >= 100 && desc.length <= 500) {
-        score += 25; checks.push({ label: 'Açıklama uzunluğu', ok: true, msg: desc.length+' karakter (ideal: 100-500)' });
+        score += 25; checks.push({ label: this.t('seo_desc_length') || 'Description length', ok: true, msg: desc.length+' '+(this.t('seo_chars') || 'chars')+' (ideal: 100-500)' });
       } else {
-        checks.push({ label: 'Açıklama uzunluğu', ok: false, msg: desc.length+' karakter (ideal: 100-500)' });
+        checks.push({ label: this.t('seo_desc_length') || 'Description length', ok: false, msg: desc.length+' '+(this.t('seo_chars') || 'chars')+' (ideal: 100-500)' });
       }
       const tags = Array.isArray(result.tags) ? result.tags : (result.tags||'').split(',').filter(Boolean);
       if (tags.length >= 10 && tags.length <= 20) {
-        score += 25; checks.push({ label: 'Etiket sayısı', ok: true, msg: tags.length+' etiket (ideal: 10-20)' });
+        score += 25; checks.push({ label: this.t('seo_tag_count') || 'Tag count', ok: true, msg: tags.length+' '+(this.t('seo_tags') || 'tags')+' (ideal: 10-20)' });
       } else {
-        checks.push({ label: 'Etiket sayısı', ok: false, msg: tags.length+' etiket (ideal: 10-20)' });
+        checks.push({ label: this.t('seo_tag_count') || 'Tag count', ok: false, msg: tags.length+' '+(this.t('seo_tags') || 'tags')+' (ideal: 10-20)' });
       }
       const titleWords = title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
       const descLower = desc.toLowerCase();
       const matchCount = titleWords.filter(w => descLower.includes(w)).length;
       const pct = titleWords.length > 0 ? Math.round(matchCount/titleWords.length*100) : 0;
       if (titleWords.length > 0 && pct >= 50) {
-        score += 25; checks.push({ label: 'Anahtar kelime uyumu', ok: true, msg: '%'+pct+' örtüşme' });
+        score += 25; checks.push({ label: this.t('seo_keyword_match') || 'Keyword match', ok: true, msg: pct+'% '+(this.t('seo_overlap') || 'overlap') });
       } else {
-        checks.push({ label: 'Anahtar kelime uyumu', ok: false, msg: '%'+pct+' örtüşme (ideal: ≥50%)' });
+        checks.push({ label: this.t('seo_keyword_match') || 'Keyword match', ok: false, msg: pct+'% '+(this.t('seo_overlap') || 'overlap')+' (ideal: ≥50%)' });
       }
       const color = score >= 75 ? 'emerald' : score >= 50 ? 'amber' : 'red';
       return { score, checks, color };
@@ -1476,16 +1483,16 @@ function app() {
 
     async testWebhook() {
       const url = this.settings.WEBHOOK_URL;
-      if (!url) { this.showNotification && this.showNotification('Webhook URL girilmedi', 'error'); return; }
+      if (!url) { this.showToast && this.showToast(this.t('webhook_no_url') || 'Webhook URL not set', 'error'); return; }
       try {
         const data = await this.apiFetch('/api/webhook/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         });
-        this.showNotification && this.showNotification(data.message || 'Webhook gönderildi', 'success');
+        this.showToast && this.showToast(data.message || this.t('webhook_sent') || 'Webhook sent', 'success');
       } catch(e) {
-        this.showNotification && this.showNotification('Webhook hatası: ' + e.message, 'error');
+        this.showToast && this.showToast((this.t('webhook_error') || 'Webhook error') + ': ' + e.message, 'error');
       }
     },
 
@@ -1785,7 +1792,7 @@ function app() {
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          this.prAutoError = err.detail || 'Hata oluştu';
+          this.prAutoError = err.detail || this.t('generic_error') || 'An error occurred';
         } else {
           const data = await r.json();
           // Merge all fields into prForm

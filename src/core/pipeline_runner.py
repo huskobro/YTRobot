@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import json
 import subprocess
@@ -10,6 +11,17 @@ from typing import Optional
 
 from src.core.utils import _read_session, _write_session, _log_file, _session_dir
 from src.core.process_registry import add_proc, remove_proc
+
+logger = logging.getLogger("ytrobot.pipeline_runner")
+
+# Whitelist of allowed env var prefixes for preset overrides
+_ALLOWED_ENV_PREFIXES = (
+    "YT_", "TTS_", "VISUALS_", "REMOTION_", "OPENAI_", "ANTHROPIC_",
+    "ELEVENLABS_", "PEXELS_", "PIXABAY_", "GOOGLE_", "SPESH_", "DUBVOICE_",
+    "EDGE_", "VIDEO_", "SUBTITLE_", "OUTPUT_", "SCRIPT_", "BULLETIN_",
+    "PR_", "PYCAPS_", "KIEAI_", "GEMINI_", "COMPOSER_", "ZIMAGE_",
+    "QWEN3_", "WEBHOOK_", "SOCIAL_",
+)
 
 STEPS = ["Script", "Metadata", "TTS", "Visuals", "Subtitles", "Compose"]
 STEP_MARKERS = {
@@ -44,8 +56,24 @@ def _emit_progress(sid: str, stage: str, progress: float, message: str):
     except Exception:
         pass
 
-_VENV_PYTHON = Path(__file__).parent.parent.parent / ".venv" / "bin" / "python"
-_PIPELINE_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
+def _find_venv_python() -> str:
+    """Find the venv Python interpreter, platform-aware."""
+    project_root = Path(__file__).parent.parent.parent
+    if sys.platform == "win32":
+        candidates = [
+            project_root / ".venv" / "Scripts" / "python.exe",
+            project_root / ".venv" / "Scripts" / "python",
+        ]
+    else:
+        candidates = [
+            project_root / ".venv" / "bin" / "python",
+        ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return sys.executable
+
+_PIPELINE_PYTHON = _find_venv_python()
 
 def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict = None):
     session = _read_session(sid)
@@ -63,7 +91,14 @@ def _run(sid: str, topic: Optional[str], script: Optional[str], preset_env: dict
 
     run_env = {**os.environ}
     if preset_env:
-        run_env.update({k: str(v) for k, v in preset_env.items()})
+        filtered = {}
+        for k, v in preset_env.items():
+            key_upper = k.upper()
+            if any(key_upper.startswith(prefix) for prefix in _ALLOWED_ENV_PREFIXES):
+                filtered[k] = str(v)
+            else:
+                logger.warning(f"Rejected env var override '{k}': prefix not in whitelist")
+        run_env.update(filtered)
 
     try:
         with open(log_path, "w", encoding="utf-8") as lf:

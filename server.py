@@ -101,9 +101,14 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    if settings.debug_mode:
+        detail = f"Sunucu hatası: {exc}"
+    else:
+        detail = "Internal server error"
     return JSONResponse(
         status_code=500,
-        content={"error": "Sunucu hatası: " + str(exc), "status_code": 500}
+        content={"error": detail, "status_code": 500}
     )
 
 from starlette.middleware.gzip import GZipMiddleware

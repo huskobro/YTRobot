@@ -30,12 +30,13 @@ class QueueManager:
     JOB_TIMEOUT = 1800          # 30 dakika maksimum sure
 
     def __init__(self):
-        self.queue: asyncio.Queue = asyncio.Queue()
+        self.queue: asyncio.Queue = asyncio.Queue(maxsize=100)
         self.active_jobs: Dict[str, VideoJob] = {}
         self._worker_tasks: List[asyncio.Task] = []
         self._worker_task: Optional[asyncio.Task] = None  # uyumluluk icin
         self._running = False
         self._running_count = 0  # Aktif is sayaci
+        self._count_lock = asyncio.Lock()
 
     def start(self):
         if not self._running:
@@ -62,6 +63,10 @@ class QueueManager:
         logger.info("  [Queue] All workers stopped.")
 
     async def add_job(self, job_type: str, data: dict, session_id: str) -> str:
+        if self.queue.full():
+            from fastapi import HTTPException
+            raise HTTPException(status_code=429, detail="Queue is full. Try again later.")
+
         job = VideoJob(job_type, data, session_id)
         self.active_jobs[session_id] = job
 
@@ -112,7 +117,8 @@ class QueueManager:
                 job = await self.queue.get()
                 job.status = JobStatus.RUNNING
                 job.started_at = time.time()
-                self._running_count += 1
+                async with self._count_lock:
+                    self._running_count += 1
                 logger.info(f"  [Queue] Worker-{worker_id} processing job: {job.id} (active: {self._running_count})")
 
                 # Session dosyasını güncelle
@@ -234,7 +240,8 @@ class QueueManager:
                         logger.warning(f"Analytics log failed: {analytics_err}")
 
                 finally:
-                    self._running_count -= 1
+                    async with self._count_lock:
+                        self._running_count -= 1
 
                 self.queue.task_done()
 

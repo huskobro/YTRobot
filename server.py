@@ -32,6 +32,9 @@ from src.api.routes.audit import router as audit_router
 from src.api.routes.notifications import router as notifications_router
 from src.api.routes.calendar import router as calendar_router
 from src.api.routes.ab_testing import router as ab_testing_router
+from src.api.routes.playlists import router as playlists_router
+from src.api.routes.video_templates import router as video_templates_router
+from src.api.routes.seo import router as seo_router
 from src.core.queue import queue_manager
 from src.core.scheduler import video_scheduler
 from src.core.cache import asset_cache
@@ -132,6 +135,9 @@ app.include_router(audit_router)
 app.include_router(notifications_router)
 app.include_router(calendar_router)
 app.include_router(ab_testing_router)
+app.include_router(playlists_router)
+app.include_router(video_templates_router)
+app.include_router(seo_router)
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")

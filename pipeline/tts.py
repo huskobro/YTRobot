@@ -72,7 +72,7 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
     do_enhance = settings.tts_enhance_with_llm and not combined_already_done
     if do_enhance:
         from pipeline.script import enhance_narration_for_tts
-        print("  [TTS] Enhancing narrations with Gemini (emphasis + pauses)...")
+        logger.info("Enhancing narrations with Gemini (emphasis + pauses)...")
 
     # Pre-enhance all narrations when needed (must happen before threading)
     narrations: list[str] = []
@@ -80,7 +80,7 @@ def synthesize_scenes(scenes: list[Scene], session_dir: Path) -> list[Path]:
         narration = scene.narration
         if do_enhance:
             narration = enhance_narration_for_tts(narration)
-            print(f"  [TTS] Scene {i} enhanced → queued for TTS...")
+            logger.info(f"Scene {i} enhanced, queued for TTS...")
         narrations.append(narration)
 
     max_workers = settings.tts_concurrent_workers
@@ -114,20 +114,20 @@ def _synthesize_sequential(
     for i, (scene, narration) in enumerate(zip(scenes, narrations)):
         out = audio_dir / f"scene_{i:03d}.mp3"
         if out.exists():
-            print(f"  [TTS] Scene {i} already exists, skipping.")
+            logger.info(f"Scene {i} already exists, skipping.")
         else:
-            print(f"  [TTS] Synthesizing scene {i}...")
+            logger.info(f"Synthesizing scene {i}...")
             try:
                 provider.synthesize(narration, out, **syn_kwargs)
             except Exception as e:
-                print(f"  [TTS] ⚠ Scene {i} synthesis failed: {e}")
-                print(f"  [TTS] Generating silent placeholder for scene {i}...")
+                logger.error(f"TTS synthesis failed for scene {i}: {e}")
+                logger.warning(f"Generating silent placeholder for scene {i}...")
                 _generate_silent_audio(out, duration=3.0)
 
         if out.exists():
             audio_paths.append(out)
         else:
-            print(f"  [TTS] ⚠ Scene {i} audio missing, generating silent placeholder...")
+            logger.warning(f"Scene {i} audio missing, generating silent placeholder...")
             _generate_silent_audio(out, duration=3.0)
             audio_paths.append(out)
     return audio_paths
@@ -144,7 +144,7 @@ def _synthesize_concurrent(
 ) -> list[Path]:
     """Process multiple scenes' TTS in parallel using a thread pool."""
     max_w = min(max_workers, len(scenes))
-    print(f"  [TTS] Concurrent mode: {max_w} workers for {len(scenes)} scenes.")
+    logger.info(f"Concurrent mode: {max_w} workers for {len(scenes)} scenes.")
 
     results: list[Path | None] = [None] * len(scenes)
 
@@ -162,8 +162,8 @@ def _synthesize_concurrent(
             return idx, out
         except Exception as exc:
             logger.error("Concurrent TTS failed for scene %d: %s", idx, exc)
-            print(f"  [TTS] ⚠ Scene {idx} synthesis failed (concurrent): {exc}")
-            print(f"  [TTS] Generating silent placeholder for scene {idx}...")
+            logger.error(f"TTS synthesis failed for scene {idx}: {exc}")
+            logger.warning(f"Generating silent placeholder for scene {idx}...")
             _generate_silent_audio(out, duration=3.0)
             return idx, out if out.exists() else None
 
@@ -181,7 +181,7 @@ def _synthesize_concurrent(
     for i, path in enumerate(results):
         if path is None or not Path(path).exists():
             out = audio_dir / f"scene_{i:03d}.mp3"
-            print(f"  [TTS] ⚠ Scene {i} audio missing, generating silent placeholder...")
+            logger.warning(f"Scene {i} audio missing, generating silent placeholder...")
             _generate_silent_audio(out, duration=3.0)
             audio_paths.append(out)
         else:

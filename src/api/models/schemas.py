@@ -54,8 +54,17 @@ class SocialMetaReq(BaseModel):
     master_prompt: Optional[str] = ""
     lang: Optional[str] = "tr"
 
+class BulletinItem(BaseModel):
+    title: str
+    summary: str = ""
+    source: str = ""
+    category: str = ""
+
+    model_config = {"extra": "allow"}  # backward compat: accept additional fields
+
+
 class BulletinRenderReq(BaseModel):
-    items: List[Dict[str, Any]]
+    items: List[BulletinItem]
     network_name: Optional[str] = "YTRobot Haber"
     style: Optional[str] = "breaking"
     fps: Optional[int] = 60

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import uuid
 import time
 import logging
 from pathlib import Path

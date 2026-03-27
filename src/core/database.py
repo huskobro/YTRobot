@@ -63,7 +63,8 @@ class Database:
         try:
             yield conn
             conn.commit()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Database transaction failed, rolling back: {e}")
             conn.rollback()
             raise
         finally:

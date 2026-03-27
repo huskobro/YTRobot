@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from typing import Literal, Optional
 import os
 import re
@@ -42,10 +42,10 @@ class Settings(BaseSettings):
     # TTS
     tts_provider: Literal["elevenlabs", "openai", "google", "speshaudio", "qwen3", "edge", "dubvoice"] = "openai"
     tts_enhance_with_llm: bool = False  # Run Gemini to add TTS emphasis/pauses before synthesis
-    tts_speed: float = 1.0             # speech rate: 0.5=slow … 1.0=normal … 2.0=fast
+    tts_speed: float = Field(default=1.0, ge=0.25, le=4.0)  # speech rate: 0.25=very slow … 1.0=normal … 4.0=fast
     tts_remove_apostrophes: bool = True  # strip ' to prevent micro-pause glitches (safe for Turkish)
     tts_trim_silence: bool = False      # trim leading/trailing silence from each TTS audio clip
-    tts_concurrent_workers: int = 1    # 1 = sequential (default), 2-5 = concurrent scene synthesis
+    tts_concurrent_workers: int = Field(default=1, ge=1, le=10)  # 1 = sequential (default), 2-5 = concurrent scene synthesis
 
     openai_tts_voice: str = "onyx"  # alloy | ash | coral | echo | fable | nova | onyx | sage | shimmer
     edge_tts_voice: str = "tr-TR-AhmetNeural"  # run `edge-tts --list-voices` for full list
@@ -54,9 +54,9 @@ class Settings(BaseSettings):
     speshaudio_api_key: str = ""
     speshaudio_voice_id: str = ""
     speshaudio_language: str = ""  # e.g. "tr", "en" — strongly recommended for Turkish to set "tr"
-    speshaudio_stability: float = 0.3
-    speshaudio_similarity_boost: float = 0.5
-    speshaudio_style: float = 0.75
+    speshaudio_stability: float = Field(default=0.3, ge=0.0, le=1.0)
+    speshaudio_similarity_boost: float = Field(default=0.5, ge=0.0, le=1.0)
+    speshaudio_style: float = Field(default=0.75, ge=0.0, le=1.0)
     dubvoice_api_key: str = ""
     dubvoice_voice_id: str = ""
 
@@ -221,11 +221,15 @@ class Settings(BaseSettings):
     # Output
     output_dir: str = "output"
     video_resolution: str = "1920x1080"
-    video_fps: int = 30
+    video_fps: int = Field(default=30, ge=1, le=120)
     gpu_encoding: str = "auto"  # auto | force | disabled
 
     # Security
     cors_origins: str = "*"  # comma-separated origins, "*" for all (dev mode)
+    debug_mode: bool = False  # When True, return full error details to client
+
+    # YouTube OAuth redirect URI
+    yt_oauth_redirect_uri: str = "http://localhost:5005/api/youtube/callback"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

@@ -1,6 +1,6 @@
 import re
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from src.core.channel_hub import channel_hub
 from src.core.upload_validator import validate_image_upload, validate_file_size, sanitize_filename, MAX_IMAGE_SIZE
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/channels", tags=["channels"])
 
 
 class CreateChannelReq(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     language: str = "tr"
     master_prompt: str = ""
     default_category: str = "general"
@@ -153,6 +153,8 @@ async def upload_logo(channel_id: str, file: UploadFile = File(...)):
 
     validate_image_upload(file)
     content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(413, "File too large. Max 5MB.")
     validate_file_size(content, MAX_IMAGE_SIZE, file.filename or "")
 
     # Save logo — filename is hardcoded to logo.png to prevent filename injection

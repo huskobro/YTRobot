@@ -76,7 +76,7 @@ class AssetCache:
                 f.write(resp.read())
             return cache_path
         except Exception as e:
-            print(f"[CACHE] Failed to download {url}: {e}")
+            logger.warning(f"Failed to download {url}: {e}")
             return None
 
     def get_tts_cache(self, text: str, voice_settings: dict, suffix: str = ".mp3") -> Optional[Path]:
@@ -122,6 +122,6 @@ class AssetCache:
             f, mtime, size = files.pop(0)
             f.unlink(missing_ok=True)
             total_size -= size
-            print(f"[CACHE] Removed {f.name} to free up space.")
+            logger.info(f"Removed {f.name} to free up space.")
 
 asset_cache = AssetCache()

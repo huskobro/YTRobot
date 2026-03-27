@@ -185,6 +185,10 @@ class Settings(BaseSettings):
     pr_currency: str = "TL"
     pr_cta_text: str = "Linke tıkla!"
 
+    # YouTube OAuth2 credentials
+    yt_oauth_client_id: str = ""
+    yt_oauth_client_secret: str = ""
+
     # Social Media Publishing
     autopublish_youtube: bool = False
     yt_privacy_status: str = "private"      # private | unlisted | public

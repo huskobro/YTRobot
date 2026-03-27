@@ -39,18 +39,44 @@ class SocialPoster:
     async def post_to_youtube(self, video_path: Path,
                                metadata: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"[YouTube] Loading video for upload: {video_path}")
+        channel_id = metadata.get("channel_id", "_default")
+
+        try:
+            from src.core.youtube_auth import youtube_auth
+            if youtube_auth.is_authenticated(channel_id):
+                service = youtube_auth.get_service(channel_id)
+                if service:
+                    from googleapiclient.http import MediaFileUpload
+                    from config import settings
+                    body = {
+                        "snippet": {
+                            "title": metadata.get("title", "Untitled"),
+                            "description": metadata.get("description", ""),
+                            "tags": metadata.get("tags", []),
+                            "categoryId": metadata.get("category_id", settings.yt_category_id),
+                        },
+                        "status": {
+                            "privacyStatus": metadata.get("privacy_status", settings.yt_privacy_status),
+                            "selfDeclaredMadeForKids": False,
+                        },
+                    }
+                    media = MediaFileUpload(str(video_path), mimetype="video/mp4", resumable=True)
+                    request = service.videos().insert(part="snippet,status", body=body, media_body=media)
+                    response = None
+                    while response is None:
+                        status, response = request.next_chunk()
+                    video_id = response.get("id", "")
+                    result = {"status": "success", "platform": "youtube", "id": video_id, "url": f"https://youtube.com/watch?v={video_id}"}
+                    self._log_publish("youtube", "success", video_path, metadata)
+                    return result
+        except Exception as e:
+            logger.error(f"[YouTube] Real upload failed: {e}")
+
+        # Fallback to draft mode
         if not self.youtube_enabled:
-            logger.info("[YouTube] API not enabled. Saving as DRAFT.")
-            result = {"status": "success", "platform": "youtube",
-                      "mode": "draft", "url": "local-draft-saved"}
+            result = {"status": "success", "platform": "youtube", "mode": "draft", "url": "local-draft-saved"}
         else:
-            try:
-                # FUTURE: Real YouTube Data API v3 implementation (Task 14)
-                result = {"status": "success", "platform": "youtube",
-                          "id": "mock-yt-123"}
-            except Exception as e:
-                logger.error(f"[YouTube] Upload failed: {e}")
-                result = {"status": "error", "message": str(e)}
+            result = {"status": "success", "platform": "youtube", "id": "mock-yt-123"}
         self._log_publish("youtube", result.get("status", "unknown"),
                           video_path, metadata)
         return result

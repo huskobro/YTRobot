@@ -15,7 +15,9 @@ feedparser>=6.0.11
 beautifulsoup4>=4.12.0
 google-generativeai
 facebook-sdk
-google-api-python-client
+google-api-python-client>=2.0.0
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
 qwen-tts
 torch
 soundfile

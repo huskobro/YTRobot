@@ -22,10 +22,11 @@ from src.api.routes.product import router as product_router
 from src.api.routes.system import router as system_router
 from src.api.routes.social import router as social_router
 from src.api.routes.stats import router as stats_router
-from src.api.routes.antigravity import router as antigravity_router
+from src.api.routes.competitor import router as competitor_router
 from src.api.routes.thumbnail import router as thumbnail_router
 from src.api.routes.webhook import router as webhook_router
 from src.api.routes.channels import router as channels_router
+from src.api.routes.youtube import router as youtube_router
 from src.core.queue import queue_manager
 from src.core.cache import asset_cache
 from contextlib import asynccontextmanager
@@ -106,10 +107,11 @@ app.include_router(product_router)
 app.include_router(system_router)
 app.include_router(social_router)
 app.include_router(stats_router)
-app.include_router(antigravity_router)
+app.include_router(competitor_router)
 app.include_router(thumbnail_router)
 app.include_router(webhook_router)
 app.include_router(channels_router)
+app.include_router(youtube_router, prefix="/api/youtube")
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")

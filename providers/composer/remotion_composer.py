@@ -21,6 +21,7 @@ from pathlib import Path
 
 from config import settings  # type: ignore  # pyre-ignore[missing-module]
 from pipeline.script import Scene  # type: ignore  # pyre-ignore[missing-module]
+from src.core.gpu_detect import get_ffmpeg_codec_args  # type: ignore  # pyre-ignore[missing-module]
 
 _REMOTION_DIR = Path(__file__).parent.parent.parent / "remotion"
 
@@ -261,6 +262,33 @@ def compose_remotion(
             raise RuntimeError(
                 f"[Remotion] Render failed (code {result.returncode}):\n{stderr_tail}\n{stdout_tail}"
             )
+
+        # GPU re-encode: Remotion renders via its own internal FFmpeg (libx264).
+        # If a hardware encoder is available, re-encode the output for faster
+        # future processing or smaller file size. Skip when gpu_encoding=disabled.
+        gpu_setting = getattr(settings, "gpu_encoding", "auto")
+        gpu_args = get_ffmpeg_codec_args(gpu_setting)
+        if gpu_args["codec"] != "libx264":
+            gpu_output = session_dir / "final_output_gpu.mp4"
+            print(f"  [Remotion] Re-encoding with {gpu_args['codec']} for GPU acceleration...")
+            reenc_cmd = [
+                "ffmpeg", "-y",
+                "-i", str(output_file.absolute()),
+                "-c:v", gpu_args["codec"],
+                *gpu_args["extra_args"],
+                "-c:a", "copy",
+                str(gpu_output.absolute()),
+            ]
+            reenc = subprocess.run(reenc_cmd, capture_output=True, text=True)
+            if reenc.returncode == 0:
+                output_file.unlink(missing_ok=True)
+                gpu_output.rename(output_file)
+                print(f"  [Remotion] GPU re-encode complete.")
+            else:
+                print(f"  [Remotion] GPU re-encode failed (code {reenc.returncode}), keeping original.")
+                gpu_output.unlink(missing_ok=True)
+        else:
+            print(f"  [Remotion] Using CPU encoder (libx264) — no GPU hardware found or encoding disabled.")
 
     print(f"  [Remotion] Done! Output: {output_file}")
     return output_file

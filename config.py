@@ -216,6 +216,7 @@ class Settings(BaseSettings):
     output_dir: str = "output"
     video_resolution: str = "1920x1080"
     video_fps: int = 30
+    gpu_encoding: str = "auto"  # auto | force | disabled
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

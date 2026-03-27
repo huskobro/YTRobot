@@ -7,6 +7,7 @@ Supports two backends (COMPOSER_PROVIDER in .env):
 from pathlib import Path
 from config import settings
 from pipeline.script import Scene
+from src.core.gpu_detect import get_moviepy_codec_kwargs
 
 
 def compose(
@@ -80,7 +81,9 @@ def _compose_moviepy(
 
     print("  [Composer] Rendering raw video...")
     try:
-        final.write_videofile(str(raw_output), fps=fps, codec="libx264", audio_codec="aac")
+        gpu_kwargs = get_moviepy_codec_kwargs(getattr(settings, "gpu_encoding", "auto"))
+        print(f"  [Composer] Encoding with codec: {gpu_kwargs['codec']}")
+        final.write_videofile(str(raw_output), fps=fps, audio_codec="aac", **gpu_kwargs)
     except Exception as e:
         raise RuntimeError(f"[Composer] Video rendering failed: {e}") from e
 

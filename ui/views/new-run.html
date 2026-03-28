@@ -1,609 +1,652 @@
 {# View: new-run #}
-    <div x-show="view==='new-run'" class="p-6">
-      <div class="max-w-3xl mx-auto">
-        
-        <!-- ── Wizard Header & Progress ── -->
-        <div class="mb-8 text-center">
-          <h1 class="text-3xl font-black text-white mb-2 tracking-tight" x-text="t('new_video_title')"></h1>
-          <p class="text-slate-500 text-sm" x-text="t('new_video_subtitle')"></p>
-        </div>
+    <div x-show="view==='new-run'" class="p-6 pb-16">
+      <div class="max-w-3xl mx-auto cr-wizard">
 
-        <div class="step-indicator-container max-w-lg mx-auto mb-12">
-          <div class="step-indicator-line"></div>
-          <div class="step-indicator-line-active" :style="`width: ${((wizardStep-1)/(wizardMaxSteps-1))*100}%`"></div>
-          
-          <template x-for="step in wizardMaxSteps" :key="step">
-            <div class="step-item" :class="{ 'active': wizardStep === step, 'completed': wizardStep > step }" @click="wizardStep = step">
-              <div class="step-circle">
-                <span x-show="wizardStep <= step" x-text="step"></span>
-                <span x-show="wizardStep > step">✓</span>
+        <!-- ══ Progress Track ══ -->
+        <div class="cr-progress-track">
+          <template x-for="(stepInfo, idx) in [
+            {key:'type',   label:'MODULE'},
+            {key:'config', label:'CONFIG'},
+            {key:'style',  label:'STYLE'},
+            {key:'review', label:'REVIEW'}
+          ]" :key="idx">
+            <template x-if="idx < wizardMaxSteps - (videoModule==='normal' ? 0 : 1)">
+              <div class="contents">
+                <div class="cr-progress-node"
+                     :class="{
+                       'active': wizardStep === idx+1,
+                       'done':   wizardStep > idx+1
+                     }"
+                     @click="if(wizardStep > idx+1) wizardStep = idx+1">
+                  <div class="cr-progress-dot">
+                    <span x-show="wizardStep <= idx+1" x-text="idx+1"></span>
+                    <span x-show="wizardStep > idx+1">✓</span>
+                  </div>
+                  <div class="cr-progress-label" x-text="stepInfo.label"></div>
+                </div>
+                <div x-show="idx < wizardMaxSteps-1" class="cr-progress-line"
+                     :class="{'done': wizardStep > idx+1}"></div>
               </div>
-              <div class="step-label" x-text="step === 1 ? t('wizard_step_type') : (step === 2 ? t('wizard_step_config') : (step === 3 && wizardMaxSteps >= 4 ? t('wizard_step_style') : (step === 4 && wizardMaxSteps === 5 ? t('wizard_step_preview') : t('wizard_step_confirm'))))"></div>
-            </div>
+            </template>
           </template>
         </div>
 
-        <!-- ── Step 1: Module Selector ── -->
-        <div x-show="wizardStep === 1" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- ══════════════════════════════════════════
+             STEP 1 — Module Select
+        ══════════════════════════════════════════ -->
+        <div x-show="wizardStep === 1"
+             x-transition:enter="cr-step-enter"
+             x-transition:enter-end="cr-step-enter-end">
+
+          <div class="cr-step-header">
+            <span class="cr-step-num">01 / MODULE</span>
+            <h1 class="cr-step-title">Hangi video türünü üreteceksiniz?</h1>
+            <div class="cr-step-divider"></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+
+            <!-- Normal Video -->
             <div @click="initWizard('normal')"
-                 class="cursor-pointer border-2 rounded-2xl p-6 transition-all select-none glass-card group relative overflow-hidden"
-                 :class="videoModule==='normal' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-900 hover:border-indigo-400'">
-              <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">▶️</div>
-              <div class="font-bold text-white text-base mb-2" x-text="t('module_normal_title')"></div>
-              <div class="text-slate-500 text-xs leading-relaxed" x-text="t('module_normal_desc')"></div>
+                 class="cr-module-card"
+                 :class="videoModule==='normal' ? 'active-normal' : ''">
+              <div class="cr-module-badge"></div>
+              <span class="cr-module-icon">▶</span>
+              <div class="cr-module-tag"
+                   :style="videoModule==='normal' ? 'border-color:var(--cr-amber);color:var(--cr-amber)' : 'border-color:#2e2e3a;color:#4b5563'">
+                GENEL
+              </div>
+              <div class="cr-module-title" x-text="t('module_normal_title')"></div>
+              <div class="cr-module-desc" x-text="t('module_normal_desc')"></div>
+              <div class="mt-4 pt-4 border-t border-slate-800 flex gap-3">
+                <span class="cr-readout-label">TTS → Script → Visuals → Compose</span>
+              </div>
             </div>
+
+            <!-- Bulletin -->
             <div @click="initWizard('bulletin'); loadBulletinSources();"
-                 class="cursor-pointer border-2 rounded-2xl p-6 transition-all select-none glass-card group relative overflow-hidden"
-                 :class="videoModule==='bulletin' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-900 hover:border-red-400'">
-              <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">📺</div>
-              <div class="font-bold text-white text-base mb-2" x-text="t('module_bulletin_title')"></div>
-              <div class="text-slate-500 text-xs leading-relaxed" x-text="t('module_bulletin_desc')"></div>
+                 class="cr-module-card"
+                 :class="videoModule==='bulletin' ? 'active-bulletin' : ''">
+              <div class="cr-module-badge"></div>
+              <span class="cr-module-icon">📡</span>
+              <div class="cr-module-tag"
+                   :style="videoModule==='bulletin' ? 'border-color:var(--cr-red);color:var(--cr-red)' : 'border-color:#2e2e3a;color:#4b5563'">
+                HABER
+              </div>
+              <div class="cr-module-title" x-text="t('module_bulletin_title')"></div>
+              <div class="cr-module-desc" x-text="t('module_bulletin_desc')"></div>
+              <div class="mt-4 pt-4 border-t border-slate-800 flex gap-3">
+                <span class="cr-readout-label">RSS → AI Özet → TTS → Compose</span>
+              </div>
             </div>
+
+            <!-- Product Review -->
             <div @click="initWizard('product-review')"
-                 class="cursor-pointer border-2 rounded-2xl p-6 transition-all select-none glass-card group relative overflow-hidden"
-                 :class="videoModule==='product-review' ? 'border-amber-500 bg-amber-900/20 ring-4 ring-amber-500/10' : 'border-slate-800 bg-slate-900 hover:border-amber-400'">
-              <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🛒</div>
-              <div class="font-bold text-white text-base mb-2" x-text="t('module_product_review_title')"></div>
-              <div class="text-slate-500 text-xs leading-relaxed" x-text="t('module_product_review_desc')"></div>
+                 class="cr-module-card"
+                 :class="videoModule==='product-review' ? 'active-product' : ''">
+              <div class="cr-module-badge"></div>
+              <span class="cr-module-icon">🔬</span>
+              <div class="cr-module-tag"
+                   :style="videoModule==='product-review' ? 'border-color:var(--cr-cyan);color:var(--cr-cyan)' : 'border-color:#2e2e3a;color:#4b5563'">
+                ÜRÜN
+              </div>
+              <div class="cr-module-title" x-text="t('module_product_review_title')"></div>
+              <div class="cr-module-desc" x-text="t('module_product_review_desc')"></div>
+              <div class="mt-4 pt-4 border-t border-slate-800 flex gap-3">
+                <span class="cr-readout-label">Ürün → Analiz → Promo Video</span>
+              </div>
             </div>
+
+          </div>
+
+          <!-- Channel selector (step 1 bottom) -->
+          <div class="cr-surface">
+            <label class="cr-label">Kanal</label>
+            <select x-model="wizardChannelId" class="cr-select">
+              <option value="_default">Varsayılan Kanal</option>
+              <template x-for="ch in channelsData" :key="ch.id">
+                <option :value="ch.id" x-text="ch.name + (ch.language ? ' [' + ch.language.toUpperCase() + ']' : '')"></option>
+              </template>
+            </select>
+            <p class="mt-2" style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-muted)">Seçilen kanalın master prompt ve TTS ayarları pipeline'da kullanılır.</p>
+          </div>
+
+          <!-- Nav -->
+          <div class="flex justify-end mt-8">
+            <button @click="if(videoModule) nextStep()" :disabled="!videoModule"
+                    class="cr-btn-next">
+              DEVAM → CONFIG
+            </button>
           </div>
         </div>
 
-        <!-- ── Step 2: Configuration ── -->
-        <div x-show="wizardStep === 2" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
-          <!-- Normal Video Config -->
-          <div x-show="videoModule==='normal'" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
-            <div class="flex gap-2 p-1.5 bg-slate-800/50 rounded-xl mb-8">
-              <button @click="mode='topic'" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all"
-                      :class="mode==='topic'?'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40':'text-slate-400 hover:text-white'"
-                      x-text="t('mode_topic')"></button>
-              <button @click="mode='script'" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all"
-                      :class="mode==='script'?'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40':'text-slate-400 hover:text-white'"
-                      x-text="t('mode_script')"></button>
-            </div>
 
-            <div class="space-y-6">
-              <div x-show="mode==='topic'">
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs font-bold text-slate-400 uppercase tracking-widest" x-text="t('topic_label')"></label>
-                  <button @click="aiAssist('topic')" class="px-1.5 py-0.5 bg-violet-600/80 hover:bg-violet-500 text-white text-[9px] font-black rounded transition-all" title="AI ile konu öner">AI</button>
-                </div>
-                <textarea x-model="newTopic" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 placeholder-slate-700 transition-all text-sm leading-relaxed" :placeholder="t('topic_placeholder')"></textarea>
-              </div>
-              <div x-show="mode==='script'">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('script_label')"></label>
-                <input x-model="newScriptFile" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 placeholder-slate-700 transition-all text-sm" :placeholder="t('script_placeholder')" />
-              </div>
+        <!-- ══════════════════════════════════════════
+             STEP 2 — Configuration
+        ══════════════════════════════════════════ -->
+        <div x-show="wizardStep === 2"
+             x-transition:enter="cr-step-enter"
+             x-transition:enter-end="cr-step-enter-end">
 
-              <div x-show="videoModule==='normal'" class="mt-4">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">İçerik Kategorisi</label>
-                <div class="grid grid-cols-3 gap-2">
-                  <template x-for="[val, label, icon, desc] in [
-                    ['general','Genel','🎬','Genel konular'],
-                    ['true_crime','Gerçek Suç','🔍','Suç/gizem hikayeleri'],
-                    ['science_tech','Bilim & Teknoloji','🔬','Bilim ve teknoloji'],
-                    ['history_mystery','Tarih & Gizem','🏛','Tarih ve gizemler'],
-                    ['motivation','Motivasyon','🔥','Motivasyon ve başarı'],
-                    ['documentary','Belgesel','🎞','Belgesel tarzı']
-                  ]" :key="val">
-                    <button @click="wizardCategory=val"
-                      class="p-2.5 rounded-xl border text-center transition-all text-xs"
-                      :class="wizardCategory===val ? 'border-indigo-500 bg-indigo-900/30 text-white' : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-600'">
-                      <div x-text="icon" class="text-lg mb-0.5"></div>
-                      <div x-text="label" class="text-[10px] font-bold"></div>
-                      <div x-text="desc" class="text-[8px] text-slate-500 mt-0.5 leading-tight"></div>
-                    </button>
-                  </template>
-                </div>
-              </div>
-
-              <div x-show="presets.length > 0">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('preset_run_label')"></label>
-                <select x-model="selectedPreset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none transition-all">
-                  <option value="" x-text="t('preset_run_default')"></option>
-                  <template x-for="p in presets" :key="p.name">
-                    <option :value="p.name" x-text="p.name"></option>
-                  </template>
-                </select>
-              </div>
-
-              <!-- Channel Selector -->
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('nav_channels')"></label>
-                <select x-model="wizardChannelId"
-                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none transition-all">
-                  <option value="_default">Varsayılan Kanal</option>
-                  <template x-for="ch in channelsData" :key="ch.id">
-                    <option :value="ch.id" x-text="ch.name + (ch.language ? ' (' + ch.language.toUpperCase() + ')' : '')"></option>
-                  </template>
-                </select>
-                <p class="text-[10px] text-slate-600 mt-1.5">Bu video için kullanılacak kanal ayarları ve master prompt.</p>
-              </div>
-            </div>
+          <div class="cr-step-header">
+            <span class="cr-step-num">02 / CONFIG</span>
+            <h1 class="cr-step-title"
+                x-text="videoModule==='normal' ? 'İçerik & Konu' : (videoModule==='bulletin' ? 'Haber Kaynakları' : 'Ürün Detayları')">
+            </h1>
+            <div class="cr-step-divider"></div>
           </div>
 
-          <!-- Bulletin Config -->
-          <div x-show="videoModule==='bulletin'" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
-            <div class="space-y-6">
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3" x-text="t('bulletin_src_list')"></label>
-                <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto mb-4 pr-2 custom-scrollbar">
-                  <template x-for="src in bulletinSources" :key="src.url">
-                    <div class="flex items-center justify-between p-3 bg-slate-950/50 border border-slate-800 rounded-xl hover:border-red-500/50 transition-colors group">
-                      <div class="flex items-center gap-3">
-                        <input type="checkbox" :value="src.url" x-model="bulletinRenderCfg.selected_sources" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-red-600 focus:ring-red-500" />
-                        <div class="flex flex-col">
-                          <span class="text-xs font-bold text-white group-hover:text-red-400 transition-colors" x-text="src.name"></span>
-                          <span class="text-[10px] text-slate-500" x-text="src.category"></span>
-                        </div>
+          <!-- ─── Normal: Topic / Script ─── -->
+          <div x-show="videoModule==='normal'" class="space-y-6">
+
+            <!-- Tab switcher -->
+            <div class="cr-tabs">
+              <button @click="mode='topic'" class="cr-tab" :class="mode==='topic' ? 'active' : ''">
+                ⌨ KONU GİR
+              </button>
+              <button @click="mode='script'" class="cr-tab" :class="mode==='script' ? 'active' : ''">
+                📄 HAZIR SCRIPT
+              </button>
+            </div>
+
+            <!-- Topic input -->
+            <div x-show="mode==='topic'">
+              <div class="flex items-center justify-between mb-2">
+                <label class="cr-label">Video Konusu</label>
+                <button @click="aiAssist('topic')" class="cr-ai-btn">⚡ AI ÖNERİ</button>
+              </div>
+              <textarea x-model="newTopic" rows="4" class="cr-textarea"
+                :placeholder="t('topic_placeholder')"></textarea>
+              <div x-show="aiAssistLoading" class="mt-2 flex items-center gap-2" style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-muted)">
+                <span class="cr-pulse">■</span> AI konu üretiyor...
+              </div>
+            </div>
+
+            <!-- Script file -->
+            <div x-show="mode==='script'">
+              <label class="cr-label" x-text="t('script_label')"></label>
+              <input x-model="newScriptFile" type="text" class="cr-input"
+                :placeholder="t('script_placeholder')" />
+            </div>
+
+            <!-- Category -->
+            <div>
+              <label class="cr-label">İçerik Kategorisi</label>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                <template x-for="[val, label, icon] in [
+                  ['general','Genel','🎬'],
+                  ['true_crime','Suç','🔍'],
+                  ['science_tech','Bilim','🔬'],
+                  ['history_mystery','Tarih','🏛'],
+                  ['motivation','Motivasyon','🔥'],
+                  ['documentary','Belgesel','🎞']
+                ]" :key="val">
+                  <button @click="wizardCategory=val"
+                    class="cr-cat-btn"
+                    :class="wizardCategory===val ? 'active' : ''">
+                    <div x-text="icon" class="text-xl mb-1"></div>
+                    <div style="font-family:var(--cr-mono);font-size:8px;font-weight:700;color:#94a3b8" x-text="label"></div>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Preset -->
+            <div x-show="presets.length > 0">
+              <label class="cr-label" x-text="t('preset_run_label')"></label>
+              <select x-model="selectedPreset" class="cr-select">
+                <option value="" x-text="t('preset_run_default')"></option>
+                <template x-for="p in presets" :key="p.name">
+                  <option :value="p.name" x-text="p.name"></option>
+                </template>
+              </select>
+            </div>
+
+            <!-- Batch queue -->
+            <details class="cr-surface">
+              <summary style="cursor:pointer;font-family:var(--cr-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--cr-muted);list-style:none;display:flex;align-items:center;gap:8px">
+                <span>▸</span> TOPLU KUYRUK (BATCH)
+              </summary>
+              <div class="mt-4 space-y-3">
+                <p style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-muted)">Her satıra bir konu gir — hepsi sıraya alınır.</p>
+                <textarea x-model="batchTopics" rows="4" class="cr-textarea"
+                  placeholder="Yapay Zekanın Geleceği&#10;Kuantum Bilgisayarlar&#10;Mars Kolonizasyonu"
+                  style="font-family:var(--cr-mono);font-size:11px"></textarea>
+                <div class="flex gap-2">
+                  <button @click="submitBatch()" :disabled="batchSubmitting || !batchTopics.trim()"
+                          class="cr-btn-next" style="padding:10px 20px;font-size:10px">
+                    <span x-show="!batchSubmitting">KUYRUĞA AL</span>
+                    <span x-show="batchSubmitting" class="cr-pulse">GÖNDERİLİYOR...</span>
+                  </button>
+                </div>
+                <template x-if="batchSubmitResult">
+                  <div class="space-y-1 max-h-32 overflow-y-auto">
+                    <template x-for="r in batchSubmitResult" :key="r.topic">
+                      <div class="flex items-center gap-2" style="font-family:var(--cr-mono);font-size:9px"
+                           :style="r.ok ? 'color:#10b981' : 'color:#ef4444'">
+                        <span x-text="r.ok ? '✓' : '✗'"></span>
+                        <span class="truncate flex-1" x-text="r.topic"></span>
                       </div>
-                      <span class="text-[10px] px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md border border-slate-700 font-mono" x-text="src.language"></span>
-                    </div>
-                  </template>
-                </div>
+                    </template>
+                  </div>
+                </template>
               </div>
-              
-              <!-- Extended Bulletin Options -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_platform_label')"></label>
-                  <select x-model="bulletinRenderCfg.format" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
-                    <option value="16:9">YouTube (Horizontal)</option>
-                    <option value="9:16">Shorts / Reels</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_mood_label')"></label>
-                  <select x-model="wizardMood" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500">
-                    <option value="energetic" x-text="t('mood_energetic')"></option>
-                    <option value="professional" x-text="t('mood_professional')"></option>
-                  </select>
-                </div>
-              </div>
+            </details>
 
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('bulletin_settings_fps')"></label>
-                  <select x-model="bulletinRenderCfg.fps" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 appearance-none transition-all">
-                    <option value="30">30 FPS</option>
-                    <option value="60">60 FPS</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Video Formatı</label>
-                  <select x-model="bulletinRenderCfg.format" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 appearance-none transition-all">
-                    <option value="16:9">16:9 (Landscape)</option>
-                    <option value="9:16">9:16 (Shorts/Reels)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('wizard_captions_label')"></label>
-                  <select x-model="wizardCaptions" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 appearance-none transition-all">
-                    <option value="yes" x-text="t('yes')"></option>
-                    <option value="no" x-text="t('no')"></option>
-                  </select>
-                </div>
+          </div>
+
+          <!-- ─── Bulletin Config ─── -->
+          <div x-show="videoModule==='bulletin'" class="space-y-6">
+
+            <div class="cr-surface">
+              <label class="cr-label mb-3">Haber Kaynakları</label>
+              <div class="space-y-2 max-h-52 overflow-y-auto pr-1 mb-4">
+                <template x-for="src in bulletinSources" :key="src.url">
+                  <label class="cr-source-row"
+                         :class="bulletinRenderCfg.selected_sources.includes(src.url) ? 'selected' : ''">
+                    <input type="checkbox" :value="src.url" x-model="bulletinRenderCfg.selected_sources"
+                           class="w-3.5 h-3.5 shrink-0 accent-red-500" />
+                    <div class="flex-1 min-w-0">
+                      <div style="font-size:12px;font-weight:700;color:#e2e8f0" x-text="src.name"></div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563" x-text="src.category"></div>
+                    </div>
+                    <span style="font-family:var(--cr-mono);font-size:8px;padding:2px 6px;border:1px solid #2e2e3a;border-radius:2px;color:#6b7280"
+                          x-text="src.language"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="cr-surface">
+                <label class="cr-label" x-text="t('wizard_platform_label')"></label>
+                <select x-model="bulletinRenderCfg.format" class="cr-select">
+                  <option value="16:9">YouTube  16:9</option>
+                  <option value="9:16">Shorts / Reels  9:16</option>
+                </select>
+              </div>
+              <div class="cr-surface">
+                <label class="cr-label" x-text="t('wizard_mood_label')"></label>
+                <select x-model="wizardMood" class="cr-select">
+                  <option value="energetic" x-text="t('mood_energetic')"></option>
+                  <option value="professional" x-text="t('mood_professional')"></option>
+                </select>
+              </div>
+              <div class="cr-surface">
+                <label class="cr-label" x-text="t('bulletin_settings_fps')"></label>
+                <select x-model="bulletinRenderCfg.fps" class="cr-select">
+                  <option value="30">30 FPS</option>
+                  <option value="60">60 FPS</option>
+                </select>
+              </div>
+              <div class="cr-surface">
+                <label class="cr-label" x-text="t('wizard_captions_label')"></label>
+                <select x-model="wizardCaptions" class="cr-select">
+                  <option value="yes" x-text="t('yes')"></option>
+                  <option value="no" x-text="t('no')"></option>
+                </select>
               </div>
             </div>
           </div>
-          
-          <!-- Product Review Config -->
-          <div x-show="videoModule==='product-review'" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
-            <div class="space-y-6">
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2" x-text="t('topic_label')">Ürün Linki veya Adı</label>
-                <textarea x-model="newTopic" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 placeholder-slate-700 transition-all text-sm leading-relaxed" placeholder="Amazon/AliExpress linki veya ürün adı..."></textarea>
-              </div>
 
-              <!-- Extended Product Review Options -->
-              <div class="grid grid-cols-3 gap-3">
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">İnceleme Derinliği</label>
-                  <select x-model="wizardTone" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                    <option value="summary">Hızlı Özet</option>
-                    <option value="deep" selected>Derin Analiz</option>
-                    <option value="pro-audit">Profesyonel Denetim</option>
-                  </select>
-                </div>
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Görsel Stil</label>
-                  <select x-model="wizardStyle" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                    <option value="modern" selected>Modern</option>
-                    <option value="premium">Premium / Luxury</option>
-                    <option value="energetic">Enerjik (Tech)</option>
-                  </select>
-                </div>
-                <div class="col-span-1">
-                  <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Format</label>
-                  <select x-model="settings.PR_FORMAT" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                    <option value="16:9">16:9 (Yatay)</option>
-                    <option value="9:16" selected>9:16 (Dikey)</option>
-                  </select>
-                </div>
+          <!-- ─── Product Review Config ─── -->
+          <div x-show="videoModule==='product-review'" class="space-y-6">
+
+            <div class="cr-surface">
+              <label class="cr-label">Ürün Linki veya Adı</label>
+              <textarea x-model="newTopic" rows="3" class="cr-textarea"
+                placeholder="Amazon/AliExpress linki veya ürün adı..." style="border-color:var(--cr-cyan)"></textarea>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div class="cr-surface">
+                <label class="cr-label">İnceleme Derinliği</label>
+                <select x-model="wizardTone" class="cr-select">
+                  <option value="summary">Hızlı Özet</option>
+                  <option value="deep" selected>Derin Analiz</option>
+                  <option value="pro-audit">Pro Denetim</option>
+                </select>
+              </div>
+              <div class="cr-surface">
+                <label class="cr-label">Görsel Stil</label>
+                <select x-model="wizardStyle" class="cr-select">
+                  <option value="modern" selected>Modern</option>
+                  <option value="premium">Premium / Luxury</option>
+                  <option value="energetic">Enerjik (Tech)</option>
+                </select>
+              </div>
+              <div class="cr-surface">
+                <label class="cr-label">Format</label>
+                <select x-model="settings.PR_FORMAT" class="cr-select">
+                  <option value="16:9">16:9 Yatay</option>
+                  <option value="9:16" selected>9:16 Dikey</option>
+                </select>
               </div>
             </div>
+          </div>
+
+          <!-- Nav -->
+          <div class="flex justify-between mt-8">
+            <button @click="prevStep()" class="cr-btn-back">← GERİ</button>
+            <button @click="nextStep()"
+                    :disabled="videoModule==='normal' && mode==='topic' && !newTopic.trim()"
+                    class="cr-btn-next">
+              DEVAM → <span x-text="videoModule==='normal' ? 'STYLE' : 'REVIEW'"></span>
+            </button>
           </div>
         </div>
 
-        <!-- ── Step 3: Style & Quality (Normal Video only) ── -->
-        <div x-show="wizardStep === 3 && videoModule === 'normal'" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card space-y-8">
 
-            <!-- Quality Preset -->
+        <!-- ══════════════════════════════════════════
+             STEP 3 — Style & Quality (Normal only)
+        ══════════════════════════════════════════ -->
+        <div x-show="wizardStep === 3 && videoModule === 'normal'"
+             x-transition:enter="cr-step-enter"
+             x-transition:enter-end="cr-step-enter-end">
+
+          <div class="cr-step-header">
+            <span class="cr-step-num">03 / STYLE</span>
+            <h1 class="cr-step-title">Kalite & Görünüm</h1>
+            <div class="cr-step-divider"></div>
+          </div>
+
+          <div class="space-y-8">
+
+            <!-- Quality -->
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_quality_label')"></label>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div @click="wizardQuality='quick_draft'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
-                     :class="wizardQuality==='quick_draft' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
-                  <div class="text-2xl mb-2">⚡</div>
-                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_quick')"></div>
-                  <div class="text-slate-500 text-[10px]">720p &middot; 24fps &middot; ~3 min</div>
+              <label class="cr-label mb-4" x-text="t('wizard_quality_label')"></label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+                <div @click="wizardQuality='quick_draft'" class="cr-option-card"
+                     :class="wizardQuality==='quick_draft' ? 'active' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">⚡</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:6px" x-text="t('wizard_quality_quick')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">720p · 24fps</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-amber);margin-top:6px">~3 dakika render</div>
                 </div>
-                <div @click="wizardQuality='standard'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
-                     :class="wizardQuality==='standard' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
-                  <div class="text-2xl mb-2">🎬</div>
-                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_standard')"></div>
-                  <div class="text-slate-500 text-[10px]">1080p &middot; 30fps &middot; ~8 min</div>
+
+                <div @click="wizardQuality='standard'" class="cr-option-card"
+                     :class="wizardQuality==='standard' ? 'active' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">🎬</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:6px" x-text="t('wizard_quality_standard')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">1080p · 30fps</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-amber);margin-top:6px">~8 dakika render</div>
                 </div>
-                <div @click="wizardQuality='cinematic'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none group"
-                     :class="wizardQuality==='cinematic' ? 'border-indigo-500 bg-indigo-900/20 ring-4 ring-indigo-500/10' : 'border-slate-800 bg-slate-950 hover:border-indigo-400'">
-                  <div class="text-2xl mb-2">✨</div>
-                  <div class="font-bold text-white text-sm mb-1" x-text="t('wizard_quality_cinematic')"></div>
-                  <div class="text-slate-500 text-[10px]">1080p &middot; 60fps &middot; ~15 min</div>
+
+                <div @click="wizardQuality='cinematic'" class="cr-option-card"
+                     :class="wizardQuality==='cinematic' ? 'active' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">✨</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:6px" x-text="t('wizard_quality_cinematic')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">1080p · 60fps</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:var(--cr-amber);margin-top:6px">~15 dakika render</div>
                 </div>
-              </div>
-              <div class="mt-3 text-center">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-900/20 border border-indigo-700/30 rounded-full text-[10px] text-indigo-400 font-bold">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  Tahmini süre: <span x-text="wizardEstimate()"></span>
-                </span>
               </div>
             </div>
 
-            <!-- Platform Target -->
+            <!-- Platform -->
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_platform_label')"></label>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div @click="wizardPlatform='youtube_16_9'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
-                     :class="wizardPlatform==='youtube_16_9' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
-                  <div class="text-2xl mb-2">📺</div>
-                  <div class="font-bold text-white text-sm mb-1">YouTube</div>
-                  <div class="text-slate-500 text-[10px]">16:9 &middot; 1920x1080</div>
+              <label class="cr-label mb-4" x-text="t('wizard_platform_label')"></label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div @click="wizardPlatform='youtube_16_9'" class="cr-option-card"
+                     :class="wizardPlatform==='youtube_16_9' ? 'active-red' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">📺</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:4px">YouTube</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">16:9 · 1920×1080</div>
                 </div>
-                <div @click="wizardPlatform='shorts_9_16'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
-                     :class="wizardPlatform==='shorts_9_16' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
-                  <div class="text-2xl mb-2">📱</div>
-                  <div class="font-bold text-white text-sm mb-1">YouTube Shorts</div>
-                  <div class="text-slate-500 text-[10px]">9:16 &middot; 1080x1920</div>
+                <div @click="wizardPlatform='shorts_9_16'" class="cr-option-card"
+                     :class="wizardPlatform==='shorts_9_16' ? 'active-red' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">📱</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:4px">Shorts</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">9:16 · 1080×1920</div>
                 </div>
-                <div @click="wizardPlatform='tiktok_9_16'"
-                     class="cursor-pointer border-2 rounded-xl p-5 transition-all select-none"
-                     :class="wizardPlatform==='tiktok_9_16' ? 'border-red-500 bg-red-900/20 ring-4 ring-red-500/10' : 'border-slate-800 bg-slate-950 hover:border-red-400'">
-                  <div class="text-2xl mb-2">🎵</div>
-                  <div class="font-bold text-white text-sm mb-1">TikTok</div>
-                  <div class="text-slate-500 text-[10px]">9:16 &middot; 1080x1920</div>
+                <div @click="wizardPlatform='tiktok_9_16'" class="cr-option-card"
+                     :class="wizardPlatform==='tiktok_9_16' ? 'active-red' : ''">
+                  <div style="font-size:22px;margin-bottom:10px">🎵</div>
+                  <div style="font-family:var(--cr-display);font-weight:800;font-size:14px;color:#e2e8f0;margin-bottom:4px">TikTok</div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563">9:16 · 1080×1920</div>
                 </div>
               </div>
             </div>
 
             <!-- Subtitle Style -->
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" x-text="t('wizard_subtitle_label')"></label>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div @click="wizardSubtitleStyle='minimal'"
-                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
-                     :class="wizardSubtitleStyle==='minimal' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
-                  <div class="text-sm font-light text-slate-300 mb-2 font-sans">Aa</div>
-                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_minimal')"></div>
-                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_minimal_desc')"></div>
+              <label class="cr-label mb-4" x-text="t('wizard_subtitle_label')"></label>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+                <div @click="wizardSubtitleStyle='minimal'" class="cr-option-card"
+                     :class="wizardSubtitleStyle==='minimal' ? 'active-green' : ''">
+                  <div class="cr-sub-preview" style="font-weight:300;font-size:11px;color:#cbd5e1">Aa</div>
+                  <div style="font-family:var(--cr-display);font-weight:700;font-size:12px;color:#e2e8f0;margin-bottom:4px" x-text="t('wizard_subtitle_minimal')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:8px;color:#4b5563" x-text="t('wizard_subtitle_minimal_desc')"></div>
                 </div>
-                <div @click="wizardSubtitleStyle='hype'"
-                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
-                     :class="wizardSubtitleStyle==='hype' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
-                  <div class="text-sm font-black text-yellow-400 mb-2 uppercase tracking-wider">Aa</div>
-                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_hype')"></div>
-                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_hype_desc')"></div>
+
+                <div @click="wizardSubtitleStyle='hype'" class="cr-option-card"
+                     :class="wizardSubtitleStyle==='hype' ? 'active-green' : ''">
+                  <div class="cr-sub-preview" style="font-weight:900;font-size:14px;color:#fbbf24;text-transform:uppercase;letter-spacing:0.05em">AA</div>
+                  <div style="font-family:var(--cr-display);font-weight:700;font-size:12px;color:#e2e8f0;margin-bottom:4px" x-text="t('wizard_subtitle_hype')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:8px;color:#4b5563" x-text="t('wizard_subtitle_hype_desc')"></div>
                 </div>
-                <div @click="wizardSubtitleStyle='cinematic'"
-                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
-                     :class="wizardSubtitleStyle==='cinematic' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
-                  <div class="text-sm font-medium text-purple-300 mb-2 italic">Aa</div>
-                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_cinematic')"></div>
-                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_cinematic_desc')"></div>
+
+                <div @click="wizardSubtitleStyle='cinematic'" class="cr-option-card"
+                     :class="wizardSubtitleStyle==='cinematic' ? 'active-green' : ''">
+                  <div class="cr-sub-preview" style="font-style:italic;font-size:12px;color:#c4b5fd">Aa</div>
+                  <div style="font-family:var(--cr-display);font-weight:700;font-size:12px;color:#e2e8f0;margin-bottom:4px" x-text="t('wizard_subtitle_cinematic')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:8px;color:#4b5563" x-text="t('wizard_subtitle_cinematic_desc')"></div>
                 </div>
-                <div @click="wizardSubtitleStyle='karaoke'"
-                     class="cursor-pointer border-2 rounded-xl p-4 transition-all select-none text-center"
-                     :class="wizardSubtitleStyle==='karaoke' ? 'border-emerald-500 bg-emerald-900/20 ring-4 ring-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-emerald-400'">
-                  <div class="text-sm font-black mb-2"><span class="text-yellow-400">A</span><span class="text-white">a</span></div>
-                  <div class="font-bold text-white text-xs" x-text="t('wizard_subtitle_karaoke')"></div>
-                  <div class="text-slate-500 text-[9px] mt-1" x-text="t('wizard_subtitle_karaoke_desc')"></div>
+
+                <div @click="wizardSubtitleStyle='karaoke'" class="cr-option-card"
+                     :class="wizardSubtitleStyle==='karaoke' ? 'active-green' : ''">
+                  <div class="cr-sub-preview"><span style="color:#fbbf24;font-weight:900;font-size:14px">A</span><span style="color:#e2e8f0;font-weight:900;font-size:14px">a</span></div>
+                  <div style="font-family:var(--cr-display);font-weight:700;font-size:12px;color:#e2e8f0;margin-bottom:4px" x-text="t('wizard_subtitle_karaoke')"></div>
+                  <div style="font-family:var(--cr-mono);font-size:8px;color:#4b5563" x-text="t('wizard_subtitle_karaoke_desc')"></div>
                 </div>
               </div>
             </div>
 
-          </div>
-        </div>
-
-        <!-- ── Step 4 (normal only): Preview & Samples ── -->
-        <div x-show="wizardStep === 4 && videoModule === 'normal'" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
-            <div class="mb-8">
-              <h2 class="text-xl font-bold text-white mb-2" x-text="t('wizard_preview_title')"></h2>
-              <p class="text-slate-500 text-sm" x-text="t('wizard_preview_desc')"></p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- TTS Voice Preview -->
-              <div class="p-5 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="flex items-center gap-2 mb-4">
-                  <span class="text-xl">🎤</span>
-                  <div>
-                    <h3 class="text-sm font-bold text-white" x-text="t('wizard_preview_tts')"></h3>
-                    <p class="text-[10px] text-slate-500" x-text="t('wizard_preview_tts_desc')"></p>
-                  </div>
-                </div>
-                <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 mb-3">
-                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Provider</div>
-                  <div class="text-sm text-indigo-400 font-bold" x-text="ttsProviderLabel()"></div>
-                </div>
-                <!-- Sample audio player -->
-                <div class="space-y-2">
+            <!-- TTS + Visuals readout -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="cr-surface-sm">
+                <div class="cr-readout-label mb-2">TTS ENGINE</div>
+                <div class="cr-readout" x-text="ttsProviderLabel()"></div>
+                <div class="mt-2 space-y-2">
                   <template x-if="settings.tts_provider === 'edge'">
-                    <div>
-                      <audio id="wizard-tts-preview" class="w-full h-8" controls preload="none">
-                        <source :src="'/samples/audio/' + (settings.edge_tts_voice || 'tr-TR-AhmetNeural') + '.mp3'" type="audio/mpeg">
-                      </audio>
-                      <p class="text-[9px] text-slate-600 mt-1">Ses: <span class="text-slate-400" x-text="settings.edge_tts_voice || 'tr-TR-AhmetNeural'"></span></p>
-                    </div>
+                    <audio class="w-full h-7" controls preload="none">
+                      <source :src="'/samples/audio/edge_tr_ahmet.mp3'" type="audio/mpeg">
+                    </audio>
                   </template>
                   <template x-if="settings.tts_provider !== 'edge'">
-                    <div>
-                      <button @click="playTtsPreview()"
-                              class="w-full py-2.5 bg-indigo-900/30 border border-indigo-800/30 rounded-lg text-indigo-400 text-xs font-bold hover:bg-indigo-900/50 transition-all flex items-center justify-center gap-2">
-                        <span>▶</span> <span x-text="t('tts_preview_btn') || 'TTS Önizleme Oluştur'"></span>
-                      </button>
-                      <p class="text-[9px] text-slate-600 mt-1">Kısa bir örnek cümle ile sesinizi test edin</p>
-                    </div>
+                    <button @click="playTtsPreview()"
+                            style="width:100%;padding:8px;font-family:var(--cr-mono);font-size:9px;font-weight:700;border:1px solid #2e2e3a;border-radius:3px;color:#6b7280;background:transparent;cursor:pointer;transition:all 0.2s"
+                            onmouseover="this.style.borderColor='var(--cr-amber)';this.style.color='var(--cr-amber)'"
+                            onmouseout="this.style.borderColor='#2e2e3a';this.style.color='#6b7280'">
+                      ▶ TTS ÖNİZLEME
+                    </button>
                   </template>
                 </div>
               </div>
-
-              <!-- Visual Provider Preview -->
-              <div class="p-5 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="flex items-center gap-2 mb-4">
-                  <span class="text-xl">🎨</span>
-                  <div>
-                    <h3 class="text-sm font-bold text-white" x-text="t('wizard_preview_visuals')"></h3>
-                    <p class="text-[10px] text-slate-500" x-text="t('wizard_preview_visuals_desc')"></p>
-                  </div>
-                </div>
-                <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 mb-3">
-                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Provider</div>
-                  <div class="text-sm text-emerald-400 font-bold" x-text="(settings.visuals_provider || 'pexels').toUpperCase()"></div>
-                </div>
-                <!-- Visual sample based on provider -->
-                <div class="grid grid-cols-2 gap-2">
+              <div class="cr-surface-sm">
+                <div class="cr-readout-label mb-2">VISUALS ENGINE</div>
+                <div class="cr-readout" x-text="(settings.visuals_provider || 'pexels').toUpperCase()"></div>
+                <div class="grid grid-cols-2 gap-1 mt-2">
                   <template x-for="i in 4" :key="i">
-                    <div class="aspect-video bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                    <div style="aspect-ratio:16/9;border-radius:2px;overflow:hidden;background:#111114;border:1px solid #1e1e24">
                       <img :src="'/samples/effects/' + (settings.visuals_provider || 'pexels') + '_sample_' + i + '.jpg'"
-                           class="w-full h-full object-cover"
-                           onerror="this.parentElement.innerHTML='<div class=\'flex items-center justify-center h-full text-slate-600 text-[10px]\'>Örnek görsel</div>'" />
+                           style="width:100%;height:100%;object-fit:cover"
+                           onerror="this.parentElement.style.display='flex';this.parentElement.innerHTML='<span style=\'font-family:monospace;font-size:8px;color:#374151;margin:auto\'>—</span>'" />
                     </div>
                   </template>
                 </div>
               </div>
             </div>
 
-            <!-- Configuration Summary Card -->
-            <div class="mt-6 p-5 bg-gradient-to-r from-indigo-950/30 to-slate-950/30 rounded-xl border border-indigo-800/20">
-              <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3" x-text="t('wizard_preview_summary')"></div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="text-center">
-                  <div class="text-lg mb-1">🎤</div>
-                  <div class="text-[10px] text-slate-500">TTS</div>
-                  <div class="text-xs text-white font-bold" x-text="ttsProviderLabel()"></div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg mb-1">🎨</div>
-                  <div class="text-[10px] text-slate-500">Görseller</div>
-                  <div class="text-xs text-white font-bold" x-text="(settings.visuals_provider || 'pexels').toUpperCase()"></div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg mb-1">🎬</div>
-                  <div class="text-[10px] text-slate-500">Composer</div>
-                  <div class="text-xs text-white font-bold" x-text="(settings.composer_provider || 'moviepy').toUpperCase()"></div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg mb-1">⏱️</div>
-                  <div class="text-[10px] text-slate-500">Tahmini Süre</div>
-                  <div class="text-xs text-white font-bold" x-text="wizardEstimate()"></div>
-                </div>
-              </div>
-            </div>
+          </div>
+
+          <!-- Nav -->
+          <div class="flex justify-between mt-8">
+            <button @click="prevStep()" class="cr-btn-back">← GERİ</button>
+            <button @click="nextStep()" class="cr-btn-next">DEVAM → REVIEW</button>
           </div>
         </div>
 
-        <!-- ── Step 3 (bulletin/product) / Step 5 (normal): Review & Submit ── -->
-        <div x-show="wizardStep === wizardMaxSteps" x-transition:enter="wizard-step-enter" x-transition:enter-end="wizard-step-enter-end" class="wizard-step">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glass-card">
-            <div class="mb-8">
-              <h2 class="text-xl font-bold text-white mb-2" x-text="t('wizard_review_title')"></h2>
-              <p class="text-slate-500 text-sm" x-text="t('wizard_review_desc')"></p>
+
+        <!-- ══════════════════════════════════════════
+             STEP FINAL — Review & Launch
+        ══════════════════════════════════════════ -->
+        <div x-show="wizardStep === wizardMaxSteps"
+             x-transition:enter="cr-step-enter"
+             x-transition:enter-end="cr-step-enter-end">
+
+          <div class="cr-step-header">
+            <span class="cr-step-num" style="border-color:var(--cr-green);color:var(--cr-green);background:var(--cr-green-dim)">REVIEW</span>
+            <h1 class="cr-step-title">Hazır — Onaylayıp Başlat</h1>
+            <div class="cr-step-divider"></div>
+          </div>
+
+          <!-- Summary block -->
+          <div class="cr-surface mb-6">
+            <div class="cr-readout-label mb-4">PIPELINE ÖZET</div>
+
+            <!-- Module row -->
+            <div class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Modül</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0"
+                    x-text="videoModule==='normal'?'▶ GENEL VİDEO':(videoModule==='bulletin'?'📡 HABER BÜLTENİ':'🔬 ÜRÜN İNCELEME')"></span>
             </div>
 
-            <div class="space-y-4 mb-8">
-              <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2" x-text="t('wizard_module_label')"></div>
-                <div class="flex items-center gap-3">
-                  <span class="text-2xl" x-text="videoModule==='normal'?'▶️':(videoModule==='bulletin'?'📺':'🛒')"></span>
-                  <span class="font-bold text-white uppercase" x-text="t('module_'+(videoModule||'normal').replace('_','_')+'_title')"></span>
-                </div>
-              </div>
-
-              <div x-show="videoModule==='normal'" class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2" x-text="mode==='topic'?t('wizard_topic_selected'):t('wizard_script_selected')"></div>
-                <div class="text-sm text-slate-300 italic truncate" x-text="mode==='topic'?newTopic:newScriptFile"></div>
-              </div>
-
-              <!-- Wizard style summary (normal video only) -->
-              <div x-show="videoModule==='normal'" class="grid grid-cols-3 gap-3">
-                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
-                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_quality_label')"></div>
-                  <div class="text-sm text-indigo-400 font-bold" x-text="wizardQualityLabel()"></div>
-                </div>
-                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
-                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_platform_label')"></div>
-                  <div class="text-sm text-red-400 font-bold" x-text="wizardPlatformLabel()"></div>
-                </div>
-                <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
-                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_subtitle_label')"></div>
-                  <div class="text-sm text-emerald-400 font-bold" x-text="wizardSubtitleLabel()"></div>
-                </div>
-              </div>
-
-              <!-- Estimated time -->
-              <div x-show="videoModule==='normal'" class="p-4 bg-indigo-950/30 rounded-xl border border-indigo-800/30">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-slate-400 font-bold" x-text="t('wizard_estimated_time')"></span>
-                  <span class="text-sm text-indigo-400 font-black" x-text="wizardEstimate()"></span>
-                </div>
-              </div>
-
-              <div x-show="selectedPreset" class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1" x-text="t('wizard_preset_label')"></div>
-                <div class="text-sm text-indigo-400 font-bold" x-text="selectedPreset"></div>
-              </div>
-
-              <!-- Yayın Ayarları: Playlist + Zamanlama -->
-              <div class="p-4 bg-cyan-950/20 rounded-xl border border-cyan-800/30">
-                <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span>📋</span> Yayın Ayarları
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Playlist Seçimi -->
-                  <div>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Playlist'e Ekle</label>
-                    <div class="flex gap-2">
-                      <select x-model="wizardPlaylistId" @focus="if(!ytPlaylists.length) loadYtPlaylists()"
-                              class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-                        <option value="">Playlist seçme</option>
-                        <optgroup label="YouTube Playlistleri" x-show="ytPlaylists.length > 0">
-                          <template x-for="ytp in ytPlaylists" :key="ytp.id">
-                            <option :value="'yt:' + ytp.id" x-text="ytp.title + ' (' + (ytp.itemCount || 0) + ' video)'"></option>
-                          </template>
-                        </optgroup>
-                        <optgroup label="Yerel Playlistler">
-                          <template x-for="pl in playlists" :key="pl.id">
-                            <option :value="pl.id" x-text="pl.name"></option>
-                          </template>
-                        </optgroup>
-                      </select>
-                      <button @click="wizardNewPlaylistOpen = !wizardNewPlaylistOpen" class="px-2.5 py-2 bg-cyan-900/30 border border-cyan-800/40 rounded-lg text-cyan-400 hover:bg-cyan-900/50 transition-all text-xs font-bold shrink-0" title="Yeni Playlist">+</button>
-                    </div>
-                    <!-- Inline playlist creation -->
-                    <div x-show="wizardNewPlaylistOpen" x-transition class="mt-2 p-3 bg-slate-950 border border-cyan-800/30 rounded-lg space-y-2">
-                      <input type="text" x-model="wizardNewPlaylistName" placeholder="Playlist adı" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" />
-                      <input type="text" x-model="wizardNewPlaylistDesc" placeholder="Açıklama (opsiyonel)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" />
-                      <div class="flex gap-2">
-                        <button @click="createWizardPlaylist()" class="flex-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-lg transition-all">Oluştur</button>
-                        <button @click="wizardNewPlaylistOpen = false" class="px-3 py-1.5 bg-slate-800 text-slate-400 text-xs rounded-lg hover:text-white transition-all">İptal</button>
-                      </div>
-                    </div>
-                    <p class="text-[10px] text-slate-600 mt-1">YouTube veya yerel playlist seçin, tamamlandığında otomatik eklenir</p>
-                  </div>
-                  <!-- Zamanlama -->
-                  <div>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Yayın Zamanla</label>
-                    <input type="datetime-local" x-model="wizardScheduleAt"
-                           class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500" />
-                    <p class="text-[10px] text-slate-600 mt-1">Boş bırakılırsa video tamamlandığında hemen yayınlanır</p>
-                  </div>
-                </div>
-              </div>
+            <!-- Channel -->
+            <div class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Kanal</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0"
+                    x-text="channelsData.find(c=>c.id===wizardChannelId)?.name || 'Varsayılan Kanal'"></span>
             </div>
 
-            <!-- Pipeline Steps (Show only for normal video in review) -->
-            <div x-show="videoModule==='normal'" class="mt-8 pt-8 border-t border-slate-800/50">
-              <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4" x-text="t('pipeline_steps_title')"></div>
-              <div class="grid grid-cols-2 gap-3">
-                <template x-for="(step, i) in pipelineSteps()" :key="i">
-                  <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-950/30 border border-slate-800/50">
-                    <span class="w-6 h-6 rounded-full bg-indigo-900/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-[10px]" x-text="i+1"></span>
-                    <span class="text-[10px] text-slate-400 font-medium" x-text="step"></span>
-                  </div>
-                </template>
-              </div>
+            <!-- Topic (normal only) -->
+            <div x-show="videoModule==='normal'" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em"
+                    x-text="mode==='topic'?'Konu':'Script'"></span>
+              <span style="font-family:var(--cr-display);font-size:13px;color:#e2e8f0;max-width:60%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                    x-text="mode==='topic'?newTopic:newScriptFile"></span>
             </div>
 
-            <div x-show="runError" class="mt-6 px-4 py-3 bg-red-900/30 border border-red-800/60 rounded-xl text-sm text-red-400 flex items-start gap-2">
-              <span class="shrink-0">⚠️</span><span x-text="runError"></span>
+            <!-- Quality (normal only) -->
+            <div x-show="videoModule==='normal'" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Kalite</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:var(--cr-amber)" x-text="wizardQualityLabel()"></span>
             </div>
 
-            <button @click="submitRun()" :disabled="submitting || !videoModule"
-                    class="mt-8 w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl shadow-2xl shadow-indigo-900/40 transition-all text-base uppercase tracking-wider group">
-              <span x-show="!submitting" class="flex items-center justify-center gap-3">
-                <span x-text="t('start_generating')"></span>
-                <span class="group-hover:translate-x-1 transition-transform">🚀</span>
-              </span>
-              <span x-show="submitting" class="flex items-center justify-center gap-3">
-                <span class="animate-spin-slow">↻</span> <span x-text="t('submitting')"></span>
-              </span>
-            </button>
+            <!-- Platform (normal only) -->
+            <div x-show="videoModule==='normal'" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Platform</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0" x-text="wizardPlatformLabel()"></span>
+            </div>
 
-            <!-- Toplu Video Kuyruğu -->
-            <div class="mt-6 border-t border-slate-800 pt-6" x-show="wizardStep===2 && videoModule==='normal'">
-              <details class="group">
-                <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors list-none select-none">
-                  <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  Toplu Video Kuyruğu (Batch)
-                </summary>
-                <div class="mt-4 space-y-4">
-                  <p class="text-xs text-slate-500">Her satıra bir konu gir — hepsi sıraya alınır.</p>
-                  <textarea x-model="batchTopics" rows="5"
-                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-violet-500 resize-y"
-                    placeholder="Yapay Zekanın Geleceği&#10;Kuantum Bilgisayarlar&#10;Mars Kolonizasyonu"></textarea>
-                  <template x-if="batchSubmitResult">
-                    <div class="space-y-1 max-h-32 overflow-y-auto pr-1">
-                      <template x-for="r in batchSubmitResult" :key="r.topic">
-                        <div class="flex items-center gap-2 text-[10px] font-mono" :class="r.ok ? 'text-emerald-400' : 'text-red-400'">
-                          <span x-text="r.ok ? '✓' : '✗'"></span>
-                          <span class="truncate flex-1" x-text="r.topic"></span>
-                          <span x-show="r.id" class="text-slate-600" x-text="r.id?.substring(0,12)"></span>
-                        </div>
+            <!-- Subtitle (normal only) -->
+            <div x-show="videoModule==='normal'" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Altyazı</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:var(--cr-green)" x-text="wizardSubtitleLabel()"></span>
+            </div>
+
+            <!-- Estimated time (normal only) -->
+            <div x-show="videoModule==='normal'" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Tahmini Süre</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:var(--cr-amber)" x-text="wizardEstimate()"></span>
+            </div>
+
+            <!-- TTS -->
+            <div class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">TTS Engine</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0" x-text="ttsProviderLabel()"></span>
+            </div>
+
+            <!-- Visuals -->
+            <div class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Visuals Engine</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0" x-text="(settings.visuals_provider||'pexels').toUpperCase()"></span>
+            </div>
+
+            <!-- Preset -->
+            <div x-show="selectedPreset" class="cr-summary-row">
+              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Preset</span>
+              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#a78bfa" x-text="selectedPreset"></span>
+            </div>
+          </div>
+
+          <!-- Publish settings -->
+          <div class="cr-surface mb-6">
+            <div class="cr-readout-label mb-4">YAYINLAMA</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="cr-label">Playlist'e Ekle</label>
+                <div class="flex gap-2">
+                  <select x-model="wizardPlaylistId" @focus="if(!ytPlaylists.length) loadYtPlaylists()" class="cr-select flex-1">
+                    <option value="">Seçme</option>
+                    <optgroup label="YouTube" x-show="ytPlaylists.length > 0">
+                      <template x-for="ytp in ytPlaylists" :key="ytp.id">
+                        <option :value="'yt:' + ytp.id" x-text="ytp.title + ' (' + (ytp.itemCount||0) + ')'"></option>
                       </template>
-                    </div>
-                  </template>
-                  <p x-show="batchError" class="text-xs text-red-400" x-text="batchError"></p>
-                  <button @click="submitBatch()"
-                    :disabled="batchSubmitting || !batchTopics.trim()"
-                    class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                    <svg x-show="batchSubmitting" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    <span x-text="batchSubmitting ? 'Kuyruğa Ekleniyor...' : 'Tümünü Kuyruğa Ekle'"></span>
-                  </button>
+                    </optgroup>
+                    <optgroup label="Yerel">
+                      <template x-for="pl in playlists" :key="pl.id">
+                        <option :value="pl.id" x-text="pl.name"></option>
+                      </template>
+                    </optgroup>
+                  </select>
+                  <button @click="wizardNewPlaylistOpen=!wizardNewPlaylistOpen"
+                          style="padding:8px 12px;border:1px solid #2e2e3a;border-radius:3px;font-family:var(--cr-mono);font-size:12px;color:#6b7280;background:transparent;cursor:pointer;transition:all 0.2s;flex-shrink:0"
+                          onmouseover="this.style.borderColor='var(--cr-amber)';this.style.color='var(--cr-amber)'"
+                          onmouseout="this.style.borderColor='#2e2e3a';this.style.color='#6b7280'">+</button>
                 </div>
-              </details>
+                <div x-show="wizardNewPlaylistOpen" x-transition class="mt-2 space-y-2 p-3 border border-amber-900/30 rounded" style="background:var(--cr-bg)">
+                  <input type="text" x-model="wizardNewPlaylistName" placeholder="Playlist adı"
+                         class="cr-input" style="font-size:12px;padding:8px 12px" />
+                  <input type="text" x-model="wizardNewPlaylistDesc" placeholder="Açıklama"
+                         class="cr-input" style="font-size:12px;padding:8px 12px" />
+                  <div class="flex gap-2">
+                    <button @click="createWizardPlaylist()" class="cr-btn-next" style="padding:8px 16px;font-size:9px">OLUŞTUR</button>
+                    <button @click="wizardNewPlaylistOpen=false" class="cr-btn-back" style="padding:8px 16px;font-size:9px">İPTAL</button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="cr-label">Yayın Zamanla</label>
+                <input type="datetime-local" x-model="wizardScheduleAt" class="cr-input" style="font-family:var(--cr-mono);font-size:11px" />
+                <p style="font-family:var(--cr-mono);font-size:8px;color:#374151;margin-top:6px">Boş bırakılırsa tamamlanınca hemen yayınlanır.</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- ── Wizard Navigation ── -->
-        <div class="flex justify-between items-center mt-8 px-4">
-          <button @click="prevStep()" x-show="wizardStep > 1"
-                  class="px-8 py-3 bg-slate-800/50 backdrop-blur hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700/50 transition-all flex items-center gap-2">
-            <span>←</span> <span x-text="t('prev_btn')"></span>
+          <!-- Pipeline steps (normal only) -->
+          <div x-show="videoModule==='normal'" class="cr-surface mb-6">
+            <div class="cr-readout-label mb-4">PIPELINE ADIMLARI</div>
+            <div class="grid grid-cols-2 gap-2">
+              <template x-for="(step, i) in pipelineSteps()" :key="i">
+                <div class="cr-pipeline-item">
+                  <div class="cr-pipeline-item-num" x-text="i+1"></div>
+                  <span x-text="step"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div x-show="runError" class="mb-6 p-4 border border-red-800/60 rounded"
+               style="background:rgba(239,68,68,0.08);font-family:var(--cr-mono);font-size:11px;color:#f87171;display:flex;gap:8px;align-items:flex-start">
+            <span style="flex-shrink:0">✗</span>
+            <span x-text="runError"></span>
+          </div>
+
+          <!-- Launch -->
+          <button @click="submitRun()"
+                  :disabled="submitting || !videoModule || (videoModule==='normal' && !newTopic.trim() && !newScriptFile.trim())"
+                  class="cr-btn-launch">
+            <span x-show="!submitting">ÜRETIME BAŞLA →</span>
+            <span x-show="submitting" class="cr-pulse">İŞLENİYOR...</span>
           </button>
-          <div x-show="wizardStep === 1"></div>
-          <button @click="nextStep()" x-show="wizardStep < wizardMaxSteps"
-                  :disabled="wizardStep===1 && !videoModule"
-                  class="px-10 py-3 bg-white hover:bg-slate-100 disabled:opacity-30 text-slate-950 font-bold rounded-xl shadow-xl transition-all flex items-center gap-2">
-            <span x-text="t('next_btn')"></span> <span>→</span>
-          </button>
+
+          <!-- Nav back -->
+          <div class="flex justify-start mt-4">
+            <button @click="prevStep()" class="cr-btn-back">← GERİ DÖN</button>
+          </div>
         </div>
 
       </div>

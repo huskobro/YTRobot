@@ -225,58 +225,519 @@
 
           </div>
 
-          <!-- ─── Bulletin Config ─── -->
-          <div x-show="videoModule==='bulletin'" class="space-y-6">
+          <!-- ─── Bulletin Config (full 3-tab flow) ─── -->
+          <div x-show="videoModule==='bulletin'" class="space-y-4">
 
-            <div class="cr-surface">
-              <label class="cr-label mb-3">Haber Kaynakları</label>
-              <div class="space-y-2 max-h-52 overflow-y-auto pr-1 mb-4">
-                <template x-for="src in bulletinSources" :key="src.url">
-                  <label class="cr-source-row"
-                         :class="bulletinRenderCfg.selected_sources.includes(src.url) ? 'selected' : ''">
-                    <input type="checkbox" :value="src.url" x-model="bulletinRenderCfg.selected_sources"
-                           class="w-3.5 h-3.5 shrink-0 accent-red-500" />
-                    <div class="flex-1 min-w-0">
-                      <div style="font-size:12px;font-weight:700;color:#e2e8f0" x-text="src.name"></div>
-                      <div style="font-family:var(--cr-mono);font-size:9px;color:#4b5563" x-text="src.category"></div>
+            <!-- Sub-step tabs: Kaynaklar → Taslak → Render -->
+            <div class="flex items-center gap-2 mb-2">
+              <template x-for="(bstep, bidx) in [{id:'sources',label:t('bulletin_tab_sources')||'Kaynaklar',icon:'📡'},{id:'draft',label:t('bulletin_tab_draft')||'Taslak',icon:'📝'},{id:'render',label:t('bulletin_tab_render')||'Render',icon:'🎬'}]" :key="bstep.id">
+                <div class="flex items-center gap-1.5 flex-1">
+                  <button @click="bulletinTab=bstep.id"
+                          class="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2"
+                          :class="bulletinTab===bstep.id ? 'bg-red-700/20 border-red-500 text-white' : (['sources','draft','render'].indexOf(bulletinTab) > bidx ? 'bg-emerald-900/20 border-emerald-700/50 text-emerald-400' : 'bg-slate-800/50 border-slate-700 text-slate-500')">
+                    <span x-text="['sources','draft','render'].indexOf(bulletinTab) > bidx ? '✅' : bstep.icon"></span>
+                    <div>
+                      <div style="font-family:var(--cr-mono);font-size:8px;opacity:0.6;text-transform:uppercase;letter-spacing:0.08em" x-text="(bidx+1) + '. ADIM'"></div>
+                      <div x-text="bstep.label"></div>
                     </div>
-                    <span style="font-family:var(--cr-mono);font-size:8px;padding:2px 6px;border:1px solid #2e2e3a;border-radius:2px;color:#6b7280"
-                          x-text="src.language"></span>
+                  </button>
+                  <span x-show="bidx < 2" style="color:#374151;font-size:14px;flex-shrink:0">→</span>
+                </div>
+              </template>
+            </div>
+
+            <!-- ── KAYNAKLAR ── -->
+            <div x-show="bulletinTab==='sources'">
+              <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
+                <h2 class="cr-label mb-3" x-text="t('bulletin_source_select')||'Kaynak Seçimi'"></h2>
+
+                <!-- Kategori filtresi -->
+                <div class="mb-3">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px" x-text="t('bulletin_filter_cat')||'Kategori Filtresi'"></div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button @click="bulletinSourceFilterCat='All'"
+                            class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all"
+                            :class="bulletinSourceFilterCat==='All' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'">Tümü</button>
+                    <template x-for="c in uniqueCategories()" :key="c">
+                      <button @click="bulletinSourceFilterCat=c"
+                              class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all uppercase"
+                              :class="bulletinSourceFilterCat===c ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'"
+                              x-text="c"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Preset filtresi -->
+                <div class="mb-4 pb-3 border-b border-slate-800" x-show="bulletinPresets && bulletinPresets.length > 0">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px" x-text="t('bulletin_filter_preset')||'Önayar Filtresi'"></div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button @click="bulletinSourceFilterPreset='All'"
+                            class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all"
+                            :class="bulletinSourceFilterPreset==='All' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'">Tümü</button>
+                    <template x-for="p in bulletinPresets" :key="p.name">
+                      <button @click="bulletinSourceFilterPreset=p.name"
+                              class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all"
+                              :class="bulletinSourceFilterPreset===p.name ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'"
+                              x-text="p.name"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Tümünü seç + liste -->
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 cursor-pointer mb-3 p-2 bg-slate-800/40 rounded-lg">
+                    <input type="checkbox" x-model="bulletinSelectAllSources" class="accent-red-600 w-4 h-4 ml-1" />
+                    <span class="text-sm font-medium text-slate-300" x-text="t('bulletin_select_all_sources')||'Tümünü Seç'"></span>
                   </label>
-                </template>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <template x-for="src in (bulletinSources || []).filter(s => {
+                      if(bulletinSourceFilterCat !== 'All' && s.category !== bulletinSourceFilterCat) return false;
+                      if(bulletinSourceFilterPreset !== 'All') {
+                        const p = bulletinPresets.find(pr => pr.name === bulletinSourceFilterPreset);
+                        if(!p || !p.values || !p.values.selected_sources) return true;
+                        if(!p.values.selected_sources.includes(s.id)) return false;
+                      }
+                      return true;
+                    })" :key="src.id">
+                      <label class="flex items-center gap-3 px-3 py-2.5 bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-700 border border-slate-700/50 hover:border-red-500/50 transition-all"
+                             :class="!src.enabled ? 'opacity-40 grayscale-[0.5]' : ''">
+                        <input type="checkbox" :value="src.id" x-model="bulletinSelectedSources" class="accent-red-600 w-4 h-4 shrink-0" :disabled="bulletinSelectAllSources" />
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-bold text-white truncate" x-text="src.name"></div>
+                          <div class="text-xs text-slate-400 mt-0.5 flex gap-1.5">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-900" x-text="src.category"></span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-900 uppercase" x-text="src.language"></span>
+                          </div>
+                        </div>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button @click="bulletinTab='draft'"
+                        class="cr-btn-next" style="padding:10px 24px;font-size:11px">
+                  TASLAK → <span x-text="t('onb_next')||'İleri'"></span>
+                </button>
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div class="cr-surface">
-                <label class="cr-label" x-text="t('wizard_platform_label')"></label>
-                <select x-model="bulletinRenderCfg.format" class="cr-select">
-                  <option value="16:9">YouTube  16:9</option>
-                  <option value="9:16">Shorts / Reels  9:16</option>
-                </select>
+            <!-- ── TASLAK ── -->
+            <div x-show="bulletinTab==='draft'">
+              <!-- Dedup info -->
+              <div x-show="bulletinActivePreset && bulletinHistory && bulletinHistory[bulletinActivePreset]?.length > 0"
+                   class="mb-3 px-4 py-2.5 bg-amber-900/20 border border-amber-800/40 rounded-xl text-xs text-amber-400 flex items-center justify-between">
+                <span x-text="(bulletinHistory[bulletinActivePreset]?.length || 0) + ' ' + (t('bulletin_dedup_note')||'tekrarlı haber filtrelendi')"></span>
+                <button @click="clearBulletinHistory()" class="underline hover:text-amber-300 font-medium ml-2 px-2 py-1" x-text="t('bulletin_dedup_clear')||'Temizle'"></button>
               </div>
-              <div class="cr-surface">
-                <label class="cr-label" x-text="t('wizard_mood_label')"></label>
-                <select x-model="wizardMood" class="cr-select">
-                  <option value="energetic" x-text="t('mood_energetic')"></option>
-                  <option value="professional" x-text="t('mood_professional')"></option>
-                </select>
+
+              <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
+                <div class="flex items-center gap-4 flex-wrap">
+                  <div class="flex items-center gap-2">
+                    <label class="cr-label" style="font-size:10px" x-text="t('bulletin_max_items')||'Maks. Haber'"></label>
+                    <select x-model="draftMaxItems" class="cr-select" style="font-size:12px;padding:6px 10px">
+                      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                      <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                      <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                      <option value="10">10</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="cr-label" style="font-size:10px" x-text="t('bulletin_lang_override')||'Dil'"></label>
+                    <select x-model="draftLangOverride" class="cr-select" style="font-size:12px;padding:6px 10px">
+                      <option value="">— Auto —</option>
+                      <option value="tr">Türkçe</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                  <button @click="fetchDraft()" :disabled="draftLoading || !bulletinSources || bulletinSources.filter(s=>s.enabled).length===0"
+                          class="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2">
+                    <span x-show="draftLoading" class="animate-spin-slow">↻</span>
+                    <span x-text="draftLoading ? (t('bulletin_fetching')||'Çekiliyor...') : (t('bulletin_fetch_btn')||'Haberleri Çek')"></span>
+                  </button>
+                  <template x-if="draftData">
+                    <span style="font-family:var(--cr-mono);font-size:10px;color:#6b7280" x-text="draftData.total + ' ' + (t('bulletin_items_found')||'haber bulundu')"></span>
+                  </template>
+                </div>
+                <div x-show="draftError" class="mt-2 px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg text-xs text-red-400" x-text="draftError"></div>
               </div>
-              <div class="cr-surface">
-                <label class="cr-label" x-text="t('bulletin_settings_fps')"></label>
-                <select x-model="bulletinRenderCfg.fps" class="cr-select">
-                  <option value="30">30 FPS</option>
-                  <option value="60">60 FPS</option>
-                </select>
-              </div>
-              <div class="cr-surface">
-                <label class="cr-label" x-text="t('wizard_captions_label')"></label>
-                <select x-model="wizardCaptions" class="cr-select">
-                  <option value="yes" x-text="t('yes')"></option>
-                  <option value="no" x-text="t('no')"></option>
-                </select>
+
+              <div x-show="!draftData && !draftLoading" class="text-center py-10 text-slate-500 text-sm" x-text="t('bulletin_draft_empty')||'Haber çekmek için butona tıklayın'"></div>
+
+              <template x-if="draftData">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span style="font-family:var(--cr-mono);font-size:10px;color:#6b7280">
+                      <span x-text="selectedDraftCount()"></span> <span x-text="t('bulletin_selected')||'seçili'"></span>
+                    </span>
+                    <div class="flex gap-1.5">
+                      <button @click="selectAllDraft(true)" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all" x-text="t('bulletin_select_all')||'Tümünü Seç'"></button>
+                      <button @click="selectAllDraft(false)" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-all" x-text="t('bulletin_deselect_all')||'Temizle'"></button>
+                    </div>
+                  </div>
+
+                  <template x-for="[cat, items] in Object.entries(draftData.categories)" :key="cat">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                      <button @click="toggleDraftCat(cat)" class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/60 transition-colors"
+                              :class="getCatBorder(cat)">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs px-2.5 py-1 text-white font-bold rounded-md" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                          <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full border border-slate-700" x-text="items.filter(i=>i.selected).length + '/' + items.length"></span>
+                        </div>
+                        <span class="text-slate-500 text-sm" x-text="openDraftCats[cat] ? '▲' : '▼'"></span>
+                      </button>
+                      <div x-show="openDraftCats[cat]" class="divide-y divide-slate-800/60">
+                        <template x-for="item in items" :key="item.id">
+                          <div class="px-4 py-3" :class="item.selected ? '' : 'opacity-50'">
+                            <div class="flex items-start gap-3">
+                              <input type="checkbox" x-model="item.selected" class="mt-1 shrink-0 accent-red-600 w-4 h-4 cursor-pointer" />
+                              <div class="flex-1 min-w-0">
+                                <div class="flex items-start gap-3">
+                                  <div class="flex-1">
+                                    <div class="font-semibold text-sm text-white mb-1" x-text="item.title"></div>
+                                    <div class="text-xs text-slate-500 mb-2 flex items-center gap-2">
+                                      <span x-text="item.source_name"></span>
+                                      <span x-show="item.published" class="text-slate-600" x-text="item.published.substring(0,16)"></span>
+                                    </div>
+                                    <label class="block text-xs font-semibold text-slate-400 mb-1" x-text="t('bulletin_narration')||'Anlatım'"></label>
+                                    <textarea x-model="item.narration" rows="3"
+                                              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 resize-none focus:outline-none focus:border-red-500 transition-colors"></textarea>
+                                  </div>
+                                  <template x-if="item.image_url">
+                                    <img :src="item.image_url" class="w-20 h-14 object-cover rounded-lg shrink-0 border border-slate-700" loading="lazy" decoding="async" />
+                                  </template>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <div x-show="draftData.errors && draftData.errors.length > 0" class="mt-2 px-4 py-3 bg-red-900/20 border border-red-800/40 rounded-xl text-xs text-red-400">
+                    <span x-text="(t('bulletin_fetch_errors')||'Hata') + ': '"></span>
+                    <template x-for="err in draftData.errors" :key="err.source_id">
+                      <span x-text="err.source_name + ' (' + err.error + ') '"></span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <div class="flex justify-between mt-4">
+                <button @click="bulletinTab='sources'" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← GERİ</button>
+                <button @click="bulletinTab='render'" :disabled="selectedDraftCount()===0"
+                        class="cr-btn-next" style="padding:10px 20px;font-size:11px"
+                        x-text="(t('bulletin_proceed_render')||'Render Ayarları') + ' (' + selectedDraftCount() + ') →'"></button>
               </div>
             </div>
+
+            <!-- ── RENDER ── -->
+            <div x-show="bulletinTab==='render'" x-init="initRenderStyles()">
+              <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
+
+                <!-- ① Render Modu -->
+                <div class="mb-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <div style="font-family:var(--cr-mono);font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em">Render Modu</div>
+                    <!-- Style Override toggle -->
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                      <span style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280" class="group-hover:text-red-400 transition-colors">Yalnızca Özel Stil</span>
+                      <div class="relative inline-block w-8 h-4 shrink-0">
+                        <input type="checkbox" x-model="bulletinOverrideStyles" class="sr-only peer" />
+                        <div class="w-full h-full bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                      </div>
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div @click="bulletinRenderMode='combined'; initRenderStyles()"
+                         class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                         :class="bulletinRenderMode==='combined' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                      <div class="text-lg mb-0.5">🎬</div>
+                      <div class="text-xs font-bold text-white">Tek Video</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280">Tüm haberler birlikte</div>
+                    </div>
+                    <div @click="bulletinRenderMode='per_category'; initRenderStyles()"
+                         class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                         :class="bulletinRenderMode==='per_category' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                      <div class="text-lg mb-0.5">📂</div>
+                      <div class="text-xs font-bold text-white">Kategoriye Göre</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280">Her kategori ayrı MP4</div>
+                    </div>
+                    <div @click="bulletinRenderMode='per_item'; initRenderStyles()"
+                         class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                         :class="bulletinRenderMode==='per_item' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                      <div class="text-lg mb-0.5">📰</div>
+                      <div class="text-xs font-bold text-white">Her Haber Ayrı</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280">Her haber kendi stilinde</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ② Format / Kanal / FPS / Dil -->
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                  <div>
+                    <label class="cr-label" style="font-size:9px" x-text="t('bulletin_network_name')||'Kanal Adı'"></label>
+                    <input x-model="bulletinRenderCfg.network_name" type="text"
+                           class="cr-input" style="font-size:12px;padding:6px 10px" />
+                  </div>
+                  <div>
+                    <label class="cr-label" style="font-size:9px" x-text="t('bulletin_format')||'Format'"></label>
+                    <div class="flex gap-1.5">
+                      <div @click="bulletinRenderCfg.format='16:9'"
+                           class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                           :class="bulletinRenderCfg.format==='16:9' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                        <div class="border border-slate-500 rounded bg-slate-700" style="width:20px;height:11px"></div>
+                        <span style="font-family:var(--cr-mono);font-size:9px;color:#9ca3af">16:9</span>
+                      </div>
+                      <div @click="bulletinRenderCfg.format='9:16'"
+                           class="flex-1 cursor-pointer border-2 rounded-lg flex flex-col items-center justify-center gap-0.5 py-1.5 transition-all select-none"
+                           :class="bulletinRenderCfg.format==='9:16' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800 hover:border-red-400'">
+                        <div class="border border-slate-500 rounded bg-slate-700" style="width:7px;height:12px"></div>
+                        <span style="font-family:var(--cr-mono);font-size:9px;color:#9ca3af">9:16</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="cr-label" style="font-size:9px" x-text="t('bulletin_fps')||'FPS'"></label>
+                    <select x-model="bulletinRenderCfg.fps" class="cr-select" style="font-size:12px;padding:6px 10px">
+                      <option value="30">30 fps</option>
+                      <option value="60">60 fps</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="cr-label" style="font-size:9px">Video Dili</label>
+                    <select x-model="bulletinRenderCfg.lang" class="cr-select" style="font-size:12px;padding:6px 10px">
+                      <option value="auto">Otomatik</option>
+                      <option value="tr">Türkçe</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- ③ Mod'a Özel Panel -->
+
+                <!-- Combined: fallback style + kategori eşleme -->
+                <div x-show="bulletinRenderMode==='combined'" x-transition class="mb-4">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Varsayılan Stil (Fallback)</div>
+                  <div class="flex gap-1.5 flex-wrap mb-3">
+                    <template x-for="[key,label,color] in [['breaking','Breaking','#dc2626'],['tech','Tech','#00e5ff'],['corporate','Corporate','#2563eb'],['sport','Sport','#10b981'],['finance','Finance','#f59e0b'],['weather','Weather','#38bdf8'],['science','Science','#8b5cf6'],['entertainment','Entertain.','#ec4899'],['dark','Dark','#94a3b8']]" :key="key">
+                      <div @click="bulletinRenderCfg.style=key"
+                           class="cursor-pointer px-2.5 py-1 rounded-lg border text-xs font-bold transition-all select-none"
+                           :class="bulletinRenderCfg.style===key ? 'border-current text-white bg-slate-700' : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                           :style="bulletinRenderCfg.style===key ? 'border-color:'+color+';color:'+color : ''">
+                        <span x-text="label"></span>
+                      </div>
+                    </template>
+                  </div>
+                  <div x-show="getSelectedCategories().length > 0" class="space-y-1">
+                    <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Kategori Eşleme (Otomatik)</div>
+                    <template x-for="cat in getSelectedCategories()" :key="cat">
+                      <div class="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg text-xs">
+                        <span class="px-1.5 py-0.5 text-white rounded font-bold" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                        <span class="text-slate-500">→</span>
+                        <span class="text-slate-300 font-bold" x-text="getAutoStyle(cat)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Per-category: kategori stil seçici -->
+                <div x-show="bulletinRenderMode==='per_category' && bulletinOverrideStyles" x-transition class="mb-4">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Kategori Stilleri</div>
+                  <div x-show="getSelectedCategories().length === 0" style="font-family:var(--cr-mono);font-size:10px;color:#6b7280;font-style:italic">Haber seçin</div>
+                  <div class="space-y-2">
+                    <template x-for="cat in getSelectedCategories()" :key="cat">
+                      <div class="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/40">
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="flex items-center gap-2">
+                            <span class="px-1.5 py-0.5 text-white rounded text-xs font-bold" :class="getCatColor(cat)" x-text="cat.toUpperCase()"></span>
+                            <span style="font-family:var(--cr-mono);font-size:9px;color:#6b7280" x-text="'otomatik: ' + getAutoStyle(cat)"></span>
+                          </div>
+                          <select x-model="bulletinCategoryStyles[cat]"
+                                  class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500 transition-colors">
+                            <option value="breaking">Breaking</option><option value="tech">Tech</option>
+                            <option value="corporate">Corporate</option><option value="sport">Sport</option>
+                            <option value="finance">Finance</option><option value="weather">Weather</option>
+                            <option value="science">Science</option><option value="entertainment">Entertainment</option>
+                            <option value="dark">Dark</option>
+                          </select>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Per-item: haber stil seçici -->
+                <div x-show="bulletinRenderMode==='per_item' && bulletinOverrideStyles" x-transition class="mb-4">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Haber Stilleri</div>
+                  <div x-show="getSelectedItems().length === 0" style="font-family:var(--cr-mono);font-size:10px;color:#6b7280;font-style:italic">Haber seçin</div>
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                    <template x-for="item in getSelectedItems()" :key="item.id || item.url || item.title">
+                      <div class="p-2 bg-slate-800/60 rounded-lg border border-slate-700/40">
+                        <div class="flex items-start gap-2">
+                          <div class="flex-1 min-w-0">
+                            <div style="font-size:10px;color:#cbd5e1;font-weight:500" class="truncate" x-text="item.title"></div>
+                            <span style="font-family:var(--cr-mono);font-size:9px;color:#6b7280;text-transform:uppercase" x-text="item.category"></span>
+                          </div>
+                          <select :x-model="'bulletinItemStyles[\'' + (item.url||item.id||item.title) + '\']'"
+                                  @change="bulletinItemStyles[item.url||item.id||item.title] = $event.target.value"
+                                  class="bg-slate-900 border border-slate-600 rounded px-1.5 py-1 text-xs text-white focus:outline-none shrink-0">
+                            <option value="breaking">Breaking</option><option value="tech">Tech</option>
+                            <option value="corporate">Corporate</option><option value="sport">Sport</option>
+                            <option value="finance">Finance</option><option value="weather">Weather</option>
+                            <option value="science">Science</option><option value="entertainment">Entertain.</option>
+                            <option value="dark">Dark</option>
+                          </select>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- ④ Geçiş Animasyonları -->
+                <div class="space-y-2 mb-4">
+                  <label class="flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors select-none">
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#cbd5e1">Kategori geçiş animasyonu</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280;margin-top:2px">Her haber öncesinde 1.5sn kategori flash</div>
+                    </div>
+                    <div class="relative ml-3 shrink-0">
+                      <input type="checkbox" x-model="bulletinShowCategoryFlash" class="sr-only peer" />
+                      <div class="w-9 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </div>
+                  </label>
+                  <label class="flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700/40 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors select-none">
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#cbd5e1">Haber intro animasyonu</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280;margin-top:2px">Her haber başında 2sn branded intro</div>
+                    </div>
+                    <div class="relative ml-3 shrink-0">
+                      <input type="checkbox" x-model="bulletinShowItemIntro" class="sr-only peer" />
+                      <div class="w-9 h-5 bg-slate-700 peer-checked:bg-red-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- ⑤ Metin Teslimat Modu -->
+                <div class="mb-4">
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Metin Teslimat Modu</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div @click="bulletinTextMode='per_scene'"
+                         class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                         :class="bulletinTextMode==='per_scene' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                      <div class="text-base mb-0.5">📋</div>
+                      <div class="text-xs font-bold text-white">Sahne Sahne</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280">Her haber kendi sesi</div>
+                    </div>
+                    <div @click="bulletinTextMode='single_chunk'"
+                         class="cursor-pointer border-2 rounded-xl p-2.5 text-center transition-all select-none"
+                         :class="bulletinTextMode==='single_chunk' ? 'border-red-500 bg-red-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'">
+                      <div class="text-base mb-0.5">📄</div>
+                      <div class="text-xs font-bold text-white">Tek Parça</div>
+                      <div style="font-family:var(--cr-mono);font-size:9px;color:#6b7280">Tüm metin tek ses</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ⑥ Seçili Haberler Özeti -->
+                <div>
+                  <div style="font-family:var(--cr-mono);font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px" x-text="(t('bulletin_selected_items')||'Seçili Haberler') + ' (' + selectedDraftCount() + ')'"></div>
+                  <div x-show="selectedDraftCount()===0" style="font-family:var(--cr-mono);font-size:10px;color:#6b7280;font-style:italic" x-text="t('bulletin_no_items_selected')||'Henüz haber seçilmedi'"></div>
+                  <div class="space-y-1 max-h-28 overflow-y-auto">
+                    <template x-for="item in getSelectedItems()" :key="item.id">
+                      <div class="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg" style="font-size:10px">
+                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span>
+                        <span class="flex-1 truncate text-slate-300" x-text="item.title"></span>
+                        <span class="shrink-0 text-slate-500 uppercase" x-text="item.category"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Render job progress (shown when bulletinJobId exists) -->
+              <template x-if="bulletinJobId">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-bold text-slate-300" x-text="t('bulletin_render_status')||'Render Durumu'"></span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border"
+                          :class="bulletinJobStatus==='completed'?'text-green-400 bg-green-400/10 border-green-500/30':bulletinJobStatus==='failed'?'text-red-400 bg-red-400/10 border-red-500/30':'text-blue-400 bg-blue-400/10 border-blue-500/30'"
+                          x-text="bulletinJobStatus"></span>
+                  </div>
+                  <div x-show="bulletinJobStatus==='running' || bulletinJobStatus==='completed'" class="mb-4">
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs text-slate-400 flex items-center gap-1.5">
+                        <span x-show="bulletinJobStatus==='running'" class="animate-spin-slow inline-block">↻</span>
+                        <span x-text="bulletinStepLabel || (t('bulletin_rendering_wait')||'Render bekleniyor...')"></span>
+                      </span>
+                      <span class="text-xs font-bold" style="font-family:var(--cr-mono)"
+                            :class="bulletinJobStatus==='completed'?'text-green-400':'text-blue-400'"
+                            x-text="bulletinProgress + '%'"></span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                      <div class="h-2.5 rounded-full transition-all duration-700"
+                           :class="bulletinJobStatus==='completed'?'bg-green-500':'bg-blue-500'"
+                           :style="'width:' + bulletinProgress + '%'"></div>
+                    </div>
+                    <div x-show="bulletinJobStatus==='running'" class="flex items-center gap-4 mt-2 text-xs text-slate-500" style="font-family:var(--cr-mono)">
+                      <span>⏱ <span x-text="Math.floor(bulletinElapsed/60).toString().padStart(2,'0') + ':' + (bulletinElapsed%60).toString().padStart(2,'0')"></span> geçti</span>
+                      <span x-show="bulletinEta !== null">~ <span x-text="Math.floor(bulletinEta/60).toString().padStart(2,'0') + ':' + (bulletinEta%60).toString().padStart(2,'0')"></span> kaldı</span>
+                    </div>
+                    <div x-show="bulletinJobStatus==='running'" class="flex items-center gap-2 mt-3">
+                      <button x-show="!bulletinPaused" @click="pauseBulletinRender()"
+                              class="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-900/30 hover:bg-yellow-800/50 border border-yellow-700/40 text-yellow-400 text-xs font-semibold rounded-lg transition-all">
+                        ⏸ Duraksat
+                      </button>
+                      <button x-show="bulletinPaused" @click="resumeBulletinRender()"
+                              class="flex items-center gap-1.5 px-3 py-1.5 bg-green-900/30 hover:bg-green-800/50 border border-green-700/40 text-green-400 text-xs font-semibold rounded-lg transition-all">
+                        ▶ Devam Et
+                      </button>
+                      <button @click="if(confirm('Render durdurulsun mu?')) stopBulletinRender()"
+                              class="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 hover:bg-red-800/50 border border-red-700/40 text-red-400 text-xs font-semibold rounded-lg transition-all">
+                        ⏹ Durdur
+                      </button>
+                      <span x-show="bulletinPaused" class="text-xs text-yellow-400 animate-pulse font-semibold">⏸ Duraklatıldı</span>
+                    </div>
+                  </div>
+                  <div x-show="bulletinJobStatus==='completed'" class="space-y-2">
+                    <div class="text-xs text-green-400 font-semibold" x-text="t('bulletin_render_done')||'Render tamamlandı!'"></div>
+                    <template x-if="Object.keys(bulletinCategoryOutputs).length > 0">
+                      <div class="space-y-1.5">
+                        <div class="text-xs text-slate-400 mb-1">Kategori videoları:</div>
+                        <template x-for="[cat, path] in Object.entries(bulletinCategoryOutputs)" :key="cat">
+                          <a :href="'/api/bulletin/download/' + bulletinJobId + '/' + cat" target="_blank"
+                             class="flex items-center gap-2 px-3 py-2 bg-green-800/30 hover:bg-green-800/60 border border-green-700/40 text-green-400 text-xs font-semibold rounded-lg transition-all">
+                            <span>⬇</span>
+                            <span x-text="cat.toUpperCase() + ' videosu'"></span>
+                          </a>
+                        </template>
+                      </div>
+                    </template>
+                    <a x-show="Object.keys(bulletinCategoryOutputs).length === 0"
+                       :href="'/api/bulletin/download/' + bulletinJobId" target="_blank"
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-green-800/40 hover:bg-green-800/70 border border-green-700/50 text-green-400 text-sm font-semibold rounded-lg transition-all"
+                       x-text="t('bulletin_download_btn')||'Videoyu İndir'"></a>
+                  </div>
+                  <div x-show="bulletinJobStatus==='cancelled'" class="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                    <span>⏹</span> <span>Render durduruldu.</span>
+                  </div>
+                  <div x-show="bulletinJobStatus==='failed'" class="text-xs text-red-400 mt-1" x-text="bulletinJobError"></div>
+                </div>
+              </template>
+
+              <div class="flex justify-between mt-4">
+                <button @click="bulletinTab='draft'" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← GERİ</button>
+                <button @click="startBulletinRender()" :disabled="bulletinRendering || selectedDraftCount()===0"
+                        class="cr-btn-launch" style="padding:12px 28px;font-size:12px;min-width:auto"
+                        :disabled="bulletinRendering || selectedDraftCount()===0">
+                  <span x-show="bulletinRendering" class="animate-spin-slow">↻</span>
+                  <span x-text="bulletinRendering ? (t('bulletin_rendering')||'Render Ediliyor...') : (t('bulletin_render_btn')||'RENDER BAŞLAT')"></span>
+                </button>
+              </div>
+            </div>
+
           </div>
 
           <!-- ─── Product Review Config ─── -->
@@ -315,8 +776,8 @@
             </div>
           </div>
 
-          <!-- Nav -->
-          <div class="flex justify-between mt-8">
+          <!-- Nav (bulletin kendi nav'ını kendi yönetiyor, burada sadece normal/product-review için) -->
+          <div x-show="videoModule !== 'bulletin'" class="flex justify-between mt-8">
             <button @click="prevStep()" class="cr-btn-back">← GERİ</button>
             <button @click="nextStep()"
                     :disabled="videoModule==='normal' && mode==='topic' && !newTopic.trim()"

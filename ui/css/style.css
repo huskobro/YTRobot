@@ -562,7 +562,8 @@ html.light .border-slate-700 {
   --cr-text: #e2e8f0;
   --cr-muted: #4b5563;
   --cr-mono: 'Space Mono', monospace;
-  --cr-display: 'Syne', sans-serif;
+  --cr-heading: 'Barlow Condensed', sans-serif;
+  --cr-display: 'DM Sans', sans-serif;
 }
 
 /* ── Wizard Container ── */
@@ -616,7 +617,7 @@ html.light .border-slate-700 {
   white-space: nowrap;
 }
 .cr-step-title {
-  font-family: var(--cr-display);
+  font-family: var(--cr-heading);
   font-size: 22px;
   font-weight: 800;
   color: var(--cr-text);
@@ -748,7 +749,7 @@ html.light .border-slate-700 {
   margin-bottom: 12px;
 }
 .cr-module-title {
-  font-family: var(--cr-display);
+  font-family: var(--cr-heading);
   font-size: 18px;
   font-weight: 800;
   color: var(--cr-text);
@@ -1038,7 +1039,7 @@ html.light .border-slate-700 {
 .cr-btn-next:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .cr-btn-launch {
-  font-family: var(--cr-display);
+  font-family: var(--cr-heading);
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.05em;

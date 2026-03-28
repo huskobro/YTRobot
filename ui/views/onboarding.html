@@ -122,91 +122,108 @@
           </h2>
           <p class="text-slate-400 mb-6" x-text="t('onb_tts_desc')"></p>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Edge TTS -->
-            <button @click="onboardingData.ttsProvider='edge'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='edge'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='edge' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🆓 Edge TTS</span>
                 <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">FREE</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_edge_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★★☆</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★★☆</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' && onboardingData.ttsProvider==='edge' ? 'playing' : '', onboardingData.ttsProvider!=='edge' ? 'opacity-30' : '']">▶</span>
               </div>
-              <button @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn mt-3" :class="onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' ? 'playing' : ''">▶</button>
-            </button>
+            </div>
 
             <!-- Qwen3 -->
-            <button @click="onboardingData.ttsProvider='qwen3'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='qwen3'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='qwen3' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🤖 Qwen3</span>
                 <span class="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full font-bold">LOCAL</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_qwen3_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★★★</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★★★</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' && onboardingData.ttsProvider==='qwen3' ? 'playing' : '', onboardingData.ttsProvider!=='qwen3' ? 'opacity-30' : '']" title="Sample (Edge TTS)">▶</span>
               </div>
-            </button>
+            </div>
 
             <!-- ElevenLabs -->
-            <button @click="onboardingData.ttsProvider='elevenlabs'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='elevenlabs'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='elevenlabs' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🎙️ ElevenLabs</span>
                 <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_eleven_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★★★</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★★★</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_en_jenny.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_en_jenny.mp3' && onboardingData.ttsProvider==='elevenlabs' ? 'playing' : '', onboardingData.ttsProvider!=='elevenlabs' ? 'opacity-30' : '']" title="Sample (Edge TTS benzeri)">▶</span>
               </div>
-            </button>
+            </div>
 
             <!-- OpenAI -->
-            <button @click="onboardingData.ttsProvider='openai'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='openai'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='openai' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🗣️ OpenAI</span>
                 <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_openai_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★★☆</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★★☆</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_en_guy.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_en_guy.mp3' && onboardingData.ttsProvider==='openai' ? 'playing' : '', onboardingData.ttsProvider!=='openai' ? 'opacity-30' : '']" title="Sample (Edge TTS benzeri)">▶</span>
               </div>
-            </button>
+            </div>
 
             <!-- SpeshAudio -->
-            <button @click="onboardingData.ttsProvider='speshaudio'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='speshaudio'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='speshaudio' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🎧 SpeshAudio</span>
                 <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_spesh_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★★★</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★★★</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_tr_emel.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_tr_emel.mp3' && onboardingData.ttsProvider==='speshaudio' ? 'playing' : '', onboardingData.ttsProvider!=='speshaudio' ? 'opacity-30' : '']" title="Sample (Edge TTS benzeri)">▶</span>
               </div>
-            </button>
+            </div>
 
             <!-- DubVoice -->
-            <button @click="onboardingData.ttsProvider='dubvoice'" class="onboarding-card text-left"
+            <div @click="onboardingData.ttsProvider='dubvoice'" class="onboarding-card text-left cursor-pointer"
                     :class="onboardingData.ttsProvider==='dubvoice' ? 'selected' : ''">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-lg font-bold">🔊 DubVoice</span>
                 <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-bold">API KEY</span>
               </div>
               <p class="text-xs text-slate-400 mb-3" x-text="t('onb_tts_dub_desc')"></p>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span>★★★☆☆</span>
-                <span x-text="t('onb_quality')"></span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span>★★★☆☆</span>
+                  <span x-text="t('onb_quality')"></span>
+                </div>
+                <span @click.stop="playOnboardingSample('/samples/audio/edge_tr_ahmet.mp3')" class="voice-play-btn transition-opacity" :class="[onboardingAudioPlaying==='/samples/audio/edge_tr_ahmet.mp3' && onboardingData.ttsProvider==='dubvoice' ? 'playing' : '', onboardingData.ttsProvider!=='dubvoice' ? 'opacity-30' : '']" title="Sample (Edge TTS benzeri)">▶</span>
               </div>
-            </button>
+            </div>
           </div>
 
           <!-- API Key input (if needed) -->

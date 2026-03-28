@@ -125,7 +125,11 @@ def _read_env() -> dict:
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, _, v = line.partition("=")
-            out[k.strip()] = v.strip()
+            v = v.strip()
+            # Strip shell single-quote wrapping and unescape \' → '
+            if v.startswith("'") and v.endswith("'"):
+                v = v[1:-1].replace("\\'", "'")
+            out[k.strip()] = v
     return out
 
 def _write_env(values: dict):

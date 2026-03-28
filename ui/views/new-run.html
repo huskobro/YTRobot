@@ -657,8 +657,8 @@
 
               </div>
 
-              <!-- Render job progress (shown when bulletinJobId exists) -->
-              <template x-if="bulletinJobId">
+              <!-- Render job progress (shown when bulletinRendering or bulletinJobId exists) -->
+              <div x-show="bulletinJobId || bulletinRendering">
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-3">
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-sm font-bold text-slate-300" x-text="t('bulletin_render_status')||'Render Durumu'"></span>
@@ -725,7 +725,7 @@
                   </div>
                   <div x-show="bulletinJobStatus==='failed'" class="text-xs text-red-400 mt-1" x-text="bulletinJobError"></div>
                 </div>
-              </template>
+              </div>
 
               <div class="flex justify-between mt-4">
                 <button @click="bulletinTab='draft'" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← GERİ</button>
@@ -740,40 +740,413 @@
 
           </div>
 
-          <!-- ─── Product Review Config ─── -->
-          <div x-show="videoModule==='product-review'" class="space-y-6">
+          <!-- ─── Product Review Config (full 4-step flow) ─── -->
+          <div x-show="videoModule==='product-review'" class="space-y-4">
 
-            <div class="cr-surface">
-              <label class="cr-label">Ürün Linki veya Adı</label>
-              <textarea x-model="newTopic" rows="3" class="cr-textarea"
-                placeholder="Amazon/AliExpress linki veya ürün adı..." style="border-color:var(--cr-cyan)"></textarea>
+            <!-- Sub-step tabs -->
+            <div class="flex items-center gap-2 mb-2">
+              <template x-for="(prstep, pridx) in [
+                {id:1, label: t('pr_wizard_step1')||'Ürün Bilgileri', icon:'📦'},
+                {id:2, label: t('pr_wizard_step2')||'Değerlendirme', icon:'⭐'},
+                {id:3, label: t('pr_wizard_step3')||'Seslendirme', icon:'🎙️'},
+                {id:4, label: t('pr_wizard_step4')||'Render', icon:'🎬'}
+              ]" :key="prstep.id">
+                <div class="flex items-center gap-1.5 flex-1">
+                  <button @click="prWizardStep=prstep.id"
+                          class="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2"
+                          :class="prWizardStep===prstep.id ? 'bg-amber-700/20 border-amber-500 text-white' : (prWizardStep > prstep.id ? 'bg-emerald-900/20 border-emerald-700/50 text-emerald-400' : 'bg-slate-800/50 border-slate-700 text-slate-500')">
+                    <span x-text="prWizardStep > prstep.id ? '✅' : prstep.icon"></span>
+                    <div>
+                      <div style="font-family:var(--cr-mono);font-size:8px;opacity:0.6;text-transform:uppercase;letter-spacing:0.08em" x-text="pridx+1 + '. ADIM'"></div>
+                      <div x-text="prstep.label"></div>
+                    </div>
+                  </button>
+                  <span x-show="pridx < 3" style="color:#374151;font-size:14px;flex-shrink:0">→</span>
+                </div>
+              </template>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
-              <div class="cr-surface">
-                <label class="cr-label">İnceleme Derinliği</label>
-                <select x-model="wizardTone" class="cr-select">
-                  <option value="summary">Hızlı Özet</option>
-                  <option value="deep" selected>Derin Analiz</option>
-                  <option value="pro-audit">Pro Denetim</option>
-                </select>
+            <!-- ── STEP 1: Ürün Bilgileri ── -->
+            <div x-show="prWizardStep===1">
+
+              <!-- Auto mode -->
+              <div class="mb-3 bg-slate-900 border rounded-xl overflow-hidden transition-all"
+                   :class="prAutoOpen ? 'border-amber-600/60' : 'border-slate-800'">
+                <button @click="prAutoOpen = !prAutoOpen"
+                        class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-800/50 transition-all">
+                  <div class="flex items-center gap-3">
+                    <span class="w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+                          :class="prAutoOpen ? 'bg-amber-600 text-white' : 'bg-slate-800 text-amber-400'">✨</span>
+                    <div>
+                      <div class="text-sm font-bold text-white" x-text="t('pr_auto_title')"></div>
+                      <div class="text-xs text-slate-500" x-text="t('pr_auto_header_sub')"></div>
+                    </div>
+                  </div>
+                  <span class="text-slate-500 text-sm transition-transform duration-200" :class="prAutoOpen ? 'rotate-180' : ''">▾</span>
+                </button>
+                <div x-show="prAutoOpen" x-transition.duration.200ms class="px-4 pb-4 border-t border-slate-800/60">
+                  <p class="text-xs text-slate-400 mt-3 mb-3" x-text="t('pr_auto_hint')"></p>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="cr-label" x-text="t('pr_product_url')"></label>
+                      <input type="url" x-model="prAutoUrl" class="cr-input"
+                        :placeholder="t('pr_url_placeholder')">
+                    </div>
+                    <div>
+                      <label class="cr-label">Master Prompt (İsteğe Bağlı)</label>
+                      <textarea x-model="prAutoPrompt" rows="2" class="cr-textarea"
+                        placeholder="Boş bırakılırsa varsayılan AI talimatları kullanılır..."></textarea>
+                    </div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                      <button @click="prAutoFill()"
+                        :disabled="prAutoLoading || !prAutoUrl.trim()"
+                        class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all"
+                        :class="prAutoLoading || !prAutoUrl.trim() ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/30'">
+                        <span x-show="prAutoLoading" class="animate-spin-slow">↻</span>
+                        <span x-text="prAutoLoading ? t('pr_auto_loading') : t('pr_auto_fill_btn')"></span>
+                      </button>
+                      <span x-show="prAutoError" class="text-xs text-red-400" x-text="prAutoError"></span>
+                      <span x-show="prAutoSuccess && !prAutoLoading" class="text-xs text-green-400" x-text="t('pr_auto_success')"></span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="cr-surface">
-                <label class="cr-label">Görsel Stil</label>
-                <select x-model="wizardStyle" class="cr-select">
-                  <option value="modern" selected>Modern</option>
-                  <option value="premium">Premium / Luxury</option>
-                  <option value="energetic">Enerjik (Tech)</option>
-                </select>
+
+              <!-- Manual mode -->
+              <div class="mb-3 bg-slate-900 border rounded-xl overflow-hidden transition-all"
+                   :class="prManualOpen ? 'border-slate-600' : 'border-slate-800'">
+                <button @click="prManualOpen = !prManualOpen"
+                        class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-800/50 transition-all">
+                  <div class="flex items-center gap-3">
+                    <span class="w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+                          :class="prManualOpen ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-400'">✏️</span>
+                    <div>
+                      <div class="text-sm font-bold text-white" x-text="t('pr_mode_manual')"></div>
+                      <div class="text-xs text-slate-500" x-text="t('pr_manual_header_sub')"></div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span x-show="prForm.name" class="text-xs text-slate-400 font-medium max-w-32 truncate" x-text="prForm.name"></span>
+                    <span class="text-slate-500 text-sm transition-transform duration-200" :class="prManualOpen ? 'rotate-180' : ''">▾</span>
+                  </div>
+                </button>
+                <div x-show="prManualOpen" x-transition.duration.200ms class="border-t border-slate-800/60 p-4 space-y-4">
+                  <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4">
+                    <h2 class="cr-label mb-3" style="color:var(--cr-amber)" x-text="t('pr_basic_info')"></h2>
+                    <div class="space-y-3">
+                      <div>
+                        <label class="cr-label" x-text="t('pr_product_name')"></label>
+                        <div class="flex gap-2">
+                          <input type="text" x-model="prForm.name" class="cr-input flex-1" placeholder="Sony WH-1000XM5">
+                          <button @click="aiAssist('prName')" class="px-2 py-1 bg-violet-600/80 hover:bg-violet-500 text-white text-xs font-black rounded-lg transition-all shrink-0">AI</button>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-3 gap-2">
+                        <div>
+                          <label class="cr-label" x-text="t('pr_price')"></label>
+                          <input type="number" x-model.number="prForm.price" class="cr-input" placeholder="1299">
+                        </div>
+                        <div>
+                          <label class="cr-label" x-text="t('pr_original_price')"></label>
+                          <input type="number" x-model.number="prForm.originalPrice" class="cr-input" placeholder="1899">
+                        </div>
+                        <div>
+                          <label class="cr-label" x-text="t('pr_currency')"></label>
+                          <select x-model="prForm.currency" class="cr-select">
+                            <option value="TL">TL</option>
+                            <option value="$">$</option>
+                            <option value="€">€</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="cr-label" x-text="t('pr_rating')"></label>
+                          <input type="number" x-model.number="prForm.rating" min="0" max="5" step="0.1" class="cr-input" placeholder="4.2">
+                        </div>
+                        <div>
+                          <label class="cr-label" x-text="t('pr_review_count')"></label>
+                          <input type="number" x-model.number="prForm.reviewCount" class="cr-input" placeholder="2847">
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="cr-label" x-text="t('pr_category')"></label>
+                          <input type="text" x-model="prForm.category" class="cr-input" placeholder="Kulaklık">
+                        </div>
+                        <div>
+                          <label class="cr-label" x-text="t('pr_platform')"></label>
+                          <input type="text" x-model="prForm.platform" class="cr-input" placeholder="trendyol">
+                        </div>
+                      </div>
+                      <div>
+                        <label class="cr-label" x-text="t('pr_image_url')"></label>
+                        <input type="url" x-model="prForm.imageUrl" class="cr-input" placeholder="https://...">
+                      </div>
+                      <div>
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="cr-label" x-text="t('pr_gallery_urls')"></label>
+                          <button @click="prForm.galleryUrls.push('')" class="text-xs font-bold" style="color:var(--cr-amber)" x-text="t('pr_add_item')"></button>
+                        </div>
+                        <div class="space-y-2">
+                          <template x-for="(url, i) in prForm.galleryUrls" :key="i">
+                            <div class="flex gap-2">
+                              <input type="url" x-model="prForm.galleryUrls[i]" class="cr-input flex-1" placeholder="https://...">
+                              <button @click="prForm.galleryUrls.splice(i, 1)" class="text-red-500 hover:text-red-400 text-xs px-2">✕</button>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="cr-surface">
-                <label class="cr-label">Format</label>
-                <select x-model="settings.PR_FORMAT" class="cr-select">
-                  <option value="16:9">16:9 Yatay</option>
-                  <option value="9:16" selected>9:16 Dikey</option>
-                </select>
+
+              <div class="flex justify-end mt-3">
+                <button @click="prWizardStep=2" class="cr-btn-next" style="padding:10px 24px;font-size:11px">
+                  <span x-text="t('pr_wizard_step2')||'Değerlendirme'"></span> →
+                </button>
               </div>
             </div>
+
+            <!-- ── STEP 2: Değerlendirme ── -->
+            <div x-show="prWizardStep===2">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Left: Pros, Cons, Comments -->
+                <div class="space-y-3">
+                  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <h2 class="text-sm font-bold text-green-400" x-text="t('pr_pros')"></h2>
+                      <button @click="prForm.pros.push('')" class="text-xs text-green-400 hover:text-green-300 font-bold" x-text="t('pr_add_item')"></button>
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="(pro, i) in prForm.pros" :key="i">
+                        <div class="flex gap-2">
+                          <span class="text-green-500 mt-2 text-sm">✓</span>
+                          <input type="text" x-model="prForm.pros[i]" class="cr-input flex-1" placeholder="Avantaj...">
+                          <button @click="prForm.pros.splice(i, 1)" class="text-red-500 text-xs px-2">✕</button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <h2 class="text-sm font-bold text-red-400" x-text="t('pr_cons')"></h2>
+                      <button @click="prForm.cons.push('')" class="text-xs text-red-400 hover:text-red-300 font-bold" x-text="t('pr_add_item')"></button>
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="(con, i) in prForm.cons" :key="i">
+                        <div class="flex gap-2">
+                          <span class="text-red-500 mt-2 text-sm">✗</span>
+                          <input type="text" x-model="prForm.cons[i]" class="cr-input flex-1" placeholder="Dezavantaj...">
+                          <button @click="prForm.cons.splice(i, 1)" class="text-red-500 text-xs px-2">✕</button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <h2 class="text-sm font-bold text-blue-400" x-text="t('pr_comments')"></h2>
+                      <button @click="prForm.topComments.push('')" class="text-xs text-blue-400 hover:text-blue-300 font-bold" x-text="t('pr_add_item')"></button>
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="(c, i) in prForm.topComments" :key="i">
+                        <div class="flex gap-2">
+                          <span class="text-blue-400 mt-2 text-sm">💬</span>
+                          <input type="text" x-model="prForm.topComments[i]" class="cr-input flex-1" placeholder="Kullanıcı yorumu...">
+                          <button @click="prForm.topComments.splice(i, 1)" class="text-red-500 text-xs px-2">✕</button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <!-- Right: Score & Verdict -->
+                <div class="space-y-3">
+                  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <h2 class="cr-label mb-3" style="color:var(--cr-amber)" x-text="t('pr_details')"></h2>
+                    <div class="space-y-3">
+                      <div>
+                        <label class="cr-label" x-text="t('pr_score')"></label>
+                        <input type="range" x-model.number="prForm.score" min="1" max="10" step="0.5" class="w-full accent-amber-500">
+                        <div class="text-center text-2xl font-bold mt-1" style="color:var(--cr-amber)" x-text="prForm.score + '/10'"></div>
+                      </div>
+                      <div>
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="cr-label" x-text="t('pr_verdict')"></label>
+                          <button @click="aiAssist('verdict')" class="px-1.5 py-0.5 bg-violet-600/80 hover:bg-violet-500 text-white text-xs font-black rounded transition-all">AI</button>
+                        </div>
+                        <textarea x-model="prForm.verdict" rows="3" class="cr-textarea" placeholder="Bu ürün hakkında son değerlendirme..."></textarea>
+                      </div>
+                      <div>
+                        <label class="cr-label" x-text="t('pr_cta')"></label>
+                        <input type="text" x-model="prForm.ctaText" class="cr-input" placeholder="Linke tıkla!">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-between mt-3">
+                <button @click="prWizardStep=1" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← <span x-text="t('pr_wizard_step1')||'Ürün Bilgileri'"></span></button>
+                <button @click="prWizardStep=3" class="cr-btn-next" style="padding:10px 20px;font-size:11px"><span x-text="t('pr_wizard_step3')||'Seslendirme'"></span> →</button>
+              </div>
+            </div>
+
+            <!-- ── STEP 3: Seslendirme ── -->
+            <div x-show="prWizardStep===3">
+              <div class="bg-slate-900 border border-purple-700/40 rounded-xl p-4">
+                <h2 class="cr-label mb-2" style="color:#c084fc" x-text="t('pr_tts_title')"></h2>
+                <p class="text-xs text-slate-400 mb-3" x-text="t('pr_tts_hint')"></p>
+                <label class="flex items-center gap-2 px-3 py-2.5 mb-4 border border-purple-700/40 rounded-lg bg-purple-950/20 cursor-pointer hover:bg-purple-900/20 transition-colors">
+                  <input type="checkbox" x-model="prAutoGenerateTTS" class="w-4 h-4 accent-purple-500 cursor-pointer rounded" />
+                  <div class="flex-1">
+                    <span class="text-sm text-purple-300 font-medium">Otomatik TTS Oluştur</span>
+                    <p class="text-xs mt-0.5" style="color:#a855f780">Render sırasında ses yoksa otomatik oluşturulur</p>
+                  </div>
+                </label>
+                <div class="space-y-3">
+                  <div>
+                    <label class="cr-label" x-text="t('pr_tts_audio_url')"></label>
+                    <input type="url" x-model="prForm.audioUrl" class="cr-input" :placeholder="t('pr_tts_audio_url_ph')">
+                  </div>
+                  <button @click="prGenerateTTS()" :disabled="prTtsLoading || !prForm.name"
+                    class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all"
+                    :class="prTtsLoading || !prForm.name ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-purple-700 hover:bg-purple-600 text-white'">
+                    <span x-show="prTtsLoading" class="animate-spin-slow">↻</span>
+                    <span>🎙️</span>
+                    <span x-text="prTtsLoading ? t('pr_tts_generating') : t('pr_tts_generate_btn')"></span>
+                  </button>
+                  <span x-show="prTtsError" class="text-xs text-red-400 block" x-text="prTtsError"></span>
+                  <div x-show="prTtsAudioUrl" class="space-y-2">
+                    <audio controls :src="prTtsAudioUrl" class="w-full" style="height:36px;"></audio>
+                    <details class="text-xs text-slate-500">
+                      <summary class="cursor-pointer hover:text-slate-400" x-text="t('pr_tts_show_script')"></summary>
+                      <p class="mt-2 text-slate-400 bg-slate-800 rounded p-2" x-text="prTtsNarration"></p>
+                    </details>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-between mt-3">
+                <button @click="prWizardStep=2" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← <span x-text="t('pr_wizard_step2')||'Değerlendirme'"></span></button>
+                <button @click="prWizardStep=4" class="cr-btn-next" style="padding:10px 20px;font-size:11px"><span x-text="t('pr_wizard_step4')||'Render'"></span> →</button>
+              </div>
+            </div>
+
+            <!-- ── STEP 4: Render ── -->
+            <div x-show="prWizardStep===4">
+              <div class="bg-slate-900 border border-amber-700/40 rounded-xl p-4">
+                <h2 class="cr-label mb-3" style="color:var(--cr-amber)">Render</h2>
+                <div class="space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="cr-label" x-text="t('pr_style')"></label>
+                      <select x-model="prRenderCfg.style" class="cr-select">
+                        <option value="modern">Modern</option>
+                        <option value="dark">Dark</option>
+                        <option value="energetic">Energetic</option>
+                        <option value="minimal">Minimal</option>
+                        <option value="premium">Premium</option>
+                      </select>
+                      <!-- Style preview -->
+                      <div class="mt-2 rounded-xl overflow-hidden border border-slate-700 h-28 relative"
+                           :class="{
+                             'bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900': prRenderCfg.style==='modern',
+                             'bg-gradient-to-br from-black via-gray-950 to-black': prRenderCfg.style==='dark',
+                             'bg-gradient-to-br from-orange-950 via-red-950 to-yellow-950': prRenderCfg.style==='energetic',
+                             'bg-gradient-to-br from-white/5 via-slate-950 to-white/5': prRenderCfg.style==='minimal',
+                             'bg-gradient-to-br from-amber-950 via-yellow-950 to-amber-900': prRenderCfg.style==='premium'
+                           }">
+                        <div class="absolute inset-2 flex items-center gap-2">
+                          <div class="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center text-xl"
+                               :class="{
+                                 'bg-blue-500/20 border border-blue-500/30': prRenderCfg.style==='modern',
+                                 'bg-white/5 border border-white/10': prRenderCfg.style==='dark',
+                                 'bg-orange-500/20 border border-orange-500/30': prRenderCfg.style==='energetic',
+                                 'bg-slate-800 border border-slate-700': prRenderCfg.style==='minimal',
+                                 'bg-amber-500/15 border border-amber-500/20': prRenderCfg.style==='premium'
+                               }">📦</div>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold mb-1 truncate"
+                                 :class="{'text-blue-300':prRenderCfg.style==='modern','text-white':prRenderCfg.style==='dark','text-orange-300':prRenderCfg.style==='energetic','text-slate-300':prRenderCfg.style==='minimal','text-amber-200':prRenderCfg.style==='premium'}"
+                                 x-text="prForm.name || 'Ürün Adı'"></div>
+                            <div class="flex items-center gap-0.5 mb-1">
+                              <template x-for="i in 5" :key="i">
+                                <span class="text-xs" :class="i <= Math.round((prForm.score||7)/2) ? 'text-amber-400' : 'text-slate-700'">★</span>
+                              </template>
+                              <span class="text-xs ml-1 text-amber-300" x-text="(prForm.score||7)+'/10'"></span>
+                            </div>
+                            <div class="text-sm font-black"
+                                 :class="{'text-blue-300':prRenderCfg.style==='modern','text-white':prRenderCfg.style!=='modern'}"
+                                 x-text="(prForm.price||'1299') + ' ' + (prForm.currency||'TL')"></div>
+                          </div>
+                        </div>
+                        <div class="absolute bottom-1 right-2 text-xs uppercase tracking-widest opacity-40"
+                             :class="{'text-blue-400':prRenderCfg.style==='modern','text-white':prRenderCfg.style==='dark','text-orange-400':prRenderCfg.style==='energetic','text-slate-400':prRenderCfg.style==='minimal','text-amber-300':prRenderCfg.style==='premium'}"
+                             x-text="prRenderCfg.style"></div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="cr-label" x-text="t('pr_format')"></label>
+                      <select x-model="prRenderCfg.format" class="cr-select">
+                        <option value="16:9">16:9 (Yatay)</option>
+                        <option value="9:16">9:16 (Dikey)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="cr-label" x-text="t('pr_channel')"></label>
+                      <input type="text" x-model="prRenderCfg.channelName" class="cr-input" placeholder="YTRobot İnceleme">
+                    </div>
+                    <div>
+                      <label class="cr-label">FPS</label>
+                      <select x-model="prRenderCfg.fps" class="cr-select">
+                        <option value="30">30</option>
+                        <option value="60">60</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Render Button -->
+                <button @click="startProductReviewRender()" :disabled="prRendering || !prForm.name"
+                  class="w-full mt-4 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all"
+                  :class="prRendering ? 'bg-amber-800 cursor-wait' : 'bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-900/30'">
+                  <span x-show="prRendering" class="animate-spin-slow">↻</span>
+                  <span x-text="prRendering ? t('pr_rendering') : t('pr_start_render')"></span>
+                </button>
+
+                <!-- Progress -->
+                <div x-show="prJobId || prRendering" class="mt-4 space-y-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                          :class="prJobStatus==='completed'?'bg-green-900/60 text-green-400':prJobStatus==='failed'?'bg-red-900/60 text-red-400':'bg-blue-900/60 text-blue-400'"
+                          x-text="prJobStatus||'başlatılıyor...'"></span>
+                    <span class="text-xs text-slate-400" x-text="prStepLabel"></span>
+                  </div>
+                  <div x-show="prJobStatus==='running'||prJobStatus==='completed'" class="space-y-1">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                      <span x-text="prProgress + '%'"></span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-500"
+                           :class="prJobStatus==='completed'?'bg-green-500':'bg-amber-500'"
+                           :style="`width:${prProgress}%`"></div>
+                    </div>
+                  </div>
+                  <a x-show="prJobStatus==='completed'"
+                     :href="'/api/product-review/download/' + prJobId" target="_blank"
+                     class="inline-flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-bold rounded-lg transition-all">
+                    <span>⬇</span> <span x-text="t('pr_download')"></span>
+                  </a>
+                  <div x-show="prJobError" class="text-xs text-red-400 bg-red-900/20 border border-red-800/40 rounded-lg p-3" x-text="prJobError"></div>
+                </div>
+              </div>
+
+              <div class="flex justify-start mt-3">
+                <button @click="prWizardStep=3" class="cr-btn-back" style="padding:10px 20px;font-size:11px">← <span x-text="t('pr_wizard_step3')||'Seslendirme'"></span></button>
+              </div>
+            </div>
+
           </div>
 
           <!-- Nav (bulletin kendi nav'ını kendi yönetiyor, burada sadece normal/product-review için) -->

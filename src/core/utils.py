@@ -135,13 +135,16 @@ def _read_env() -> dict:
 def _write_env(values: dict):
     """
     .env dosyasini guvenli sekilde yazar.
-    Bosluk veya ozel karakter iceren degerler tikli tirnak icine alinir.
+    Sadece bosluk veya = veya newline iceren degerler tirnak icine alinir.
+    # ve ' karakterleri tırnaksız yazilir — .env standardi bunu destekler
+    ve tekrar okuyunca bozulma olmaz.
     """
     lines = []
     for k, v in values.items():
         v_str = str(v) if v is not None else ""
-        # Deger bosluk, tikli tirnak, #, = veya yeni satir iceriyorsa tirnak kullan
-        if any(c in v_str for c in (' ', '"', "'", '#', '\n', '\r', '=')):
+        # Sadece bosluk, = veya newline varsa tirnak kullan
+        if any(c in v_str for c in (' ', '=', '\n', '\r')):
+            # Tirnak icinde sadece ' karakterini escape et
             escaped = v_str.replace("'", "\\'")
             lines.append(f"{k}='{escaped}'")
         else:

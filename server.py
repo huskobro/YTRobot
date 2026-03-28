@@ -157,6 +157,8 @@ app.include_router(seo_router)
 
 # Mount Static Files
 app.mount("/output", StaticFiles(directory="output"), name="output")
+Path("assets/cache").mkdir(parents=True, exist_ok=True)
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 Path("sessions").mkdir(exist_ok=True)
 app.mount("/sessions", StaticFiles(directory="sessions"), name="sessions")
 app.mount("/css", StaticFiles(directory="ui/css"), name="css")
@@ -216,6 +218,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=5006, help="Server port (default: 5006 for v3)")
     args = parser.parse_args()
+    import os as _os
+    _os.environ["YTROBOT_PORT"] = str(args.port)
     OUTPUT_DIR.mkdir(exist_ok=True)
     _cleanup_stale_sessions()
     print(f"🎬 YTRobot v3.0 → http://localhost:{args.port}")

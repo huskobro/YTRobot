@@ -117,18 +117,29 @@ def _do_product_render_sync(rid: str, data: dict):
         narration = product.get("narration", "")
         if auto_tts and not product.get("audioUrl"):
             p = product
-            name, price, original_price = p.get("name", "Bu ürün"), p.get("price", 0), p.get("originalPrice", 0)
-            currency, rating, review_count = p.get("currency", "TL"), p.get("rating", 0), p.get("reviewCount", 0)
-            score, verdict, cta = p.get("score", 7), p.get("verdict", ""), p.get("ctaText", "Linke tıkla!")
+            def _to_float(v, default=0):
+                try: return float(str(v).replace(",", ".").split()[0])
+                except: return default
+            name = p.get("name", "Bu ürün")
+            price_raw = p.get("price", 0)
+            original_price_raw = p.get("originalPrice", 0)
+            price = _to_float(price_raw)
+            original_price = _to_float(original_price_raw)
+            currency, rating, review_count = p.get("currency", "TL"), _to_float(p.get("rating", 0)), p.get("reviewCount", 0)
+            score = _to_float(p.get("score", 7), 7)
+            verdict, cta = p.get("verdict", ""), p.get("ctaText", "Linke tıkla!")
+            # Display strings: use raw values if they look like formatted strings, else numeric
+            price_display = price_raw if isinstance(price_raw, str) and price_raw else price
+            orig_display = original_price_raw if isinstance(original_price_raw, str) and original_price_raw else original_price
             pros, cons = p.get("pros", []), p.get("cons", [])
 
             if lang == "tr":
-                discount_line = f" Normalde {original_price} {currency} olan bu ürün şu an {price} {currency}'ye satılıyor, yüzde {round((original_price-price)/max(1,original_price)*100)} indirimle." if original_price > price else f" Fiyatı {price} {currency}."
+                discount_line = f" Normalde {orig_display} {currency} olan bu ürün şu an {price_display} {currency}'ye satılıyor, yüzde {round((original_price-price)/max(1,original_price)*100)} indirimle." if original_price > price else f" Fiyatı {price_display} {currency}."
                 pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
                 cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
                 narration = f"Merhaba! Bugün {name} inceliyoruz.{discount_line} {review_count} yorum ve {rating} üzerinden {rating} yıldız aldı. Artıları: {pros_text} Eksileri: {cons_text} Genel puanımız: 10 üzerinden {score}. {verdict} {cta}"
             else:
-                discount_line = f" Originally {original_price} {currency}, now {price} {currency} — {round((original_price-price)/max(1,original_price)*100)}% off." if original_price > price else f" Priced at {price} {currency}."
+                discount_line = f" Originally {orig_display} {currency}, now {price_display} {currency} — {round((original_price-price)/max(1,original_price)*100)}% off." if original_price > price else f" Priced at {price_display} {currency}."
                 pros_text = " ".join([f"{i+1}. {pro}." for i, pro in enumerate(pros[:4])])
                 cons_text = " ".join([f"{i+1}. {con}." for i, con in enumerate(cons[:3])])
                 narration = f"Hey! Today we're reviewing the {name}.{discount_line} It has {review_count} reviews and a {rating} star rating. Pros: {pros_text} Cons: {cons_text} Our overall score: {score} out of 10. {verdict} {cta}"
@@ -138,12 +149,13 @@ def _do_product_render_sync(rid: str, data: dict):
             _on_product_progress(rid, 5, "tts", "TTS sentezleniyor...")
             try:
                 from config import settings as cfg
-                from pipeline.tts import clean_for_tts, _tts_load
-                
+                from pipeline.tts import _load_provider
+                from providers.tts.base import clean_for_tts
+
                 pr_tts_provider = os.environ.get("PR_TTS_PROVIDER") or getattr(cfg, "pr_tts_provider", "")
                 eff_prov = pr_tts_provider or cfg.tts_provider
                 voice_settings = {"provider": eff_prov, "lang": lang}
-                
+
                 cached_tts = asset_cache.get_tts_cache(narration, voice_settings)
                 if cached_tts:
                     product["audioUrl"] = f"/api/product-review/audio/{cached_tts.name}"
@@ -152,7 +164,7 @@ def _do_product_render_sync(rid: str, data: dict):
                 else:
                     audio_filename = f"pr_tts_{int(time.time()*1000)}.mp3"
                     audio_path = PRODUCT_REVIEW_DIR / audio_filename
-                    provider = _tts_load(eff_prov if eff_prov else None)
+                    provider = _load_provider(eff_prov if eff_prov else None)
                     cleaned = clean_for_tts(narration, remove_apostrophes=cfg.tts_remove_apostrophes)
                     provider.synthesize(cleaned, audio_path)
                     product["audioUrl"] = f"/api/product-review/audio/{audio_filename}"
@@ -161,15 +173,29 @@ def _do_product_render_sync(rid: str, data: dict):
                 print(f"[WARN] Auto-TTS failed: {e}")
 
         # --- Asset Caching (Images) ---
+        # Cache'lenmiş dosyaları HTTP URL'ye çevir (Remotion mutlak yol açamaz)
+        from config import settings as _img_cfg
+        _port = getattr(_img_cfg, "port", 5005)
+        _assets_root = Path(__file__).parent.parent.parent.parent / "assets"
+
+        def _cache_to_http(path: Path) -> str:
+            """Mutlak cache yolunu HTTP URL'ye çevir."""
+            try:
+                rel = path.relative_to(_assets_root)
+                return f"http://localhost:{_port}/assets/{rel.as_posix()}"
+            except ValueError:
+                return str(path.absolute())
+
         if product.get("imageUrl"):
             cached_img = asset_cache.get_url_cache(product["imageUrl"])
-            if cached_img: product["imageUrl"] = str(cached_img.absolute())
-            
+            if cached_img:
+                product["imageUrl"] = _cache_to_http(cached_img)
+
         if product.get("galleryUrls"):
             cached_galleries = []
             for g_url in product["galleryUrls"]:
                 c_g = asset_cache.get_url_cache(g_url)
-                cached_galleries.append(str(c_g.absolute()) if c_g else g_url)
+                cached_galleries.append(_cache_to_http(c_g) if c_g else g_url)
             product["galleryUrls"] = cached_galleries
 
         # --- Remotion Render ---
@@ -182,9 +208,14 @@ def _do_product_render_sync(rid: str, data: dict):
             from pipeline.script import Scene as PipelineScene
             
             # Mock a scene object for the subtitle aligner
+            audio_url = product.get("audioUrl", "")
+            if not audio_url:
+                raise ValueError("audioUrl boş — kelime zamanlaması atlanıyor")
             p_scene = PipelineScene(id="pr", title=product.get("name", ""), narration=narration)
-            audio_path = PRODUCT_REVIEW_DIR / product["audioUrl"].split("/")[-1]
-            
+            audio_path = PRODUCT_REVIEW_DIR / audio_url.split("/")[-1]
+            if not audio_path.exists():
+                raise ValueError(f"Ses dosyası bulunamadı: {audio_path}")
+
             # Generate word_timing.json
             wt_path = generate_word_timing([audio_path], [p_scene], PRODUCT_REVIEW_DIR, fps=fps)
             if wt_path.exists():
@@ -208,15 +239,55 @@ def _do_product_render_sync(rid: str, data: dict):
         except Exception as wt_err:
             print(f"[WARN] Word timing generation failed: {wt_err}")
 
+        # Remotion number alanlarını normalize et (string gelirse float'a çevir)
+        def _safe_num(v, default=0):
+            try: return float(str(v).replace(",", ".").split()[0])
+            except: return default
+        product_norm = dict(product)
+        for num_field in ("price", "originalPrice", "rating", "score", "reviewCount"):
+            if num_field in product_norm:
+                product_norm[num_field] = _safe_num(product_norm[num_field])
+
+        # audioUrl relative ise Remotion'un erişebileceği tam URL'ye çevir
+        audio_url_val = product_norm.get("audioUrl", "")
+        if audio_url_val and audio_url_val.startswith("/api/"):
+            _port = int(os.environ.get("YTROBOT_PORT", "") or os.environ.get("PORT", "") or 5006)
+            product_norm["audioUrl"] = f"http://localhost:{_port}{audio_url_val}"
+
+        # imageUrl ve galleryUrls'deki mutlak yerel yolları HTTP URL'ye çevir
+        # (Remotion bundle sunucusu localhost:3002'den mutlak yolları açamaz)
+        # Port: önce env var, sonra config, default 5005
+        _port2 = int(os.environ.get("YTROBOT_PORT", "") or os.environ.get("PORT", "") or getattr(__import__("config", fromlist=["settings"]).settings, "port", 5006))
+        _proj_root = Path(__file__).parent.parent.parent.parent
+
+        def _local_to_http(url_or_path: str) -> str:
+            if not url_or_path:
+                return url_or_path
+            # Zaten HTTP URL ise dokunma
+            if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+                return url_or_path
+            # Mutlak yerel yol → /assets/... relative yap
+            p = Path(url_or_path)
+            try:
+                rel = p.relative_to(_proj_root)
+                return f"http://localhost:{_port2}/{rel.as_posix()}"
+            except ValueError:
+                return url_or_path
+
+        if product_norm.get("imageUrl"):
+            product_norm["imageUrl"] = _local_to_http(product_norm["imageUrl"])
+        if product_norm.get("galleryUrls"):
+            product_norm["galleryUrls"] = [_local_to_http(u) for u in product_norm["galleryUrls"]]
+
         props = {
-            "product": product, 
-            "style": style, 
+            "product": product_norm,
+            "style": style,
             "fps": fps, 
             "channelName": channel_name,
             "subtitles": final_subtitles,
             "settings": {
                 "subtitleFont": getattr(settings, "remotion_subtitle_font", "bebas"),
-                "subtitleSize": getattr(settings, "remotion_subtitle_size", 68),
+                "subtitleSize": int(re.sub(r"[^0-9]", "", str(getattr(settings, "remotion_subtitle_size", 68))) or "68"),
                 "subtitleColor": getattr(settings, "remotion_subtitle_color", "#ffffff"),
                 "subtitleBg": getattr(settings, "remotion_subtitle_bg", "none"),
                 "subtitleStroke": getattr(settings, "remotion_subtitle_stroke", 2),
@@ -238,7 +309,9 @@ def _do_product_render_sync(rid: str, data: dict):
             logger.warning(f"Failed to register PID for job {rid}: {e}")
         
         _l_pct = 10
+        remotion_output_lines = []
         for line in proc.stdout:
+            remotion_output_lines.append(line.rstrip())
             m = re.search(r"(\d+)\s*%", line)
             if m:
                 p_pct = int(m.group(1))
@@ -246,7 +319,10 @@ def _do_product_render_sync(rid: str, data: dict):
                 if overall > _l_pct: _l_pct = overall; _on_product_progress(rid, overall, "remotion", f"Video render: {p_pct}%")
             if _stop_event.is_set(): proc.terminate(); proc.wait(); raise InterruptedError("Durduruldu.")
         proc.wait()
-        if proc.returncode != 0: raise RuntimeError(f"Render failed ({proc.returncode})")
+        if proc.returncode != 0:
+            error_lines = [l for l in remotion_output_lines if any(x in l for x in ("error", "Error", "Cannot", "TypeError", "undefined", "failed", "Failed"))]
+            logger.error(f"[ProductReview] Remotion failed. Last output:\n" + "\n".join(remotion_output_lines[-30:]))
+            raise RuntimeError(f"Render failed ({proc.returncode}): " + "; ".join(error_lines[-3:]) if error_lines else f"Render failed ({proc.returncode})")
         
         # FFmpeg post-process
         fix_cmd = ["ffmpeg", "-i", str(raw_out.resolve()), "-c:v", "libx264", "-crf", "18", "-preset", "fast", "-vf", "colorspace=bt709:iall=bt470bg:fast=1,format=yuv420p", "-color_range", "tv", "-colorspace", "bt709", "-color_trc", "bt709", "-color_primaries", "bt709", "-c:a", "copy", str(output_path.resolve()), "-y"]
@@ -321,16 +397,88 @@ def product_review_autofill(body: ProductReviewAutofillReq):
     import urllib.request as urllib_req
     page_html = ""
     try:
-        req = urllib_req.Request(body.url, headers={"User-Agent": "Mozilla/5.0 (compatible; YTRobotBot/1.0)"})
-        with urllib_req.urlopen(req, timeout=15) as resp: page_html = resp.read(120_000).decode("utf-8", errors="replace")
+        req = urllib_req.Request(body.url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+            "Accept-Encoding": "identity",
+        })
+        with urllib_req.urlopen(req, timeout=15) as resp: page_html = resp.read(300_000).decode("utf-8", errors="replace")
     except Exception as e:
         logger.warning(f"Product page fetch failed for {body.url}: {e}")
         page_html = "(Fetch failed)"
     text_content = re.sub(r"<[^>]+>", " ", page_html)
     text_content = re.sub(r"\s+", " ", text_content).strip()[:8000]
-    
-    # AI logic preserved (Simplified for now, can be expanded)
-    return {"name": "Detected Product", "url": body.url, "html_len": len(page_html), "text_preview": text_content[:200]}
+
+    import json as _json
+
+    # --- Yapılandırılmış fiyat/puan verisini HTML'den direkt çıkar ---
+    structured_hints = {}
+    # discountedPrice (indirimli fiyat) — Trendyol ve benzerleri
+    _disc_m  = re.search(r'"discountedPrice"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)', page_html)
+    # originalPrice (orijinal/liste fiyatı)
+    _orig_m  = re.search(r'"originalPrice"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)', page_html)
+    # buyingPrice veya genel price fallback
+    _price_m = re.search(r'"price"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)', page_html)
+    # ratingScore.averageRating (Trendyol)
+    _rating_m = re.search(r'"ratingScore"\s*:\s*\{[^}]*"averageRating"\s*:\s*([\d.]+)', page_html)
+    if not _rating_m:
+        _rating_m = re.search(r'"averageRating"\s*:\s*([\d.]+)', page_html)
+    # commentCount / reviewCount
+    _rcount_m = re.search(r'"commentCount"\s*:\s*(\d+)', page_html)
+    if not _rcount_m:
+        _rcount_m = re.search(r'"totalCommentCount"\s*:\s*(\d+)', page_html)
+    if not _rcount_m:
+        _rcount_m = re.search(r'"reviewCount"\s*:\s*(\d+)', page_html)
+
+    if _disc_m:
+        structured_hints["price"] = float(_disc_m.group(1))
+    elif _price_m:
+        structured_hints["price"] = float(_price_m.group(1))
+    if _orig_m:
+        structured_hints["originalPrice"] = float(_orig_m.group(1))
+    if _rating_m:
+        structured_hints["rating"] = float(_rating_m.group(1))
+    if _rcount_m:
+        structured_hints["reviewCount"] = int(_rcount_m.group(1))
+
+    hints_text = ""
+    if structured_hints:
+        hints_text = f"\n\nYapılandırılmış veri (HTML'den çıkarıldı, kesinlikle kullan):\n{_json.dumps(structured_hints, ensure_ascii=False)}"
+
+    system_prompt = body.master_prompt.strip() if body.master_prompt and body.master_prompt.strip() else _PR_AUTOFILL_SYSTEM_PROMPT
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"URL: {body.url}\nDil: {body.lang}{hints_text}\n\nSayfa içeriği:\n{text_content}"}
+    ]
+    kieai_key = os.environ.get("KIEAI_API_KEY") or getattr(cfg, "kieai_api_key", "")
+    openai_key = os.environ.get("OPENAI_API_KEY") or getattr(cfg, "openai_api_key", "")
+    result_text = None
+    if kieai_key:
+        from openai import OpenAI
+        client = OpenAI(api_key=kieai_key, base_url="https://api.kie.ai/gemini-2.5-flash/v1")
+        r = client.chat.completions.create(model="gemini-2.5-flash", messages=messages, max_tokens=1000, temperature=0.3)
+        result_text = r.choices[0].message.content.strip()
+    elif openai_key:
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_key)
+        r = client.chat.completions.create(model="gpt-4o-mini", messages=messages, max_tokens=1000, temperature=0.3)
+        result_text = r.choices[0].message.content.strip()
+    else:
+        raise HTTPException(400, "AI API key bulunamadı (KIEAI_API_KEY veya OPENAI_API_KEY gerekli)")
+    if result_text.startswith("```"):
+        result_text = re.sub(r"```[a-z]*\n?", "", result_text).strip().rstrip("`").strip()
+    try:
+        data = _json.loads(result_text)
+    except Exception as e:
+        raise HTTPException(500, f"LLM yanıtı JSON parse edilemedi: {e}\n{result_text[:300]}")
+
+    # HTML'den çıkarılan yapılandırılmış veriyi her zaman uygula
+    for k, v in structured_hints.items():
+        if v:
+            data[k] = v
+
+    return data
 
 @router.post("/tts")
 def product_review_tts(body: ProductReviewTTSReq):

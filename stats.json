@@ -1,35 +1,165 @@
 {
-    "total_renders": 13,
-    "success_rate": 76.92307692307693,
-    "failed_renders": 3,
-    "completed_renders": 10,
-    "average_render_time": 126.14645476341248,
-    "total_render_time": 1261.4645476341248,
+    "total_renders": 37,
+    "success_rate": 48.64864864864865,
+    "failed_renders": 19,
+    "completed_renders": 18,
+    "average_render_time": 127.33645983537038,
+    "total_render_time": 2292.056277036667,
     "platform_stats": {
         "youtube": 0,
         "instagram": 0
     },
     "error_patterns": {
         "argument should be a str or an os.PathLike object ": 2,
-        "FlashAttention2 has been toggled on, but it cannot": 1
+        "FlashAttention2 has been toggled on, but it cannot": 1,
+        "Remotion render failed (exit code 1)": 3,
+        "Render failed (1)": 5,
+        "'>' not supported between instances of 'int' and '": 1,
+        "Render failed (1): \u001b[31mAn error occurred while re": 2,
+        "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error": 5
     },
-    "last_update": 1774603423.4079711,
+    "last_update": 1774669558.7642722,
     "modules": {
-        "yt_video": 4,
-        "bulletin": 0,
-        "product_review": 0
+        "yt_video": 5,
+        "bulletin": 3,
+        "product_review": 20
     },
     "daily_history": [
         {
             "date": "2026-03-27",
-            "renders": 4,
-            "success": 4,
+            "renders": 5,
+            "success": 5,
             "failed": 0
+        },
+        {
+            "date": "2026-03-28",
+            "renders": 23,
+            "success": 7,
+            "failed": 16
         }
     ],
     "cost_tracking": {
-        "total_estimated_usd": 0.0,
-        "by_provider": {}
+        "total_estimated_usd": 0.2,
+        "by_provider": {
+            "qwen3": 0.0,
+            "pexels": 0.0,
+            "speshaudio": 0.06,
+            "zimage": 0.14,
+            "edge": 0.0
+        }
     },
-    "error_details": []
+    "error_details": [
+        {
+            "ts": 1774661140.34915,
+            "error": "Remotion render failed (exit code 1)",
+            "session_id": "bul_45e65d218e3f",
+            "module": "bulletin",
+            "status": "failed"
+        },
+        {
+            "ts": 1774662957.869685,
+            "error": "Remotion render failed (exit code 1)",
+            "session_id": "bul_7421a38a8600",
+            "module": "bulletin",
+            "status": "failed"
+        },
+        {
+            "ts": 1774663999.395823,
+            "error": "Render failed (1)",
+            "session_id": "pr_84dbd40207dd",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664166.735865,
+            "error": "'>' not supported between instances of 'int' and 'str'",
+            "session_id": "pr_2682a988de47",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664231.1596491,
+            "error": "Render failed (1)",
+            "session_id": "pr_3576d518eda1",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664369.768971,
+            "error": "Render failed (1)",
+            "session_id": "pr_6d1c583ef8cf",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664498.282045,
+            "error": "Render failed (1)",
+            "session_id": "pr_f47bdfba5b51",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664747.0352058,
+            "error": "Render failed (1)",
+            "session_id": "pr_503bd9b98807",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664806.102745,
+            "error": "Render failed (1): \u001b[31mAn error occurred while rendering frame 870:\u001b[39m; \u001b[31m\u001b[41m\u001b[37m Error \u001b[39m\u001b[31m\u001b[49m\u001b[39m \u001b[31moutputRange must contain only numbers\u001b[39m; \u001b[90m3459\u001b[39m \u2502 \u001b[90m    throw n",
+            "session_id": "pr_0a3241c39952",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774664890.215391,
+            "error": "Render failed (1): \u001b[31mAn error occurred while rendering frame 870:\u001b[39m; \u001b[31m\u001b[41m\u001b[37m Error \u001b[39m\u001b[31m\u001b[49m\u001b[39m \u001b[31moutputRange must contain only numbers\u001b[39m; \u001b[90m3459\u001b[39m \u2502 \u001b[90m    throw n",
+            "session_id": "pr_9516c25d565f",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774665480.8181,
+            "error": "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error.stack = new Error(error.message).stack;\u001b[39m; \u001b[90m1474\u001b[39m \u2502 \u001b[90m  error = Error(err);\u001b[39m; \u001b[90m1476\u001b[39m \u2502 \u001b[90m  error = Error(\"Rendering was ",
+            "session_id": "pr_5cd739e3182e",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774666892.069525,
+            "error": "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error.stack = new Error(error.message).stack;\u001b[39m; \u001b[90m1474\u001b[39m \u2502 \u001b[90m  error = Error(err);\u001b[39m; \u001b[90m1476\u001b[39m \u2502 \u001b[90m  error = Error(\"Rendering was ",
+            "session_id": "pr_e2cc5b06f330",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774667093.846692,
+            "error": "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error.stack = new Error(error.message).stack;\u001b[39m; \u001b[90m1474\u001b[39m \u2502 \u001b[90m  error = Error(err);\u001b[39m; \u001b[90m1476\u001b[39m \u2502 \u001b[90m  error = Error(\"Rendering was ",
+            "session_id": "pr_0273b561e9e7",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774667201.044565,
+            "error": "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error.stack = new Error(error.message).stack;\u001b[39m; \u001b[90m1474\u001b[39m \u2502 \u001b[90m  error = Error(err);\u001b[39m; \u001b[90m1476\u001b[39m \u2502 \u001b[90m  error = Error(\"Rendering was ",
+            "session_id": "pr_d2c3ef11f6fa",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774667280.4008808,
+            "error": "Render failed (1): \u001b[90m1471\u001b[39m \u2502 \u001b[90m    error.stack = new Error(error.message).stack;\u001b[39m; \u001b[90m1474\u001b[39m \u2502 \u001b[90m  error = Error(err);\u001b[39m; \u001b[90m1476\u001b[39m \u2502 \u001b[90m  error = Error(\"Rendering was ",
+            "session_id": "pr_5cce512afa12",
+            "module": "product_review",
+            "status": "failed"
+        },
+        {
+            "ts": 1774669558.762728,
+            "error": "Remotion render failed (exit code 1)",
+            "session_id": "bul_2d54b6fb523f",
+            "module": "bulletin",
+            "status": "failed"
+        }
+    ]
 }

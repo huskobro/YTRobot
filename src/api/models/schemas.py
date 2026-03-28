@@ -113,6 +113,8 @@ class ProductReviewRenderReq(BaseModel):
 
 class ProductReviewAutofillReq(BaseModel):
     url: str
+    lang: str = "tr"
+    master_prompt: Optional[str] = None
 
 class ProductReviewTTSReq(BaseModel):
     narration: str

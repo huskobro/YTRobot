@@ -89,7 +89,7 @@ export const StarRating: React.FC<Props> = ({
           lineHeight: 1,
         }}
       >
-        {rating.toFixed(1)}
+        {(rating ?? 0).toFixed(1)}
       </span>
 
       {/* Review count */}
@@ -102,7 +102,7 @@ export const StarRating: React.FC<Props> = ({
           lineHeight: 1,
         }}
       >
-        ({reviewCount.toLocaleString("tr-TR")} yorum)
+        ({(reviewCount ?? 0).toLocaleString("tr-TR")} yorum)
       </span>
     </div>
   );

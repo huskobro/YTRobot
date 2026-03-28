@@ -53,6 +53,12 @@ function productReviewMixin() {
           if (Array.isArray(data.pros) && data.pros.length) this.prForm.pros = data.pros;
           if (Array.isArray(data.cons) && data.cons.length) this.prForm.cons = data.cons;
           if (Array.isArray(data.topComments) && data.topComments.length) this.prForm.topComments = data.topComments;
+          // rating (1-5 yıldız) → score (1-10) otomatik dönüşüm
+          // Gerçek müşteri rating'i varsa her zaman onu kullan (LLM tahminine göre daha güvenilir)
+          const rating = parseFloat(this.prForm.rating) || 0;
+          if (rating > 0) {
+            this.prForm.score = Math.round(rating * 2 * 10) / 10;
+          }
           this.prAutoSuccess = true;
           // Open manual panel so user can review the filled form
           this.prManualOpen = true;

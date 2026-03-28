@@ -39,7 +39,8 @@ function analyticsMixin() {
       try {
         this.analyticsData = await this.apiFetch('/api/stats');
         await this.$nextTick();
-        this.renderDailyChart('dailyRenderChart');
+        // x-show transition tamamlandıktan sonra render et (100ms yeterli)
+        setTimeout(() => this.renderDailyChart('dailyRenderChart'), 100);
       } catch(e) { console.error("Analytics fetch error:", e); }
       finally { this.analyticsLoading = false; }
     },
@@ -174,34 +175,45 @@ function analyticsMixin() {
       if (!this.analyticsData?.daily_history?.length) return;
       const canvas = document.getElementById(canvasId);
       if (!canvas || typeof Chart === 'undefined') return;
+      // Chart.js global registry'den temizle (async destroy race condition önleme)
+      const existing = Chart.getChart(canvas);
+      if (existing) existing.destroy();
       if (this._chartInstance) { this._chartInstance.destroy(); this._chartInstance = null; }
-      const history = this.analyticsData.daily_history.slice(-14);
-      this._chartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels: history.map(d => d.date.slice(5)),
-          datasets: [
-            { label: 'Success', data: history.map(d => d.success),
-              backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
-            { label: 'Failed', data: history.map(d => d.failed),
-              backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 4 },
-          ],
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { labels: { color: '#94a3b8', font: { size: 10 } } },
-            tooltip: { enabled: true, mode: 'index', intersect: false },
+      // Alpine proxy çakışmasını önlemek için fetch ile taze veri al
+      fetch('/api/stats').then(r => r.json()).then(raw => {
+        const history = (raw.daily_history || []).slice(-14);
+        const labels = history.map(d => String(d.date || '').slice(5));
+        const successData = history.map(d => Number(d.success) || 0);
+        const failedData  = history.map(d => Number(d.failed)  || 0);
+        const freshCanvas = document.getElementById(canvasId);
+        if (!freshCanvas) return;
+        // Tekrar kontrol et
+        const ex2 = Chart.getChart(freshCanvas);
+        if (ex2) ex2.destroy();
+        this._chartInstance = new Chart(freshCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Success', data: successData, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
+              { label: 'Failed',  data: failedData,  backgroundColor: 'rgba(239,68,68,0.6)',  borderRadius: 4 },
+            ],
           },
-          scales: {
-            x: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } },
-                 grid: { color: 'rgba(255,255,255,0.05)' } },
-            y: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } },
-                 grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { labels: { color: '#94a3b8', font: { size: 10 } } },
+              tooltip: { enabled: true, mode: 'index', intersect: false },
+            },
+            scales: {
+              x: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              y: { stacked: true, ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+            },
           },
-        },
-      });
+        });
+      }).catch(e => console.warn('[chart] render error:', e));
     },
 
     downloadStatsCsv() {

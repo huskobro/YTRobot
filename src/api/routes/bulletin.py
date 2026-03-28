@@ -324,6 +324,24 @@ async def start_bulletin_render(body: BulletinRenderReq):
     
     return {"bulletin_id": bid}
 
+@router.get("/render/{bid}")
+def get_bulletin_render_status(bid: str):
+    with _bulletin_jobs_lock:
+        job = _bulletin_jobs.get(bid)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return {
+        "id": bid,
+        "status": job.get("status", "queued"),
+        "progress": job.get("progress", 0),
+        "step_label": job.get("step_label", ""),
+        "error": job.get("error", ""),
+        "elapsed": int(time.time() - job.get("started_at", time.time())),
+        "eta": job.get("eta"),
+        "paused": job.get("paused", False),
+        "outputs": job.get("outputs", {}),
+    }
+
 @router.post("/render/{bid}/stop")
 def stop_bulletin_render(bid: str):
     with _bulletin_jobs_lock:

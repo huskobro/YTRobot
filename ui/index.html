@@ -350,7 +350,8 @@
     </div>
 
     <!-- ══ ANALYTICS ══════════════════════════════════════════════════ -->
-    <div x-show="view==='analytics'" class="p-6">
+    <div x-show="view==='analytics'" class="p-6"
+         x-init="$watch('view', v => { if(v==='analytics') { loadAnalytics(); loadQueueStatus(); loadErrorDetails(); } })">
       <div class="flex items-center justify-between mb-8">
         <div>
           <h1 class="text-3xl font-black text-white tracking-tight" x-text="t('analytics_title')"></h1>

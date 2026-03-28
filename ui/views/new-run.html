@@ -191,16 +191,6 @@
               </div>
             </div>
 
-            <!-- Preset -->
-            <div x-show="presets.length > 0">
-              <label class="cr-label" x-text="t('preset_run_label')"></label>
-              <select x-model="selectedPreset" class="cr-select">
-                <option value="" x-text="t('preset_run_default')"></option>
-                <template x-for="p in presets" :key="p.name">
-                  <option :value="p.name" x-text="p.name"></option>
-                </template>
-              </select>
-            </div>
 
             <!-- Batch queue -->
             <details class="cr-surface">
@@ -564,11 +554,6 @@
               <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#e2e8f0" x-text="(settings.visuals_provider||'pexels').toUpperCase()"></span>
             </div>
 
-            <!-- Preset -->
-            <div x-show="selectedPreset" class="cr-summary-row">
-              <span style="font-family:var(--cr-mono);font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em">Preset</span>
-              <span style="font-family:var(--cr-mono);font-size:11px;font-weight:700;color:#a78bfa" x-text="selectedPreset"></span>
-            </div>
           </div>
 
           <!-- Publish settings -->
